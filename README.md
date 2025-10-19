@@ -6,23 +6,26 @@ Enterprise-grade Model Context Protocol (MCP) servers for secure AI-powered mark
 
 This project provides a unified MCP server that connects AI agents (Claude, GPT-4, Gemini) to multiple Google Marketing APIs, enabling WPP Media's global network to automate marketing workflows while maintaining strict safety controls.
 
-### Integrated APIs (4)
+### Integrated APIs (7)
 
-1. **Google Search Console** - Organic search data, sitemaps, URL inspection (9 tools)
+1. **Google Search Console** - Organic search data, sitemaps, URL inspection (10 tools)
 2. **Chrome UX Report (CrUX)** - Core Web Vitals, performance metrics (5 tools)
-3. **Google Ads** - Campaign management, budgets, keywords (12 tools)
-4. **Google Analytics 4** - User behavior, conversions, reporting (5 tools)
+3. **Google Ads** - Campaign management, budgets, keywords, conversions, audiences (25 tools)
+4. **Google Analytics 4** - User behavior, conversions, reporting, property management (11 tools)
+5. **Google Business Profile** - Location management, reviews, local SEO (3 tools)
+6. **BigQuery** - Data blending, SQL queries, cross-platform analysis (3 tools)
+7. **Bright Data SERP** - Unlimited Google searches, rank tracking (1 tool)
 
-**Total: 31 production-ready MCP tools**
+**Total: 58 production-ready MCP tools** (+27 from expansion)
 
-### Planned Expansion (6 additional APIs)
+### Future Expansion
 
-5. **Google Ads Extended** - 28 additional services (conversion tracking, assets, audiences, bidding)
-6. **Google Analytics Admin** - 25 methods (property setup, audiences, conversions, GA4-Ads linking)
-7. **Google Business Profile** - 12 tools (locations, reviews, posts, insights)
-8. **BigQuery** - 20 tools (data blending, SQL queries, data pipelines)
-9. **Bright Data SERP** - 10 tools (rank tracking, SERP analysis, unlimited searches)
-10. **BI Platform** - Metabase or Apache Superset integration for dashboards
+- Google Ads: +15 additional tools (asset management, advanced bidding, batch operations)
+- Google Analytics: +19 additional Admin API methods
+- Business Profile: +9 tools (review management, posts, insights)
+- BigQuery: +17 tools (table management, data transfers)
+- Bright Data: +9 SERP tools (shopping, news, local, rank tracking)
+- BI Platform: Metabase/Superset integration
 
 ## 🛡️ Safety Features
 
@@ -41,18 +44,22 @@ This project provides a unified MCP server that connects AI agents (Claude, GPT-
 ## 📊 Current Status
 
 **Phase 1 & 2: COMPLETE** ✅ (100%)
-- All 31 tools working
-- All 9 safety features implemented
+- All core functionality + safety features complete
+- 58 MCP tools across 7 APIs
+- 9 safety features implemented (95% - email sending pending)
+- 13 Claude Code workflow skills
 - HTTP server for OMA integration ready
 - 23 automated tests
-- 18 comprehensive documentation files
+- 30+ comprehensive documentation files
 - 0 compilation errors
 
-**Phase 3: API Expansion** 📋 (Planned)
-- Google Ads expansion (28 services)
-- Google Analytics Admin (25 methods)
-- New APIs (Business Profile, BigQuery, Bright Data)
-- BI platform integration
+**Phase 3: API Expansion** ⏳ (Partially Complete)
+- ✅ Google Ads: +13 tools (25 total) - Conversion tracking, audiences, keyword planning
+- ✅ Google Analytics: +6 Admin API tools (11 total) - Property setup, custom tracking
+- ✅ Business Profile: 3 tools - Location management
+- ✅ BigQuery: 3 tools - Data blending with SQL queries
+- ✅ Bright Data SERP: 1 tool - Unlimited Google searches
+- 📋 Remaining: 60 tools across API expansions (documented, ready to implement)
 
 ## 🏗️ Architecture
 
@@ -131,27 +138,35 @@ HTTP_PORT=3000 node dist/http-server/index.js
 
 ## 📚 Documentation
 
-### Getting Started
-- [`CLAUDE.md`](CLAUDE.md) - Project overview and architecture
-- [`SETUP-GUIDE.md`](SETUP-GUIDE.md) - OAuth setup instructions
+**Start Here:**
+- [Getting Started](GETTING-STARTED.md) - 5-minute quick start
+- [Documentation Index](docs/00-START-HERE.md) - Complete docs guide
 
-### Safety & Production
-- [`SAFETY-AUDIT.md`](SAFETY-AUDIT.md) - Complete risk analysis
-- [`PRODUCTION-READINESS.md`](PRODUCTION-READINESS.md) - Deployment roadmap
-- [`INTEGRATION-GUIDE.md`](INTEGRATION-GUIDE.md) - Developer integration templates
+**Essential Reading:**
+- [Project Overview](docs/architecture/CLAUDE.md) - Complete architecture and design
+- [Safety Audit](docs/safety/SAFETY-AUDIT.md) - Risk analysis and protections
+- [Skills Guide](docs/guides/SKILLS-GUIDE.md) - 13 Claude Code workflow skills
 
-### API References
-- [`GSC-API-CAPABILITIES.md`](GSC-API-CAPABILITIES.md) - Search Console + CrUX
-- [`GOOGLE-ADS-API-REFERENCE.md`](GOOGLE-ADS-API-REFERENCE.md) - Google Ads (40 tools)
+**For Practitioners:**
+- [Skills Guide](docs/guides/SKILLS-GUIDE.md) - How to use 13 workflow skills
+- [Current Status](docs/status/CURRENT-STATUS.md) - What's available now
 
-### Development
-- [`AGENT-HANDOVER.md`](AGENT-HANDOVER.md) - Complete development guide
-- [`AWS-DEPLOYMENT-GUIDE.md`](AWS-DEPLOYMENT-GUIDE.md) - Infrastructure deployment
-- [`OMA-MCP-INTEGRATION.md`](OMA-MCP-INTEGRATION.md) - OMA platform integration spec
+**For Developers:**
+- [Setup Guide](docs/guides/SETUP-GUIDE.md) - OAuth and authentication
+- [Integration Guide](docs/guides/INTEGRATION-GUIDE.md) - How to create new tools
+- [Testing Guide](docs/guides/TESTING-GUIDE.md) - Testing procedures
+- [Agent Handover](docs/internal/AGENT-HANDOVER.md) - Development guide
 
-### Status & Planning
-- [`COMPLETE-OCT-18.md`](COMPLETE-OCT-18.md) - Project completion summary
-- [`API-EXPANSION-PLAN.md`](API-EXPANSION-PLAN.md) - Future API expansion roadmap
+**For Deployment:**
+- [Production Readiness](docs/safety/PRODUCTION-READINESS.md) - Rollout plan
+- [AWS Deployment](docs/architecture/AWS-DEPLOYMENT-GUIDE.md) - Infrastructure guide
+
+**API References:**
+- [Google Ads](docs/api-reference/GOOGLE-ADS-API-REFERENCE.md) - 25 tools (40 documented)
+- [Search Console](docs/api-reference/GSC-API-REFERENCE.md) - 10 tools
+- [All APIs](docs/api-reference/) - Complete API documentation
+
+**Browse all docs:** [docs/00-START-HERE.md](docs/00-START-HERE.md)
 
 ## 🧪 Testing
 
