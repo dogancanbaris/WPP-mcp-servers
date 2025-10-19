@@ -1,0 +1,29 @@
+{
+  "budgetLimits": {
+    "maxIncreasePercent": 500,
+    "maxDecreasePercent": 500,
+    "warningThreshold": 100,
+    "gradualRecommendation": 20,
+    "description": "Budget changes >500% are blocked. User must use Google Ads UI for extreme changes."
+  },
+  "bulkOperationLimits": {
+    "maxKeywordsPerCall": 50,
+    "maxCampaignsPerPatternMatch": 20,
+    "description": "Limits on bulk operations to prevent accidental mass changes"
+  },
+  "confirmationRequirements": {
+    "destructiveOperations": [
+      "delete_sitemap",
+      "update_campaign_status_REMOVED"
+    ],
+    "requiresTypedConfirmation": true,
+    "confirmationTimeout": 60,
+    "description": "Destructive operations require typing exact resource name to confirm"
+  },
+  "approvalRequirements": {
+    "allWriteOperations": true,
+    "requiresPreview": true,
+    "approvalTimeout": 300,
+    "description": "All write operations require preview and user approval before execution"
+  }
+}

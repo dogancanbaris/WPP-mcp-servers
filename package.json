@@ -1,0 +1,52 @@
+{
+  "name": "wpp-mcp-servers",
+  "version": "1.0.0",
+  "description": "MCP servers for Google Search Console and Google Ads integration",
+  "type": "module",
+  "main": "dist/gsc/server.js",
+  "scripts": {
+    "build": "tsc",
+    "dev:gsc": "node --loader ts-node/esm src/gsc/server.ts",
+    "start:gsc": "node dist/gsc/server.js",
+    "setup:auth": "node --loader ts-node/esm src/setup-auth.ts",
+    "test:ads": "node --loader ts-node/esm src/test-google-ads.ts",
+    "test": "jest",
+    "test:gsc": "jest tests/gsc",
+    "lint": "tsc --noEmit",
+    "clean": "rm -rf dist",
+    "prebuild": "npm run lint"
+  },
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.913.0",
+    "@aws-sdk/client-secrets-manager": "^3.913.0",
+    "@aws-sdk/client-ses": "^3.913.0",
+    "@aws-sdk/lib-dynamodb": "^3.913.0",
+    "@google-analytics/admin": "^9.0.1",
+    "@google-analytics/data": "^5.2.1",
+    "@google-cloud/bigquery": "^8.1.1",
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "body-parser": "^2.2.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.0",
+    "express": "^5.1.0",
+    "google-ads-api": "^21.0.1",
+    "google-auth-library": "^9.0.0",
+    "googleapis": "^118.0.0",
+    "nodemailer": "^7.0.9",
+    "open": "^9.1.0",
+    "uuid": "^13.0.0",
+    "zod": "^3.22.0"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.3",
+    "@types/jest": "^29.0.0",
+    "@types/node": "^20.0.0",
+    "@types/nodemailer": "^7.0.2",
+    "@types/uuid": "^10.0.0",
+    "jest": "^29.0.0",
+    "ts-jest": "^29.0.0",
+    "ts-node": "^10.0.0",
+    "typescript": "^5.3.0"
+  }
+}

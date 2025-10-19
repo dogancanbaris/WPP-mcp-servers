@@ -1,0 +1,9 @@
+{
+  "selectedProperties": [],
+  "role": "admin",
+  "auditLogging": true,
+  "requireApproval": {
+    "writeOperations": true,
+    "deleteOperations": true
+  }
+}

@@ -1,0 +1,53 @@
+{
+  "prohibitedOperations": [
+    {
+      "operation": "delete_property",
+      "api": "Google Search Console",
+      "reason": "Property deletion is too destructive and difficult to reverse. Must be done manually in GSC UI.",
+      "blockedPermanently": true,
+      "errorMessage": "Property deletion is not allowed through MCP for account safety. Please use Google Search Console UI if you need to remove a property."
+    },
+    {
+      "operation": "delete_google_ads_account",
+      "api": "Google Ads",
+      "reason": "Account-level deletion is catastrophic. No legitimate use case for AI agents.",
+      "blockedPermanently": true,
+      "errorMessage": "Google Ads account deletion is not allowed through MCP. This operation must be done manually if absolutely necessary."
+    }
+  ],
+  "restrictedOperations": [
+    {
+      "operation": "update_budget",
+      "api": "Google Ads",
+      "restrictions": {
+        "maxChangePercent": 500,
+        "requiresApproval": true,
+        "requiresSpecificAmount": true,
+        "requiresReason": true
+      },
+      "description": "Budget updates allowed but with strict safety controls"
+    },
+    {
+      "operation": "update_campaign_status",
+      "api": "Google Ads",
+      "restrictions": {
+        "requiresApproval": true,
+        "requiresSpecificCampaignIds": true,
+        "requiresReason": true,
+        "multiStepConfirmationWhenRemoving": true
+      },
+      "description": "Campaign status changes allowed with approval and confirmation"
+    },
+    {
+      "operation": "delete_sitemap",
+      "api": "Google Search Console",
+      "restrictions": {
+        "requiresApproval": true,
+        "multiStepConfirmation": true
+      },
+      "description": "Sitemap deletion allowed with multi-step confirmation"
+    }
+  ],
+  "lastUpdated": "2025-10-17",
+  "notes": "This configuration enforces safety boundaries that cannot be overridden by agents or users through the MCP interface."
+}

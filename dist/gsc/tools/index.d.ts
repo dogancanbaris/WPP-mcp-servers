@@ -1,0 +1,2641 @@
+/**
+ * Export all MCP tools
+ */
+export { listPropertiesTool, getPropertyTool, addPropertyTool } from './properties.js';
+export { querySearchAnalyticsTool } from './analytics.js';
+export { listSitemapsTool, getSitemapTool, submitSitemapTool, deleteSitemapTool, } from './sitemaps.js';
+export { inspectUrlTool } from './url-inspection.js';
+export declare const allTools: ({
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {};
+        required: never[];
+    };
+    handler(_input: any): Promise<{
+        success: boolean;
+        data: {
+            accounts: {
+                resourceName: string;
+                customerId: string;
+            }[];
+            count: number;
+            message: string;
+        };
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            customerId: {
+                type: string;
+                description: string;
+            };
+            assetType: {
+                type: string;
+                enum: string[];
+                description: string;
+            };
+        };
+        required: string[];
+    };
+    handler(input: any): Promise<{
+        success: boolean;
+        data: {
+            customerId: any;
+            assets: {
+                id: string;
+                name: string;
+                type: string;
+                imageUrl: string | undefined;
+                youtubeVideoId: string | undefined;
+                text: string | undefined;
+            }[];
+            count: number;
+            message: string;
+        };
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            customerId: {
+                type: string;
+                description: string;
+            };
+        };
+        required: string[];
+    };
+    handler(input: any): Promise<{
+        success: boolean;
+        data: {
+            customerId: any;
+            userLists: {
+                id: string;
+                name: string;
+                type: string;
+                sizeForDisplay: number;
+                sizeForSearch: number;
+                membershipDays: number;
+                matchRate: number | undefined;
+            }[];
+            count: number;
+            message: string;
+        };
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            customerId: {
+                type: string;
+                description: string;
+            };
+            name: {
+                type: string;
+                description: string;
+            };
+            membershipDays: {
+                type: string;
+                description: string;
+            };
+            description: {
+                type: string;
+                description: string;
+            };
+            confirmationToken: {
+                type: string;
+                description: string;
+            };
+        };
+        required: string[];
+    };
+    handler(input: any): Promise<{
+        success: boolean;
+        requiresApproval: boolean;
+        preview: string;
+        confirmationToken: string;
+        message: string;
+        data?: undefined;
+    } | {
+        success: boolean;
+        data: {
+            customerId: any;
+            userListId: any;
+            name: any;
+            membershipDays: any;
+            message: string;
+        };
+        requiresApproval?: undefined;
+        preview?: undefined;
+        confirmationToken?: undefined;
+        message?: undefined;
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            customerId: {
+                type: string;
+                description: string;
+            };
+            userListId: {
+                type: string;
+                description: string;
+            };
+            customers: {
+                type: string;
+                description: string;
+                items: {
+                    type: string;
+                    properties: {
+                        hashedEmail: {
+                            type: string;
+                            description: string;
+                        };
+                        hashedPhoneNumber: {
+                            type: string;
+                            description: string;
+                        };
+                    };
+                };
+            };
+            confirmationToken: {
+                type: string;
+                description: string;
+            };
+        };
+        required: string[];
+    };
+    handler(input: any): Promise<{
+        success: boolean;
+        requiresApproval: boolean;
+        preview: string;
+        confirmationToken: string;
+        message: string;
+        data?: undefined;
+    } | {
+        success: boolean;
+        data: {
+            customerId: any;
+            userListId: any;
+            customersUploaded: any;
+            result: any;
+            message: string;
+        };
+        requiresApproval?: undefined;
+        preview?: undefined;
+        confirmationToken?: undefined;
+        message?: undefined;
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            customerId: {
+                type: string;
+                description: string;
+            };
+            name: {
+                type: string;
+                description: string;
+            };
+            description: {
+                type: string;
+                description: string;
+            };
+            confirmationToken: {
+                type: string;
+                description: string;
+            };
+        };
+        required: string[];
+    };
+    handler(input: any): Promise<{
+        success: boolean;
+        requiresApproval: boolean;
+        preview: string;
+        confirmationToken: string;
+        message: string;
+        data?: undefined;
+    } | {
+        success: boolean;
+        data: {
+            customerId: any;
+            audienceId: any;
+            name: any;
+            message: string;
+        };
+        requiresApproval?: undefined;
+        preview?: undefined;
+        confirmationToken?: undefined;
+        message?: undefined;
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            customerId: {
+                type: string;
+                description: string;
+            };
+        };
+        required: string[];
+    };
+    handler(input: any): Promise<{
+        success: boolean;
+        data: {
+            customerId: any;
+            strategies: {
+                id: string;
+                name: string;
+                type: string;
+                campaignCount: number;
+                targetCpa: number | undefined;
+                targetRoas: number | undefined;
+                status: string;
+            }[];
+            count: number;
+            message: string;
+        };
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            customerId: {
+                type: string;
+                description: string;
+            };
+            name: {
+                type: string;
+                description: string;
+            };
+            dailyAmountDollars: {
+                type: string;
+                description: string;
+            };
+            confirmationToken: {
+                type: string;
+                description: string;
+            };
+        };
+        required: string[];
+    };
+    handler(input: any): Promise<{
+        success: boolean;
+        requiresApproval: boolean;
+        preview: string;
+        confirmationToken: string;
+        message: string;
+        data?: undefined;
+    } | {
+        success: boolean;
+        data: {
+            customerId: any;
+            budgetId: any;
+            name: any;
+            dailyAmount: string;
+            monthlyEstimate: string;
+            message: string;
+        };
+        requiresApproval?: undefined;
+        preview?: undefined;
+        confirmationToken?: undefined;
+        message?: undefined;
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            customerId: {
+                type: string;
+                description: string;
+            };
+            budgetId: {
+                type: string;
+                description: string;
+            };
+            newDailyAmountDollars: {
+                type: string;
+                description: string;
+            };
+            confirmationToken: {
+                type: string;
+                description: string;
+            };
+        };
+        required: string[];
+    };
+    handler(input: any): Promise<{
+        success: boolean;
+        requiresApproval: boolean;
+        preview: string;
+        confirmationToken: string;
+        message: string;
+        data?: undefined;
+    } | {
+        success: boolean;
+        data: {
+            customerId: any;
+            budgetId: any;
+            previousAmount: string;
+            newAmount: string;
+            dailyDifference: string;
+            monthlyImpact: string;
+            percentageChange: string;
+            result: any;
+            message: string;
+        };
+        requiresApproval?: undefined;
+        preview?: undefined;
+        confirmationToken?: undefined;
+        message?: undefined;
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            customerId: {
+                type: string;
+                description: string;
+            };
+            campaignId: {
+                type: string;
+                description: string;
+            };
+            status: {
+                type: string;
+                enum: string[];
+                description: string;
+            };
+            confirmationToken: {
+                type: string;
+                description: string;
+            };
+        };
+        required: string[];
+    };
+    handler(input: any): Promise<{
+        success: boolean;
+        requiresApproval: boolean;
+        preview: string;
+        confirmationToken: string;
+        message: string;
+        data?: undefined;
+    } | {
+        success: boolean;
+        data: {
+            customerId: any;
+            campaignId: any;
+            campaignName: any;
+            previousStatus: any;
+            newStatus: any;
+            result: any;
+            message: string;
+        };
+        requiresApproval?: undefined;
+        preview?: undefined;
+        confirmationToken?: undefined;
+        message?: undefined;
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            customerId: {
+                type: string;
+                description: string;
+            };
+            name: {
+                type: string;
+                description: string;
+            };
+            budgetId: {
+                type: string;
+                description: string;
+            };
+            campaignType: {
+                type: string;
+                enum: string[];
+                description: string;
+            };
+            status: {
+                type: string;
+                enum: string[];
+                description: string;
+            };
+        };
+        required: string[];
+    };
+    handler(input: any): Promise<{
+        success: boolean;
+        data: {
+            customerId: any;
+            campaignId: any;
+            name: any;
+            campaignType: any;
+            status: any;
+            message: string;
+        };
+        warning: string[];
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            customerId: {
+                type: string;
+                description: string;
+            };
+        };
+        required: string[];
+    };
+    handler(input: any): Promise<{
+        success: boolean;
+        data: {
+            customerId: any;
+            conversionActions: {
+                id: string;
+                name: string;
+                category: string;
+                status: string;
+                type: string;
+                countingType: string;
+                attributionWindow: number;
+                defaultValue: number | undefined;
+                alwaysUseDefaultValue: boolean;
+            }[];
+            count: number;
+            message: string;
+        };
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            customerId: {
+                type: string;
+                description: string;
+            };
+            name: {
+                type: string;
+                description: string;
+            };
+            category: {
+                type: string;
+                enum: string[];
+                description: string;
+            };
+            countingType: {
+                type: string;
+                enum: string[];
+                description: string;
+            };
+            attributionWindowDays: {
+                type: string;
+                description: string;
+            };
+            valueSettings: {
+                type: string;
+                properties: {
+                    defaultValue: {
+                        type: string;
+                        description: string;
+                    };
+                    alwaysUseDefaultValue: {
+                        type: string;
+                        description: string;
+                    };
+                };
+            };
+            confirmationToken: {
+                type: string;
+                description: string;
+            };
+        };
+        required: string[];
+    };
+    handler(input: any): Promise<{
+        success: boolean;
+        requiresApproval: boolean;
+        preview: string;
+        confirmationToken: string;
+        message: string;
+        data?: undefined;
+    } | {
+        success: boolean;
+        data: {
+            customerId: any;
+            conversionActionId: any;
+            name: any;
+            category: any;
+            countingType: any;
+            attributionWindowDays: any;
+            message: string;
+        };
+        requiresApproval?: undefined;
+        preview?: undefined;
+        confirmationToken?: undefined;
+        message?: undefined;
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            customerId: {
+                type: string;
+                description: string;
+            };
+            conversionActionId: {
+                type: string;
+                description: string;
+            };
+            conversions: {
+                type: string;
+                description: string;
+                items: {
+                    type: string;
+                    properties: {
+                        gclid: {
+                            type: string;
+                            description: string;
+                        };
+                        conversionDateTime: {
+                            type: string;
+                            description: string;
+                        };
+                        conversionValue: {
+                            type: string;
+                            description: string;
+                        };
+                        currencyCode: {
+                            type: string;
+                            description: string;
+                        };
+                    };
+                    required: string[];
+                };
+            };
+            confirmationToken: {
+                type: string;
+                description: string;
+            };
+        };
+        required: string[];
+    };
+    handler(input: any): Promise<{
+        success: boolean;
+        requiresApproval: boolean;
+        preview: string;
+        confirmationToken: string;
+        message: string;
+        data?: undefined;
+    } | {
+        success: boolean;
+        data: {
+            customerId: any;
+            conversionActionId: any;
+            conversionsUploaded: any;
+            totalValue: string;
+            result: any;
+            message: string;
+        };
+        requiresApproval?: undefined;
+        preview?: undefined;
+        confirmationToken?: undefined;
+        message?: undefined;
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            customerId: {
+                type: string;
+                description: string;
+            };
+            conversionActionId: {
+                type: string;
+                description: string;
+            };
+            adjustments: {
+                type: string;
+                description: string;
+                items: {
+                    type: string;
+                    properties: {
+                        gclid: {
+                            type: string;
+                            description: string;
+                        };
+                        conversionDateTime: {
+                            type: string;
+                            description: string;
+                        };
+                        adjustmentType: {
+                            type: string;
+                            enum: string[];
+                            description: string;
+                        };
+                        adjustedValue: {
+                            type: string;
+                            description: string;
+                        };
+                        adjustmentDateTime: {
+                            type: string;
+                            description: string;
+                        };
+                    };
+                    required: string[];
+                };
+            };
+            confirmationToken: {
+                type: string;
+                description: string;
+            };
+        };
+        required: string[];
+    };
+    handler(input: any): Promise<{
+        success: boolean;
+        requiresApproval: boolean;
+        preview: string;
+        confirmationToken: string;
+        message: string;
+        data?: undefined;
+    } | {
+        success: boolean;
+        data: {
+            customerId: any;
+            conversionActionId: any;
+            adjustmentsUploaded: any;
+            retractions: any;
+            restatements: number;
+            totalValueChange: string;
+            result: any;
+            message: string;
+        };
+        requiresApproval?: undefined;
+        preview?: undefined;
+        confirmationToken?: undefined;
+        message?: undefined;
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            customerId: {
+                type: string;
+                description: string;
+            };
+            conversionActionId: {
+                type: string;
+                description: string;
+            };
+        };
+        required: string[];
+    };
+    handler(input: any): Promise<{
+        success: boolean;
+        data: {
+            customerId: any;
+            conversionAction: {
+                id: string;
+                name: string;
+                category: string;
+                status: string;
+                type: string;
+                countingType: string;
+                clickThroughWindow: number;
+                viewThroughWindow: number;
+                defaultValue: number | undefined;
+                alwaysUseDefaultValue: boolean;
+                tagSnippets: import("google-ads-node/build/protos/protos.js").google.ads.googleads.v21.common.ITagSnippet[];
+            };
+            message: string;
+        };
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            customerId: {
+                type: string;
+                description: string;
+            };
+        };
+        required: string[];
+    };
+    handler(input: any): Promise<{
+        success: boolean;
+        data: {
+            customerId: any;
+            extensions: {
+                id: string;
+                name: string;
+                type: string;
+                sitelinkText: string | undefined;
+                phoneNumber: string | undefined;
+                snippetHeader: string | undefined;
+                promotionTarget: string | undefined;
+            }[];
+            count: number;
+            message: string;
+        };
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            customerId: {
+                type: string;
+                description: string;
+            };
+        };
+        required: string[];
+    };
+    handler(input: any): Promise<{
+        success: boolean;
+        data: {
+            customerId: any;
+            campaigns: any[];
+            count: number;
+            message: string;
+        };
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            customerId: {
+                type: string;
+                description: string;
+            };
+            campaignId: {
+                type: string;
+                description: string;
+            };
+            startDate: {
+                type: string;
+                description: string;
+            };
+            endDate: {
+                type: string;
+                description: string;
+            };
+        };
+        required: string[];
+    };
+    handler(input: any): Promise<{
+        success: boolean;
+        data: {
+            customerId: any;
+            campaignId: any;
+            dateRange: string | {
+                startDate: any;
+                endDate: any;
+            };
+            searchTerms: any[];
+            count: number;
+            message: string;
+        };
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            customerId: {
+                type: string;
+                description: string;
+            };
+        };
+        required: string[];
+    };
+    handler(input: any): Promise<{
+        success: boolean;
+        data: {
+            customerId: any;
+            budgets: any[];
+            count: number;
+            message: string;
+        };
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            customerId: {
+                type: string;
+                description: string;
+            };
+            campaignId: {
+                type: string;
+                description: string;
+            };
+            startDate: {
+                type: string;
+                description: string;
+            };
+            endDate: {
+                type: string;
+                description: string;
+            };
+        };
+        required: string[];
+    };
+    handler(input: any): Promise<{
+        success: boolean;
+        data: {
+            customerId: any;
+            campaignId: any;
+            dateRange: string | {
+                startDate: any;
+                endDate: any;
+            };
+            keywords: any[];
+            count: number;
+            message: string;
+        };
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            customerId: {
+                type: string;
+                description: string;
+            };
+            adGroupId: {
+                type: string;
+                description: string;
+            };
+            keywords: {
+                type: string;
+                description: string;
+                items: {
+                    type: string;
+                    properties: {
+                        text: {
+                            type: string;
+                            description: string;
+                        };
+                        matchType: {
+                            type: string;
+                            enum: string[];
+                            description: string;
+                        };
+                        maxCpcDollars: {
+                            type: string;
+                            description: string;
+                        };
+                    };
+                    required: string[];
+                };
+            };
+            confirmationToken: {
+                type: string;
+                description: string;
+            };
+        };
+        required: string[];
+    };
+    handler(input: any): Promise<{
+        success: boolean;
+        requiresApproval: boolean;
+        preview: string;
+        confirmationToken: string;
+        message: string;
+        data?: undefined;
+    } | {
+        success: boolean;
+        data: {
+            customerId: any;
+            adGroupId: any;
+            keywordsAdded: any;
+            matchTypeBreakdown: any;
+            keywords: any;
+            result: any;
+            message: string;
+        };
+        requiresApproval?: undefined;
+        preview?: undefined;
+        confirmationToken?: undefined;
+        message?: undefined;
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            customerId: {
+                type: string;
+                description: string;
+            };
+            campaignId: {
+                type: string;
+                description: string;
+            };
+            keywords: {
+                type: string;
+                description: string;
+                items: {
+                    type: string;
+                    properties: {
+                        text: {
+                            type: string;
+                            description: string;
+                        };
+                        matchType: {
+                            type: string;
+                            enum: string[];
+                            description: string;
+                        };
+                    };
+                    required: string[];
+                };
+            };
+            confirmationToken: {
+                type: string;
+                description: string;
+            };
+        };
+        required: string[];
+    };
+    handler(input: any): Promise<{
+        success: boolean;
+        requiresApproval: boolean;
+        preview: string;
+        confirmationToken: string;
+        message: string;
+        data?: undefined;
+    } | {
+        success: boolean;
+        data: {
+            customerId: any;
+            campaignId: any;
+            negativesAdded: any;
+            keywords: any;
+            result: any;
+            message: string;
+        };
+        requiresApproval?: undefined;
+        preview?: undefined;
+        confirmationToken?: undefined;
+        message?: undefined;
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            customerId: {
+                type: string;
+                description: string;
+            };
+            seedKeywords: {
+                type: string;
+                items: {
+                    type: string;
+                };
+                description: string;
+            };
+            pageUrl: {
+                type: string;
+                description: string;
+            };
+            languageCode: {
+                type: string;
+                description: string;
+            };
+            geoTargetIds: {
+                type: string;
+                items: {
+                    type: string;
+                };
+                description: string;
+            };
+        };
+        required: string[];
+    };
+    handler(input: any): Promise<{
+        success: boolean;
+        data: {
+            customerId: any;
+            keywordIdeas: {
+                keyword: any;
+                avgMonthlySearches: number;
+                competition: any;
+                lowTopPageBid: number | undefined;
+                highTopPageBid: number | undefined;
+            }[];
+            count: number;
+            message: string;
+        };
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {};
+        required: never[];
+    };
+    handler(_input: any): Promise<{
+        success: boolean;
+        data: {
+            accounts: import("../../analytics/types.js").AnalyticsAccount[];
+            count: number;
+            message: string;
+        };
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            accountId: {
+                type: string;
+                description: string;
+            };
+        };
+    };
+    handler(input: any): Promise<{
+        success: boolean;
+        data: {
+            accountId: any;
+            properties: import("../../analytics/types.js").AnalyticsProperty[];
+            count: number;
+            message: string;
+        };
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            propertyId: {
+                type: string;
+                description: string;
+            };
+        };
+        required: string[];
+    };
+    handler(input: any): Promise<{
+        success: boolean;
+        data: {
+            propertyId: any;
+            streams: import("../../analytics/types.js").DataStream[];
+            count: number;
+            message: string;
+        };
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            accountId: {
+                type: string;
+                description: string;
+            };
+            displayName: {
+                type: string;
+                description: string;
+            };
+            timeZone: {
+                type: string;
+                description: string;
+            };
+            currencyCode: {
+                type: string;
+                description: string;
+            };
+            industryCategory: {
+                type: string;
+                description: string;
+            };
+            confirmationToken: {
+                type: string;
+                description: string;
+            };
+        };
+        required: string[];
+    };
+    handler(input: any): Promise<{
+        success: boolean;
+        requiresApproval: boolean;
+        preview: string;
+        confirmationToken: string;
+        message: string;
+        data?: undefined;
+    } | {
+        success: boolean;
+        data: {
+            accountId: any;
+            propertyId: any;
+            displayName: any;
+            timeZone: any;
+            currencyCode: any;
+            message: string;
+        };
+        requiresApproval?: undefined;
+        preview?: undefined;
+        confirmationToken?: undefined;
+        message?: undefined;
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            propertyId: {
+                type: string;
+                description: string;
+            };
+            streamType: {
+                type: string;
+                enum: string[];
+                description: string;
+            };
+            displayName: {
+                type: string;
+                description: string;
+            };
+            websiteUrl: {
+                type: string;
+                description: string;
+            };
+            confirmationToken: {
+                type: string;
+                description: string;
+            };
+        };
+        required: string[];
+    };
+    handler(input: any): Promise<{
+        success: boolean;
+        requiresApproval: boolean;
+        preview: string;
+        confirmationToken: string;
+        message: string;
+        data?: undefined;
+    } | {
+        success: boolean;
+        data: {
+            propertyId: any;
+            streamId: any;
+            measurementId: any;
+            displayName: any;
+            streamType: any;
+            message: string;
+        };
+        requiresApproval?: undefined;
+        preview?: undefined;
+        confirmationToken?: undefined;
+        message?: undefined;
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            propertyId: {
+                type: string;
+                description: string;
+            };
+            displayName: {
+                type: string;
+                description: string;
+            };
+            parameterName: {
+                type: string;
+                description: string;
+            };
+            scope: {
+                type: string;
+                enum: string[];
+                description: string;
+            };
+            description: {
+                type: string;
+                description: string;
+            };
+            confirmationToken: {
+                type: string;
+                description: string;
+            };
+        };
+        required: string[];
+    };
+    handler(input: any): Promise<{
+        success: boolean;
+        requiresApproval: boolean;
+        preview: string;
+        confirmationToken: string;
+        message: string;
+        data?: undefined;
+    } | {
+        success: boolean;
+        data: {
+            propertyId: any;
+            dimensionId: any;
+            displayName: any;
+            parameterName: any;
+            scope: any;
+            message: string;
+        };
+        requiresApproval?: undefined;
+        preview?: undefined;
+        confirmationToken?: undefined;
+        message?: undefined;
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            propertyId: {
+                type: string;
+                description: string;
+            };
+            displayName: {
+                type: string;
+                description: string;
+            };
+            parameterName: {
+                type: string;
+                description: string;
+            };
+            measurementUnit: {
+                type: string;
+                enum: string[];
+                description: string;
+            };
+            scope: {
+                type: string;
+                enum: string[];
+                description: string;
+            };
+            confirmationToken: {
+                type: string;
+                description: string;
+            };
+        };
+        required: string[];
+    };
+    handler(input: any): Promise<{
+        success: boolean;
+        requiresApproval: boolean;
+        preview: string;
+        confirmationToken: string;
+        data?: undefined;
+    } | {
+        success: boolean;
+        data: {
+            propertyId: any;
+            metricId: any;
+            displayName: any;
+            message: string;
+        };
+        requiresApproval?: undefined;
+        preview?: undefined;
+        confirmationToken?: undefined;
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            propertyId: {
+                type: string;
+            };
+            eventName: {
+                type: string;
+                description: string;
+            };
+            confirmationToken: {
+                type: string;
+            };
+        };
+        required: string[];
+    };
+    handler(input: any): Promise<{
+        success: boolean;
+        requiresApproval: boolean;
+        preview: string;
+        confirmationToken: string;
+        data?: undefined;
+    } | {
+        success: boolean;
+        data: {
+            propertyId: any;
+            eventName: any;
+            message: string;
+        };
+        requiresApproval?: undefined;
+        preview?: undefined;
+        confirmationToken?: undefined;
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            propertyId: {
+                type: string;
+            };
+            googleAdsCustomerId: {
+                type: string;
+                description: string;
+            };
+            confirmationToken: {
+                type: string;
+            };
+        };
+        required: string[];
+    };
+    handler(input: any): Promise<{
+        success: boolean;
+        requiresApproval: boolean;
+        preview: string;
+        confirmationToken: string;
+        data?: undefined;
+    } | {
+        success: boolean;
+        data: {
+            propertyId: any;
+            googleAdsCustomerId: any;
+            linkId: any;
+            message: string;
+        };
+        requiresApproval?: undefined;
+        preview?: undefined;
+        confirmationToken?: undefined;
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            propertyId: {
+                type: string;
+                description: string;
+            };
+            startDate: {
+                type: string;
+                description: string;
+            };
+            endDate: {
+                type: string;
+                description: string;
+            };
+            dimensions: {
+                type: string;
+                items: {
+                    type: string;
+                };
+                description: string;
+            };
+            metrics: {
+                type: string;
+                items: {
+                    type: string;
+                };
+                description: string;
+            };
+            limit: {
+                type: string;
+                description: string;
+            };
+        };
+        required: string[];
+    };
+    handler(input: any): Promise<{
+        success: boolean;
+        data: {
+            propertyId: any;
+            dateRange: {
+                startDate: any;
+                endDate: any;
+            };
+            dimensions: any[];
+            metrics: any[];
+            rows: import("../../analytics/types.js").ReportRow[];
+            rowCount: number;
+            message: string;
+        };
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            propertyId: {
+                type: string;
+                description: string;
+            };
+            dimensions: {
+                type: string;
+                items: {
+                    type: string;
+                };
+                description: string;
+            };
+            metrics: {
+                type: string;
+                items: {
+                    type: string;
+                };
+                description: string;
+            };
+            limit: {
+                type: string;
+                description: string;
+            };
+        };
+        required: string[];
+    };
+    handler(input: any): Promise<{
+        success: boolean;
+        data: {
+            propertyId: any;
+            timeframe: string;
+            dimensions: any[];
+            metrics: any[];
+            rows: import("../../analytics/types.js").ReportRow[];
+            rowCount: number;
+            message: string;
+        };
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {};
+    };
+    handler(_input: any): Promise<{
+        success: boolean;
+        data: {
+            datasets: {
+                id: any;
+                friendlyName: any;
+                location: any;
+                creationTime: any;
+            }[];
+            count: number;
+            message: string;
+        };
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            datasetId: {
+                type: string;
+                description: string;
+            };
+            location: {
+                type: string;
+                description: string;
+            };
+            description: {
+                type: string;
+                description: string;
+            };
+            confirmationToken: {
+                type: string;
+            };
+        };
+        required: string[];
+    };
+    handler(input: any): Promise<{
+        success: boolean;
+        requiresApproval: boolean;
+        preview: string;
+        confirmationToken: string;
+        data?: undefined;
+    } | {
+        success: boolean;
+        data: {
+            datasetId: any;
+            location: any;
+            message: string;
+        };
+        requiresApproval?: undefined;
+        preview?: undefined;
+        confirmationToken?: undefined;
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            sql: {
+                type: string;
+                description: string;
+            };
+            maxResults: {
+                type: string;
+                description: string;
+            };
+        };
+        required: string[];
+    };
+    handler(input: any): Promise<{
+        success: boolean;
+        data: {
+            rows: any;
+            rowCount: any;
+            jobId: any;
+            message: string;
+        };
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            accountId: {
+                type: string;
+                description: string;
+            };
+        };
+        required: string[];
+    };
+    handler(input: any): Promise<{
+        success: boolean;
+        data: {
+            accountId: any;
+            locations: {
+                name: any;
+                locationId: any;
+                title: any;
+                address: any;
+                websiteUri: any;
+                phoneNumbers: any;
+                categories: any;
+            }[];
+            count: number;
+            message: string;
+        };
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            locationName: {
+                type: string;
+                description: string;
+            };
+        };
+        required: string[];
+    };
+    handler(input: any): Promise<{
+        success: boolean;
+        data: {
+            location: any;
+            message: string;
+        };
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            locationName: {
+                type: string;
+                description: string;
+            };
+            updates: {
+                type: string;
+                description: string;
+                properties: {
+                    title: {
+                        type: string;
+                    };
+                    websiteUri: {
+                        type: string;
+                    };
+                    phoneNumbers: {
+                        type: string;
+                    };
+                    regularHours: {
+                        type: string;
+                    };
+                };
+            };
+            confirmationToken: {
+                type: string;
+                description: string;
+            };
+        };
+        required: string[];
+    };
+    handler(input: any): Promise<{
+        success: boolean;
+        requiresApproval: boolean;
+        preview: string;
+        confirmationToken: string;
+        data?: undefined;
+    } | {
+        success: boolean;
+        data: {
+            locationName: any;
+            updatedFields: string[];
+            message: string;
+        };
+        requiresApproval?: undefined;
+        preview?: undefined;
+        confirmationToken?: undefined;
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            origin: {
+                type: string;
+                description: string;
+            };
+            formFactor: {
+                type: string;
+                enum: string[];
+                description: string;
+            };
+        };
+        required: string[];
+    };
+    handler(input: any): Promise<{
+        success: boolean;
+        data: {
+            message: string;
+            lcp?: {
+                p75: number;
+                good: number;
+                needsImprovement: number;
+                poor: number;
+            };
+            inp?: {
+                p75: number;
+                good: number;
+                needsImprovement: number;
+                poor: number;
+            };
+            cls?: {
+                p75: number;
+                good: number;
+                needsImprovement: number;
+                poor: number;
+            };
+            fcp?: {
+                p75: number;
+                good: number;
+                needsImprovement: number;
+                poor: number;
+            };
+            ttfb?: {
+                p75: number;
+                good: number;
+                needsImprovement: number;
+                poor: number;
+            };
+            collectionPeriod?: {
+                start: string;
+                end: string;
+            };
+            origin: any;
+            formFactor: any;
+        };
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            url: {
+                type: string;
+                description: string;
+            };
+            formFactor: {
+                type: string;
+                enum: string[];
+                description: string;
+            };
+        };
+        required: string[];
+    };
+    handler(input: any): Promise<{
+        success: boolean;
+        data: {
+            message: string;
+            lcp?: {
+                p75: number;
+                good: number;
+                needsImprovement: number;
+                poor: number;
+            };
+            inp?: {
+                p75: number;
+                good: number;
+                needsImprovement: number;
+                poor: number;
+            };
+            cls?: {
+                p75: number;
+                good: number;
+                needsImprovement: number;
+                poor: number;
+            };
+            fcp?: {
+                p75: number;
+                good: number;
+                needsImprovement: number;
+                poor: number;
+            };
+            ttfb?: {
+                p75: number;
+                good: number;
+                needsImprovement: number;
+                poor: number;
+            };
+            collectionPeriod?: {
+                start: string;
+                end: string;
+            };
+            url: any;
+            formFactor: any;
+        };
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            origin: {
+                type: string;
+                description: string;
+            };
+            formFactor: {
+                type: string;
+                enum: string[];
+                description: string;
+            };
+        };
+        required: string[];
+    };
+    handler(input: any): Promise<{
+        success: boolean;
+        data: {
+            origin: any;
+            formFactor: any;
+            history: import("../../crux/types.js").HistoricalRecord;
+            collectionPeriods: import("../../crux/types.js").CollectionPeriod[];
+            message: string;
+        };
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            url: {
+                type: string;
+                description: string;
+            };
+            formFactor: {
+                type: string;
+                enum: string[];
+                description: string;
+            };
+        };
+        required: string[];
+    };
+    handler(input: any): Promise<{
+        success: boolean;
+        data: {
+            url: any;
+            formFactor: any;
+            history: import("../../crux/types.js").HistoricalRecord;
+            collectionPeriods: import("../../crux/types.js").CollectionPeriod[];
+            message: string;
+        };
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            origin: {
+                type: string;
+                description: string;
+            };
+            url: {
+                type: string;
+                description: string;
+            };
+        };
+    };
+    handler(input: any): Promise<{
+        success: boolean;
+        data: any;
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {};
+        required: never[];
+    };
+    handler(_input: any): Promise<{
+        success: boolean;
+        data: {
+            properties: {
+                url: string | null | undefined;
+                permissionLevel: string | null | undefined;
+            }[];
+            total: number;
+            message: string;
+        };
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            property: {
+                type: string;
+                description: string;
+            };
+        };
+        required: string[];
+    };
+    handler(input: any): Promise<{
+        success: boolean;
+        data: {
+            url: string | null | undefined;
+            permissionLevel: string | null | undefined;
+        };
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            siteUrl: {
+                type: string;
+                description: string;
+            };
+        };
+        required: string[];
+    };
+    handler(input: any): Promise<{
+        success: boolean;
+        data: {
+            requiresApproval: boolean;
+            dryRun: import("../types.js").DryRunResult;
+            message: string;
+            property?: undefined;
+        };
+    } | {
+        success: boolean;
+        data: {
+            property: any;
+            message: string;
+            requiresApproval?: undefined;
+            dryRun?: undefined;
+        };
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            property: {
+                type: string;
+                description: string;
+            };
+            startDate: {
+                type: string;
+                description: string;
+            };
+            endDate: {
+                type: string;
+                description: string;
+            };
+            dimensions: {
+                type: string;
+                items: {
+                    type: string;
+                };
+                description: string;
+            };
+            searchType: {
+                type: string;
+                enum: string[];
+                description: string;
+            };
+            rowLimit: {
+                type: string;
+                description: string;
+            };
+        };
+        required: string[];
+    };
+    handler(input: any): Promise<{
+        success: boolean;
+        data: {
+            property: any;
+            dateRange: {
+                start: any;
+                end: any;
+            };
+            dimensions: any;
+            searchType: any;
+            rows: {
+                keys: any;
+                clicks: any;
+                impressions: any;
+                ctr: any;
+                position: any;
+            }[];
+            rowCount: number;
+            message: string;
+        };
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            property: {
+                type: string;
+                description: string;
+            };
+        };
+        required: string[];
+    };
+    handler(input: any): Promise<{
+        success: boolean;
+        data: {
+            property: any;
+            sitemaps: {
+                url: any;
+                lastSubmitted: any;
+                lastDownloaded: any;
+                errors: any;
+                warnings: any;
+                contents: any;
+            }[];
+            count: number;
+            message: string;
+        };
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            property: {
+                type: string;
+                description: string;
+            };
+            sitemapUrl: {
+                type: string;
+                description: string;
+            };
+        };
+        required: string[];
+    };
+    handler(input: any): Promise<{
+        success: boolean;
+        data: {
+            url: string | null | undefined;
+            lastSubmitted: string | null | undefined;
+            lastDownloaded: string | null | undefined;
+            errors: string | number;
+            warnings: string | number;
+            contents: import("googleapis").webmasters_v3.Schema$WmxSitemapContent[];
+        };
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            property: {
+                type: string;
+                description: string;
+            };
+            sitemapUrl: {
+                type: string;
+                description: string;
+            };
+            confirmationToken: {
+                type: string;
+                description: string;
+            };
+        };
+        required: string[];
+    };
+    handler(input: any): Promise<{
+        success: boolean;
+        requiresApproval: boolean;
+        preview: string;
+        confirmationToken: string;
+        message: string;
+        data?: undefined;
+    } | {
+        success: boolean;
+        data: {
+            property: any;
+            sitemapUrl: any;
+            message: string;
+        };
+        requiresApproval?: undefined;
+        preview?: undefined;
+        confirmationToken?: undefined;
+        message?: undefined;
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            property: {
+                type: string;
+                description: string;
+            };
+            url: {
+                type: string;
+                description: string;
+            };
+        };
+        required: string[];
+    };
+    handler(input: any): Promise<{
+        success: boolean;
+        data: any;
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            query: {
+                type: string;
+                description: string;
+            };
+            numResults: {
+                type: string;
+                description: string;
+            };
+            location: {
+                type: string;
+                description: string;
+            };
+            device: {
+                type: string;
+                enum: string[];
+                description: string;
+            };
+            gl: {
+                type: string;
+                description: string;
+            };
+            hl: {
+                type: string;
+                description: string;
+            };
+        };
+        required: string[];
+    };
+    handler(input: any): Promise<{
+        success: boolean;
+        data: {
+            query: any;
+            results: any;
+            message: string;
+        };
+    }>;
+})[];
+export declare const readTools: ({
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            origin: {
+                type: string;
+                description: string;
+            };
+            formFactor: {
+                type: string;
+                enum: string[];
+                description: string;
+            };
+        };
+        required: string[];
+    };
+    handler(input: any): Promise<{
+        success: boolean;
+        data: {
+            message: string;
+            lcp?: {
+                p75: number;
+                good: number;
+                needsImprovement: number;
+                poor: number;
+            };
+            inp?: {
+                p75: number;
+                good: number;
+                needsImprovement: number;
+                poor: number;
+            };
+            cls?: {
+                p75: number;
+                good: number;
+                needsImprovement: number;
+                poor: number;
+            };
+            fcp?: {
+                p75: number;
+                good: number;
+                needsImprovement: number;
+                poor: number;
+            };
+            ttfb?: {
+                p75: number;
+                good: number;
+                needsImprovement: number;
+                poor: number;
+            };
+            collectionPeriod?: {
+                start: string;
+                end: string;
+            };
+            origin: any;
+            formFactor: any;
+        };
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            url: {
+                type: string;
+                description: string;
+            };
+            formFactor: {
+                type: string;
+                enum: string[];
+                description: string;
+            };
+        };
+        required: string[];
+    };
+    handler(input: any): Promise<{
+        success: boolean;
+        data: {
+            message: string;
+            lcp?: {
+                p75: number;
+                good: number;
+                needsImprovement: number;
+                poor: number;
+            };
+            inp?: {
+                p75: number;
+                good: number;
+                needsImprovement: number;
+                poor: number;
+            };
+            cls?: {
+                p75: number;
+                good: number;
+                needsImprovement: number;
+                poor: number;
+            };
+            fcp?: {
+                p75: number;
+                good: number;
+                needsImprovement: number;
+                poor: number;
+            };
+            ttfb?: {
+                p75: number;
+                good: number;
+                needsImprovement: number;
+                poor: number;
+            };
+            collectionPeriod?: {
+                start: string;
+                end: string;
+            };
+            url: any;
+            formFactor: any;
+        };
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            origin: {
+                type: string;
+                description: string;
+            };
+            formFactor: {
+                type: string;
+                enum: string[];
+                description: string;
+            };
+        };
+        required: string[];
+    };
+    handler(input: any): Promise<{
+        success: boolean;
+        data: {
+            origin: any;
+            formFactor: any;
+            history: import("../../crux/types.js").HistoricalRecord;
+            collectionPeriods: import("../../crux/types.js").CollectionPeriod[];
+            message: string;
+        };
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            url: {
+                type: string;
+                description: string;
+            };
+            formFactor: {
+                type: string;
+                enum: string[];
+                description: string;
+            };
+        };
+        required: string[];
+    };
+    handler(input: any): Promise<{
+        success: boolean;
+        data: {
+            url: any;
+            formFactor: any;
+            history: import("../../crux/types.js").HistoricalRecord;
+            collectionPeriods: import("../../crux/types.js").CollectionPeriod[];
+            message: string;
+        };
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            origin: {
+                type: string;
+                description: string;
+            };
+            url: {
+                type: string;
+                description: string;
+            };
+        };
+    };
+    handler(input: any): Promise<{
+        success: boolean;
+        data: any;
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {};
+        required: never[];
+    };
+    handler(_input: any): Promise<{
+        success: boolean;
+        data: {
+            properties: {
+                url: string | null | undefined;
+                permissionLevel: string | null | undefined;
+            }[];
+            total: number;
+            message: string;
+        };
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            property: {
+                type: string;
+                description: string;
+            };
+        };
+        required: string[];
+    };
+    handler(input: any): Promise<{
+        success: boolean;
+        data: {
+            url: string | null | undefined;
+            permissionLevel: string | null | undefined;
+        };
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            property: {
+                type: string;
+                description: string;
+            };
+            startDate: {
+                type: string;
+                description: string;
+            };
+            endDate: {
+                type: string;
+                description: string;
+            };
+            dimensions: {
+                type: string;
+                items: {
+                    type: string;
+                };
+                description: string;
+            };
+            searchType: {
+                type: string;
+                enum: string[];
+                description: string;
+            };
+            rowLimit: {
+                type: string;
+                description: string;
+            };
+        };
+        required: string[];
+    };
+    handler(input: any): Promise<{
+        success: boolean;
+        data: {
+            property: any;
+            dateRange: {
+                start: any;
+                end: any;
+            };
+            dimensions: any;
+            searchType: any;
+            rows: {
+                keys: any;
+                clicks: any;
+                impressions: any;
+                ctr: any;
+                position: any;
+            }[];
+            rowCount: number;
+            message: string;
+        };
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            property: {
+                type: string;
+                description: string;
+            };
+        };
+        required: string[];
+    };
+    handler(input: any): Promise<{
+        success: boolean;
+        data: {
+            property: any;
+            sitemaps: {
+                url: any;
+                lastSubmitted: any;
+                lastDownloaded: any;
+                errors: any;
+                warnings: any;
+                contents: any;
+            }[];
+            count: number;
+            message: string;
+        };
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            property: {
+                type: string;
+                description: string;
+            };
+            sitemapUrl: {
+                type: string;
+                description: string;
+            };
+        };
+        required: string[];
+    };
+    handler(input: any): Promise<{
+        success: boolean;
+        data: {
+            url: string | null | undefined;
+            lastSubmitted: string | null | undefined;
+            lastDownloaded: string | null | undefined;
+            errors: string | number;
+            warnings: string | number;
+            contents: import("googleapis").webmasters_v3.Schema$WmxSitemapContent[];
+        };
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            property: {
+                type: string;
+                description: string;
+            };
+            url: {
+                type: string;
+                description: string;
+            };
+        };
+        required: string[];
+    };
+    handler(input: any): Promise<{
+        success: boolean;
+        data: any;
+    }>;
+})[];
+export declare const writeTools: ({
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            siteUrl: {
+                type: string;
+                description: string;
+            };
+        };
+        required: string[];
+    };
+    handler(input: any): Promise<{
+        success: boolean;
+        data: {
+            requiresApproval: boolean;
+            dryRun: import("../types.js").DryRunResult;
+            message: string;
+            property?: undefined;
+        };
+    } | {
+        success: boolean;
+        data: {
+            property: any;
+            message: string;
+            requiresApproval?: undefined;
+            dryRun?: undefined;
+        };
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            property: {
+                type: string;
+                description: string;
+            };
+            sitemapUrl: {
+                type: string;
+                description: string;
+            };
+            confirmationToken: {
+                type: string;
+                description: string;
+            };
+        };
+        required: string[];
+    };
+    handler(input: any): Promise<{
+        success: boolean;
+        requiresApproval: boolean;
+        preview: string;
+        confirmationToken: string;
+        message: string;
+        data?: undefined;
+    } | {
+        success: boolean;
+        data: {
+            property: any;
+            sitemapUrl: any;
+            message: string;
+        };
+        requiresApproval?: undefined;
+        preview?: undefined;
+        confirmationToken?: undefined;
+        message?: undefined;
+    }>;
+})[];
+//# sourceMappingURL=index.d.ts.map

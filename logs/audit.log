@@ -1,0 +1,524 @@
+[
+  {
+    "timestamp": "2025-10-17T16:55:51.173Z",
+    "user": "system",
+    "action": "authentication",
+    "property": "system",
+    "operationType": "read",
+    "result": "success",
+    "details": {
+      "server": "GSC MCP started",
+      "version": "1.0.0"
+    }
+  },
+  {
+    "timestamp": "2025-10-17T16:55:51.175Z",
+    "user": "system",
+    "action": "authentication",
+    "property": "system",
+    "operationType": "read",
+    "result": "failure",
+    "details": {
+      "error": "Server does not support tools (required for tools/list)"
+    },
+    "errorMessage": "Authentication failed"
+  },
+  {
+    "timestamp": "2025-10-17T16:56:20.559Z",
+    "user": "system",
+    "action": "authentication",
+    "property": "system",
+    "operationType": "read",
+    "result": "success",
+    "details": {
+      "server": "GSC MCP started",
+      "version": "1.0.0"
+    }
+  },
+  {
+    "timestamp": "2025-10-17T16:56:20.561Z",
+    "user": "system",
+    "action": "authentication",
+    "property": "system",
+    "operationType": "read",
+    "result": "failure",
+    "details": {
+      "error": "Server does not support tools (required for tools/list)"
+    },
+    "errorMessage": "Authentication failed"
+  },
+  {
+    "timestamp": "2025-10-17T16:56:46.432Z",
+    "user": "system",
+    "action": "authentication",
+    "property": "system",
+    "operationType": "read",
+    "result": "success",
+    "details": {
+      "server": "GSC MCP started",
+      "version": "1.0.0"
+    }
+  },
+  {
+    "timestamp": "2025-10-17T16:56:46.434Z",
+    "user": "system",
+    "action": "authentication",
+    "property": "system",
+    "operationType": "read",
+    "result": "failure",
+    "details": {
+      "error": "Server does not support tools (required for tools/list)"
+    },
+    "errorMessage": "Authentication failed"
+  },
+  {
+    "timestamp": "2025-10-17T16:57:05.596Z",
+    "user": "system",
+    "action": "authentication",
+    "property": "system",
+    "operationType": "read",
+    "result": "success",
+    "details": {
+      "server": "GSC MCP started",
+      "version": "1.0.0"
+    }
+  },
+  {
+    "timestamp": "2025-10-17T16:57:05.598Z",
+    "user": "system",
+    "action": "authentication",
+    "property": "system",
+    "operationType": "read",
+    "result": "failure",
+    "details": {
+      "error": "Server does not support tools (required for tools/list)"
+    },
+    "errorMessage": "Authentication failed"
+  },
+  {
+    "timestamp": "2025-10-17T16:58:35.135Z",
+    "user": "system",
+    "action": "authentication",
+    "property": "system",
+    "operationType": "read",
+    "result": "success",
+    "details": {
+      "server": "GSC MCP started",
+      "version": "1.0.0"
+    }
+  },
+  {
+    "timestamp": "2025-10-17T17:23:36.945Z",
+    "user": "system",
+    "action": "authentication",
+    "property": "system",
+    "operationType": "read",
+    "result": "success",
+    "details": {
+      "server": "GSC MCP started",
+      "version": "1.0.0"
+    }
+  },
+  {
+    "timestamp": "2025-10-17T17:27:57.503Z",
+    "user": "system",
+    "action": "authentication",
+    "property": "system",
+    "operationType": "read",
+    "result": "success",
+    "details": {
+      "server": "GSC MCP started",
+      "version": "1.0.0"
+    }
+  },
+  {
+    "timestamp": "2025-10-17T17:33:32.609Z",
+    "user": "system",
+    "action": "authentication",
+    "property": "system",
+    "operationType": "read",
+    "result": "success",
+    "details": {
+      "server": "GSC MCP started",
+      "version": "1.0.0"
+    }
+  },
+  {
+    "timestamp": "2025-10-17T17:34:20.664Z",
+    "user": "user",
+    "action": "list_properties",
+    "property": "system",
+    "operationType": "read",
+    "result": "success",
+    "details": {
+      "totalProperties": 9,
+      "discoveredProperties": 9
+    }
+  },
+  {
+    "timestamp": "2025-10-17T17:36:14.490Z",
+    "user": "user",
+    "action": "query_search_analytics",
+    "property": "sc-domain:keepersdigital.com",
+    "operationType": "read",
+    "result": "success",
+    "details": {
+      "startDate": "2024-10-10",
+      "endDate": "2024-10-17",
+      "rowsReturned": 8,
+      "dimensions": "date"
+    }
+  },
+  {
+    "timestamp": "2025-10-17T17:54:49.012Z",
+    "user": "system",
+    "action": "authentication",
+    "property": "system",
+    "operationType": "read",
+    "result": "success",
+    "details": {
+      "server": "GSC MCP started",
+      "version": "1.0.0"
+    }
+  },
+  {
+    "timestamp": "2025-10-17T18:01:57.403Z",
+    "user": "system",
+    "action": "authentication",
+    "property": "system",
+    "operationType": "read",
+    "result": "success",
+    "details": {
+      "server": "GSC MCP started",
+      "version": "1.0.0"
+    }
+  },
+  {
+    "timestamp": "2025-10-17T18:01:58.354Z",
+    "user": "system",
+    "action": "authentication",
+    "property": "system",
+    "operationType": "read",
+    "result": "success",
+    "details": {
+      "server": "GSC MCP started",
+      "version": "1.0.0"
+    }
+  },
+  {
+    "timestamp": "2025-10-17T18:03:23.209Z",
+    "user": "system",
+    "action": "authentication",
+    "property": "system",
+    "operationType": "read",
+    "result": "success",
+    "details": {
+      "server": "GSC MCP started",
+      "version": "1.0.0"
+    }
+  },
+  {
+    "timestamp": "2025-10-17T18:05:19.576Z",
+    "user": "system",
+    "action": "authentication",
+    "property": "system",
+    "operationType": "read",
+    "result": "success",
+    "details": {
+      "server": "GSC MCP started",
+      "version": "1.0.0"
+    }
+  },
+  {
+    "timestamp": "2025-10-17T18:07:55.495Z",
+    "user": "user",
+    "action": "inspect_url",
+    "property": "sc-domain:keepersdigital.com",
+    "operationType": "read",
+    "result": "success",
+    "details": {
+      "inspectionUrl": "https://keepersdigital.com/",
+      "verdict": "PASS"
+    }
+  },
+  {
+    "timestamp": "2025-10-17T18:08:05.110Z",
+    "user": "user",
+    "action": "query_search_analytics",
+    "property": "sc-domain:keepersdigital.com",
+    "operationType": "read",
+    "result": "success",
+    "details": {
+      "startDate": "2024-10-01",
+      "endDate": "2024-10-17",
+      "rowsReturned": 10,
+      "dimensions": "query"
+    }
+  },
+  {
+    "timestamp": "2025-10-17T18:08:11.313Z",
+    "user": "user",
+    "action": "query_search_analytics",
+    "property": "sc-domain:keepersdigital.com",
+    "operationType": "read",
+    "result": "success",
+    "details": {
+      "startDate": "2024-10-01",
+      "endDate": "2024-10-17",
+      "rowsReturned": 10,
+      "dimensions": "page"
+    }
+  },
+  {
+    "timestamp": "2025-10-17T18:08:20.207Z",
+    "user": "user",
+    "action": "query_search_analytics",
+    "property": "sc-domain:keepersdigital.com",
+    "operationType": "read",
+    "result": "success",
+    "details": {
+      "startDate": "2024-10-01",
+      "endDate": "2024-10-17",
+      "rowsReturned": 3,
+      "dimensions": "device"
+    }
+  },
+  {
+    "timestamp": "2025-10-17T18:08:28.683Z",
+    "user": "user",
+    "action": "query_search_analytics",
+    "property": "sc-domain:keepersdigital.com",
+    "operationType": "read",
+    "result": "success",
+    "details": {
+      "startDate": "2024-10-01",
+      "endDate": "2024-10-17",
+      "rowsReturned": 15,
+      "dimensions": "country"
+    }
+  },
+  {
+    "timestamp": "2025-10-17T18:08:37.088Z",
+    "user": "user",
+    "action": "query_search_analytics",
+    "property": "sc-domain:keepersdigital.com",
+    "operationType": "read",
+    "result": "success",
+    "details": {
+      "startDate": "2024-10-01",
+      "endDate": "2024-10-17",
+      "rowsReturned": 10,
+      "dimensions": "query,page,device"
+    }
+  },
+  {
+    "timestamp": "2025-10-17T18:08:46.685Z",
+    "user": "user",
+    "action": "list_sitemaps",
+    "property": "sc-domain:keepersdigital.com",
+    "operationType": "read",
+    "result": "success",
+    "details": {
+      "sitemapCount": 0
+    }
+  },
+  {
+    "timestamp": "2025-10-17T18:08:56.611Z",
+    "user": "user",
+    "action": "query_search_analytics",
+    "property": "sc-domain:keepersdigital.com",
+    "operationType": "read",
+    "result": "success",
+    "details": {
+      "startDate": "2024-10-01",
+      "endDate": "2024-10-17",
+      "rowsReturned": 0,
+      "dimensions": "searchAppearance"
+    }
+  },
+  {
+    "timestamp": "2025-10-17T18:09:04.964Z",
+    "user": "user",
+    "action": "query_search_analytics",
+    "property": "sc-domain:keepersdigital.com",
+    "operationType": "read",
+    "result": "success",
+    "details": {
+      "startDate": "2024-10-01",
+      "endDate": "2024-10-17",
+      "rowsReturned": 5,
+      "dimensions": "query"
+    }
+  },
+  {
+    "timestamp": "2025-10-17T18:09:12.489Z",
+    "user": "user",
+    "action": "query_search_analytics",
+    "property": "sc-domain:keepersdigital.com",
+    "operationType": "read",
+    "result": "success",
+    "details": {
+      "startDate": "2024-09-01",
+      "endDate": "2024-10-17",
+      "rowsReturned": 20,
+      "dimensions": "query,country,device"
+    }
+  },
+  {
+    "timestamp": "2025-10-17T18:09:22.909Z",
+    "user": "user",
+    "action": "query_search_analytics",
+    "property": "sc-domain:themindfulsteward.com",
+    "operationType": "read",
+    "result": "success",
+    "details": {
+      "startDate": "2024-10-01",
+      "endDate": "2024-10-17",
+      "rowsReturned": 10,
+      "dimensions": "query"
+    }
+  },
+  {
+    "timestamp": "2025-10-17T18:09:35.070Z",
+    "user": "user",
+    "action": "query_search_analytics",
+    "property": "sc-domain:themindfulsteward.com",
+    "operationType": "read",
+    "result": "success",
+    "details": {
+      "startDate": "2024-10-01",
+      "endDate": "2024-10-17",
+      "rowsReturned": 0,
+      "dimensions": "page"
+    }
+  },
+  {
+    "timestamp": "2025-10-17T18:09:41.758Z",
+    "user": "user",
+    "action": "list_sitemaps",
+    "property": "sc-domain:themindfulsteward.com",
+    "operationType": "read",
+    "result": "success",
+    "details": {
+      "sitemapCount": 3
+    }
+  },
+  {
+    "timestamp": "2025-10-17T18:10:09.132Z",
+    "user": "user",
+    "action": "get_sitemap",
+    "property": "sc-domain:themindfulsteward.com",
+    "operationType": "read",
+    "result": "success",
+    "details": {
+      "sitemapUrl": "https://www.themindfulsteward.com/sitemap_index.xml"
+    }
+  },
+  {
+    "timestamp": "2025-10-17T18:10:25.481Z",
+    "user": "user",
+    "action": "inspect_url",
+    "property": "sc-domain:themindfulsteward.com",
+    "operationType": "read",
+    "result": "success",
+    "details": {
+      "inspectionUrl": "https://www.themindfulsteward.com/types-of-meditation/",
+      "verdict": "NEUTRAL"
+    }
+  },
+  {
+    "timestamp": "2025-10-17T18:11:22.140Z",
+    "user": "user",
+    "action": "get_property",
+    "property": "sc-domain:keepersdigital.com",
+    "operationType": "read",
+    "result": "success",
+    "details": {
+      "permissionLevel": "siteOwner"
+    }
+  },
+  {
+    "timestamp": "2025-10-17T18:44:18.068Z",
+    "user": "system",
+    "action": "authentication",
+    "property": "system",
+    "operationType": "read",
+    "result": "success",
+    "details": {
+      "server": "GSC MCP started",
+      "version": "1.0.0"
+    }
+  },
+  {
+    "timestamp": "2025-10-17T19:05:48.246Z",
+    "user": "system",
+    "action": "authentication",
+    "property": "system",
+    "operationType": "read",
+    "result": "success",
+    "details": {
+      "server": "GSC MCP started",
+      "version": "1.0.0"
+    }
+  },
+  {
+    "timestamp": "2025-10-17T19:39:54.536Z",
+    "user": "system",
+    "action": "authentication",
+    "property": "system",
+    "operationType": "read",
+    "result": "success",
+    "details": {
+      "server": "GSC MCP started",
+      "version": "1.0.0"
+    }
+  },
+  {
+    "timestamp": "2025-10-17T19:40:34.070Z",
+    "user": "system",
+    "action": "authentication",
+    "property": "system",
+    "operationType": "read",
+    "result": "success",
+    "details": {
+      "server": "GSC MCP started",
+      "version": "1.0.0"
+    }
+  },
+  {
+    "timestamp": "2025-10-18T10:22:34.218Z",
+    "user": "system",
+    "action": "authentication",
+    "property": "system",
+    "operationType": "read",
+    "result": "success",
+    "details": {
+      "server": "GSC MCP started",
+      "version": "1.0.0"
+    }
+  },
+  {
+    "timestamp": "2025-10-19T11:16:15.174Z",
+    "user": "system",
+    "action": "authentication",
+    "property": "system",
+    "operationType": "read",
+    "result": "success",
+    "details": {
+      "server": "GSC MCP started",
+      "version": "1.0.0"
+    }
+  },
+  {
+    "timestamp": "2025-10-19T11:18:34.721Z",
+    "user": "system",
+    "action": "authentication",
+    "property": "system",
+    "operationType": "read",
+    "result": "success",
+    "details": {
+      "server": "GSC MCP started",
+      "version": "1.0.0"
+    }
+  }
+]
