@@ -3,10 +3,10 @@
  * Property management, data streams, custom dimensions/metrics, audiences, conversion events
  */
 
-import { getAnalyticsClient } from '../client.js';
 import { getLogger } from '../../shared/logger.js';
 import { getApprovalEnforcer, DryRunResultBuilder } from '../../shared/approval-enforcer.js';
 import { detectAndEnforceVagueness } from '../../shared/vagueness-detector.js';
+import { extractOAuthToken, createAnalyticsAdminClient } from '../../shared/oauth-client-factory.js';
 
 const logger = getLogger('analytics.tools.admin');
 
@@ -89,7 +89,14 @@ export const createPropertyTool = {
         inputParams: { accountId, displayName },
       });
 
-      const client = getAnalyticsClient();
+      // Extract OAuth token from request
+      const oauthToken = extractOAuthToken(input);
+      if (!oauthToken) {
+        throw new Error('OAuth token required for Google Analytics API access');
+      }
+
+      // Create Analytics Admin client with user's OAuth token
+      const client = createAnalyticsAdminClient(oauthToken);
 
       // Build dry-run preview
       const approvalEnforcer = getApprovalEnforcer();
@@ -143,15 +150,15 @@ export const createPropertyTool = {
         confirmationToken,
         dryRun,
         async () => {
-          const property = {
-            parent: `accounts/${accountId}`,
-            displayName,
-            timeZone,
-            currencyCode,
-            industryCategory: industryCategory || undefined,
-          };
-
-          const [createdProperty] = await client.createProperty(accountId, property);
+          const [createdProperty] = await client.createProperty({
+            property: {
+              parent: `accounts/${accountId}`,
+              displayName,
+              timeZone,
+              currencyCode,
+              industryCategory: industryCategory || undefined,
+            },
+          });
 
           return createdProperty;
         }
@@ -248,7 +255,14 @@ export const createDataStreamTool = {
         throw new Error('websiteUrl is required for WEB data streams');
       }
 
-      const client = getAnalyticsClient();
+      // Extract OAuth token from request
+      const oauthToken = extractOAuthToken(input);
+      if (!oauthToken) {
+        throw new Error('OAuth token required for Google Analytics API access');
+      }
+
+      // Create Analytics Admin client with user's OAuth token
+      const client = createAnalyticsAdminClient(oauthToken);
 
       // Build dry-run preview
       const approvalEnforcer = getApprovalEnforcer();
@@ -312,7 +326,10 @@ export const createDataStreamTool = {
             };
           }
 
-          const [createdStream] = await client.createDataStream(propertyId, dataStream);
+          const [createdStream] = await client.createDataStream({
+            parent: `properties/${propertyId}`,
+            dataStream,
+          });
 
           return createdStream;
         }
@@ -415,7 +432,14 @@ Custom dimension: "Customer Tier" → parameter: customer_tier, scope: EVENT`,
         inputParams: { propertyId, displayName, parameterName, scope },
       });
 
-      const client = getAnalyticsClient();
+      // Extract OAuth token from request
+      const oauthToken = extractOAuthToken(input);
+      if (!oauthToken) {
+        throw new Error('OAuth token required for Google Analytics API access');
+      }
+
+      // Create Analytics Admin client with user's OAuth token
+      const client = createAnalyticsAdminClient(oauthToken);
 
       // Build dry-run preview
       const approvalEnforcer = getApprovalEnforcer();
@@ -472,14 +496,15 @@ Custom dimension: "Customer Tier" → parameter: customer_tier, scope: EVENT`,
         confirmationToken,
         dryRun,
         async () => {
-          const dimension = {
-            displayName,
-            parameterName,
-            scope,
-            description: description || '',
-          };
-
-          const [createdDimension] = await client.createCustomDimension(propertyId, dimension);
+          const [createdDimension] = await client.createCustomDimension({
+            parent: `properties/${propertyId}`,
+            customDimension: {
+              displayName,
+              parameterName,
+              scope,
+              description: description || '',
+            },
+          });
 
           return createdDimension;
         }
@@ -574,7 +599,14 @@ export const createCustomMetricTool = {
         inputParams: { propertyId, displayName, parameterName },
       });
 
-      const client = getAnalyticsClient();
+      // Extract OAuth token from request
+      const oauthToken = extractOAuthToken(input);
+      if (!oauthToken) {
+        throw new Error('OAuth token required for Google Analytics API access');
+      }
+
+      // Create Analytics Admin client with user's OAuth token
+      const client = createAnalyticsAdminClient(oauthToken);
 
       const approvalEnforcer = getApprovalEnforcer();
       const dryRunBuilder = new DryRunResultBuilder(
@@ -613,8 +645,15 @@ export const createCustomMetricTool = {
         confirmationToken,
         dryRun,
         async () => {
-          const metric = { displayName, parameterName, measurementUnit, scope };
-          const [created] = await client.createCustomMetric(propertyId, metric);
+          const [created] = await client.createCustomMetric({
+            parent: `properties/${propertyId}`,
+            customMetric: {
+              displayName,
+              parameterName,
+              measurementUnit,
+              scope,
+            },
+          });
           return created;
         }
       );
@@ -678,7 +717,15 @@ export const createConversionEventTool = {
         inputParams: { propertyId, eventName },
       });
 
-      const client = getAnalyticsClient();
+      // Extract OAuth token from request
+      const oauthToken = extractOAuthToken(input);
+      if (!oauthToken) {
+        throw new Error('OAuth token required for Google Analytics API access');
+      }
+
+      // Create Analytics Admin client with user's OAuth token
+      const client = createAnalyticsAdminClient(oauthToken);
+
       const approvalEnforcer = getApprovalEnforcer();
 
       const dryRunBuilder = new DryRunResultBuilder(
@@ -716,7 +763,12 @@ export const createConversionEventTool = {
         confirmationToken,
         dryRun,
         async () => {
-          const [created] = await client.createConversionEvent(propertyId, eventName);
+          const [created] = await client.createConversionEvent({
+            parent: `properties/${propertyId}`,
+            conversionEvent: {
+              eventName,
+            },
+          });
           return created;
         }
       );
@@ -777,7 +829,15 @@ export const createGoogleAdsLinkTool = {
         inputParams: { propertyId, googleAdsCustomerId },
       });
 
-      const client = getAnalyticsClient();
+      // Extract OAuth token from request
+      const oauthToken = extractOAuthToken(input);
+      if (!oauthToken) {
+        throw new Error('OAuth token required for Google Analytics API access');
+      }
+
+      // Create Analytics Admin client with user's OAuth token
+      const client = createAnalyticsAdminClient(oauthToken);
+
       const approvalEnforcer = getApprovalEnforcer();
 
       const dryRunBuilder = new DryRunResultBuilder(
@@ -818,11 +878,12 @@ export const createGoogleAdsLinkTool = {
         confirmationToken,
         dryRun,
         async () => {
-          const link = {
-            customerId: googleAdsCustomerId,
-          };
-
-          const [createdLink] = await client.createGoogleAdsLink(propertyId, link);
+          const [createdLink] = await client.createGoogleAdsLink({
+            parent: `properties/${propertyId}`,
+            googleAdsLink: {
+              customerId: googleAdsCustomerId,
+            },
+          });
           return createdLink;
         }
       );

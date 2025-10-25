@@ -13,7 +13,7 @@ export declare const allTools: ({
         properties: {};
         required: never[];
     };
-    handler(_input: any): Promise<{
+    handler(input: any): Promise<{
         success: boolean;
         data: {
             accounts: {
@@ -1474,7 +1474,7 @@ export declare const allTools: ({
             };
             dimensions: any[];
             metrics: any[];
-            rows: import("../../analytics/types.js").ReportRow[];
+            rows: import("@google-analytics/data/build/protos/protos.js").google.analytics.data.v1beta.IRow[];
             rowCount: number;
             message: string;
         };
@@ -1517,7 +1517,7 @@ export declare const allTools: ({
             timeframe: string;
             dimensions: any[];
             metrics: any[];
-            rows: import("../../analytics/types.js").ReportRow[];
+            rows: import("@google-analytics/data/build/protos/protos.js").google.analytics.data.v1beta.IRow[];
             rowCount: number;
             message: string;
         };
@@ -1603,9 +1603,9 @@ export declare const allTools: ({
     handler(input: any): Promise<{
         success: boolean;
         data: {
-            rows: any;
-            rowCount: any;
-            jobId: any;
+            rows: any[];
+            rowCount: number;
+            jobId: string | undefined;
             message: string;
         };
     }>;
@@ -1655,7 +1655,7 @@ export declare const allTools: ({
     handler(input: any): Promise<{
         success: boolean;
         data: {
-            location: any;
+            location: import("googleapis").mybusinessbusinessinformation_v1.Schema$Location;
             message: string;
         };
     }>;
@@ -2088,7 +2088,7 @@ export declare const allTools: ({
             lastDownloaded: string | null | undefined;
             errors: string | number;
             warnings: string | number;
-            contents: import("googleapis").webmasters_v3.Schema$WmxSitemapContent[];
+            contents: import("googleapis").searchconsole_v1.Schema$WmxSitemapContent[];
         };
     }>;
 } | {
@@ -2193,6 +2193,405 @@ export declare const allTools: ({
             results: any;
             message: string;
         };
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            title: {
+                type: string;
+                description: string;
+            };
+            datasource: {
+                type: string;
+                description: string;
+            };
+            rows: {
+                type: string;
+                description: string;
+                items: {
+                    type: string;
+                    properties: {
+                        columns: {
+                            type: string;
+                            items: {
+                                type: string;
+                                properties: {
+                                    width: {
+                                        type: string;
+                                        enum: string[];
+                                    };
+                                    component: {
+                                        type: string;
+                                        properties: {
+                                            type: {
+                                                type: string;
+                                            };
+                                            title: {
+                                                type: string;
+                                            };
+                                            dimension: {
+                                                type: string;
+                                            };
+                                            metrics: {
+                                                type: string;
+                                                items: {
+                                                    type: string;
+                                                };
+                                            };
+                                        };
+                                    };
+                                };
+                                required: string[];
+                            };
+                        };
+                    };
+                    required: string[];
+                };
+            };
+            workspaceId: {
+                type: string;
+                description: string;
+            };
+            supabaseUrl: {
+                type: string;
+                description: string;
+            };
+            supabaseKey: {
+                type: string;
+                description: string;
+            };
+        };
+        required: string[];
+    };
+    handler(input: any): Promise<{
+        success: boolean;
+        dashboard_id: string;
+        dashboard_url: string;
+        workspace_id: string;
+        row_count: number;
+        component_count: number;
+        created_at: string;
+        error?: undefined;
+        details?: undefined;
+    } | {
+        success: boolean;
+        error: string;
+        details: string[];
+        dashboard_id?: undefined;
+        dashboard_url?: undefined;
+        workspace_id?: undefined;
+        row_count?: undefined;
+        component_count?: undefined;
+        created_at?: undefined;
+    } | {
+        success: boolean;
+        error: string;
+        dashboard_id?: undefined;
+        dashboard_url?: undefined;
+        workspace_id?: undefined;
+        row_count?: undefined;
+        component_count?: undefined;
+        created_at?: undefined;
+        details?: undefined;
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            dashboard_id: {
+                type: string;
+                description: string;
+            };
+            operation: {
+                type: string;
+                enum: string[];
+                description: string;
+            };
+            data: {
+                type: string;
+                description: string;
+            };
+            supabaseUrl: {
+                type: string;
+                description: string;
+            };
+            supabaseKey: {
+                type: string;
+                description: string;
+            };
+        };
+        required: string[];
+    };
+    handler(input: any): Promise<{
+        success: boolean;
+        dashboard_id: string;
+        operation: "add_row" | "remove_row" | "update_component";
+        row_count: any;
+        updated_at: string;
+        error?: undefined;
+        details?: undefined;
+    } | {
+        success: boolean;
+        error: string;
+        details: string[];
+        dashboard_id?: undefined;
+        operation?: undefined;
+        row_count?: undefined;
+        updated_at?: undefined;
+    } | {
+        success: boolean;
+        error: string;
+        dashboard_id?: undefined;
+        operation?: undefined;
+        row_count?: undefined;
+        updated_at?: undefined;
+        details?: undefined;
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {};
+    };
+    handler(_input: any): Promise<{
+        success: boolean;
+        templates: {
+            id: string;
+            name: string;
+            description: string;
+            datasource: string;
+            rows: import("../../wpp-analytics/tools/dashboards.js").RowConfig[];
+            component_count: number;
+            preview: string | undefined;
+        }[];
+        count: number;
+        error?: undefined;
+    } | {
+        success: boolean;
+        error: string;
+        templates?: undefined;
+        count?: undefined;
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            platform: {
+                type: string;
+                enum: string[];
+                description: string;
+            };
+            property: {
+                type: string;
+                description: string;
+            };
+            dateRange: {
+                type: string;
+                items: {
+                    type: string;
+                };
+                minItems: number;
+                maxItems: number;
+                description: string;
+            };
+            dimensions: {
+                type: string;
+                items: {
+                    type: string;
+                };
+                description: string;
+            };
+            tableName: {
+                type: string;
+                description: string;
+            };
+            __oauthToken: {
+                type: string;
+                description: string;
+            };
+        };
+        required: string[];
+    };
+    handler(input: any): Promise<{
+        success: boolean;
+        error: string;
+        table?: undefined;
+        tableName?: undefined;
+        rows_inserted?: undefined;
+        dimensions_pulled?: undefined;
+        platform?: undefined;
+        property?: undefined;
+        dateRange?: undefined;
+    } | {
+        success: boolean;
+        table: string;
+        tableName: any;
+        rows_inserted: number;
+        dimensions_pulled: any;
+        platform: any;
+        property: any;
+        dateRange: any;
+        error?: undefined;
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            bigqueryTable: {
+                type: string;
+                description: string;
+            };
+            template: {
+                type: string;
+                description: string;
+            };
+            rows: {
+                type: string;
+                description: string;
+            };
+            title: {
+                type: string;
+                description: string;
+            };
+            description: {
+                type: string;
+                description: string;
+            };
+            dateRange: {
+                type: string;
+                items: {
+                    type: string;
+                };
+                minItems: number;
+                maxItems: number;
+            };
+            platform: {
+                type: string;
+                enum: string[];
+            };
+            workspace_id: {
+                type: string;
+            };
+        };
+        required: string[];
+    };
+    handler(input: any): Promise<{
+        success: boolean;
+        error: string;
+        dashboard_id?: undefined;
+        dataset_id?: undefined;
+        dashboard_url?: undefined;
+        view_url?: undefined;
+        instructions?: undefined;
+        sql_statements?: undefined;
+        agent_workflow?: undefined;
+    } | {
+        success: boolean;
+        dashboard_id: string;
+        dataset_id: string;
+        dashboard_url: string;
+        view_url: string;
+        instructions: string;
+        sql_statements: {
+            step: number;
+            description: string;
+            sql: string;
+        }[];
+        agent_workflow: string[];
+        error?: undefined;
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            bigqueryTable: {
+                type: string;
+            };
+            dateRange: {
+                type: string;
+                items: {
+                    type: string;
+                };
+                minItems: number;
+                maxItems: number;
+            };
+        };
+        required: string[];
+    };
+    handler(input: any): Promise<{
+        success: boolean;
+        insights: {
+            totals: {
+                clicks: any;
+                impressions: any;
+                ctr: string;
+                position: any;
+            };
+            trends: {
+                firstWeekAvg: string;
+                lastWeekAvg: string;
+                clicksChange: string;
+                direction: string;
+            };
+            topPerformers: {
+                topPage: {
+                    url: any;
+                    clicks: any;
+                    share: string;
+                    position: any;
+                };
+                topQuery: {
+                    query: any;
+                    clicks: any;
+                    position: any;
+                };
+                top5Pages: {
+                    url: any;
+                    clicks: any;
+                }[];
+                top5Queries: {
+                    query: any;
+                    clicks: any;
+                    position: any;
+                }[];
+            };
+            deviceInsights: {
+                mobileShare: string;
+                mobileCTR: string;
+                desktopCTR: string;
+                mobileAdvantage: string;
+            };
+            geoInsights: {
+                topCountry: any;
+                topCountryShare: string;
+                highestCTRCountry: any;
+                highestCTR: string;
+                top5Countries: {
+                    country: any;
+                    clicks: any;
+                    ctr: string;
+                }[];
+            };
+        };
+        usage_instructions: string[];
+        error?: undefined;
+    } | {
+        success: boolean;
+        error: string;
+        insights?: undefined;
+        usage_instructions?: undefined;
     }>;
 })[];
 export declare const readTools: ({
@@ -2542,7 +2941,7 @@ export declare const readTools: ({
             lastDownloaded: string | null | undefined;
             errors: string | number;
             warnings: string | number;
-            contents: import("googleapis").webmasters_v3.Schema$WmxSitemapContent[];
+            contents: import("googleapis").searchconsole_v1.Schema$WmxSitemapContent[];
         };
     }>;
 } | {

@@ -18,6 +18,7 @@ import { analyticsTools } from '../../analytics/tools/index.js';
 import { businessProfileTools } from '../../business-profile/tools.js';
 import { bigQueryTools } from '../../bigquery/tools.js';
 import { serpTools } from '../../serp/tools.js';
+import { allWppAnalyticsTools } from '../../wpp-analytics/tools/index.js';
 export const allTools = [
     // GSC Read operations
     listPropertiesTool,
@@ -43,6 +44,8 @@ export const allTools = [
     ...bigQueryTools,
     // SERP API operations (1 tool)
     ...serpTools,
+    // WPP Analytics Platform dashboard tools (4 tools: create_dashboard, update_dashboard_layout, list_dashboard_templates, create_dashboard_from_platform)
+    ...allWppAnalyticsTools,
 ];
 export const readTools = [
     listPropertiesTool,

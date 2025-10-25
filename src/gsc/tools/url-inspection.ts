@@ -2,7 +2,7 @@
  * MCP Tools for URL Inspection operations
  */
 
-import { getGoogleClient } from '../google-client.js';
+import { extractOAuthToken, createGSCClient } from '../../shared/oauth-client-factory.js';
 import { getAuditLogger } from '../audit.js';
 import { validateGSCProperty } from '../validation.js';
 import { getLogger } from '../../shared/logger.js';
@@ -34,10 +34,18 @@ export const inspectUrlTool = {
     try {
       const { property, url } = input;
 
+      // Extract OAuth token from request
+      const oauthToken = extractOAuthToken(input);
+      if (!oauthToken) {
+        throw new Error('OAuth token required for Google Search Console API access');
+      }
+
+      // Create GSC client with user's OAuth token
+      const gscClient = createGSCClient(oauthToken);
+
       // Validate input
       validateGSCProperty(property);
 
-      const client = getGoogleClient();
       const audit = getAuditLogger();
 
       // Note: Access control removed for full property discovery mode
@@ -45,7 +53,13 @@ export const inspectUrlTool = {
 
       logger.info('Inspecting URL', { property, url });
 
-      const result = await client.inspectUrl(property, url);
+      const res = await gscClient.urlInspection.index.inspect({
+        requestBody: {
+          inspectionUrl: url,
+          siteUrl: property,
+        },
+      });
+      const result = res.data;
 
       // Parse the inspection result
       let formattedResult: any = {
@@ -62,7 +76,7 @@ export const inspectUrlTool = {
           lastCrawlTime: indexStatus.lastCrawlTime,
           robotsTxtState: indexStatus.robotsTxtState,
           indexingState: indexStatus.indexingState,
-          pageProtocol: indexStatus.pageProtocol,
+          pageProtocol: (indexStatus as any).pageProtocol,
           userCanonical: indexStatus.userCanonical,
           googleCanonical: indexStatus.googleCanonical,
         };

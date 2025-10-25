@@ -1,0 +1,53 @@
+TRANSLATION RULES BASED ON WEB RESEARCH
+=========================================
+
+GERMAN RULES:
+-------------
+✅ KEEP AS-IS (Legitimate loanwords/German words):
+- "Routine" → Acceptable German loanword, widely used in skincare
+- "Peptid/Peptide" → German word for peptide
+- "Retinoid" → Technical term, same in German
+- "Serum" → Standard German loanword
+- "Peeling" → Standard German word
+- "Gel" → Standard German word
+- "Sport" → German word
+- "Anti" → Acceptable in "Anti-Aging"
+
+❌ MUST TRANSLATE:
+- "vitality" → "Vitalität"
+- "brightness" → "Helligkeit"  
+- "weights" → "Gewichte"
+- "essentials" → "Essenzen" or "Grundlagen"
+- "textured" → "strukturiert"
+- "hormonal" → "hormonal" (wait - this IS used in German medical contexts, KEEP)
+- "argan" → "Argan" (proper noun - oil name, KEEP)
+
+⚠️ SPECIAL CASES:
+- "granactive retinoid" → Trade name (Hydroxypinacolone Retinoate), KEEP as-is
+- "routinen" → Already German plural, KEEP
+- "hautpflegeroutine" → Already German, KEEP
+
+PORTUGUESE RULES:
+-----------------
+✅ KEEP AS-IS (Portuguese words):
+- "natural" → IS a Portuguese word meaning "natural"
+- "molecular" → IS a Portuguese word meaning "molecular"  
+- "hormonal" → IS a Portuguese word meaning "hormonal"
+- "esportes/esporte" → Portuguese word for sports
+- "naturalmente" → Portuguese adverb "naturally"
+
+❌ MUST TRANSLATE:
+- "vitality" → "vitalidade"
+- "brightness" → "brilho" or "luminosidade"
+- "essentials" → "essenciais"
+- "textured" → "texturizado"
+- "argan" → "argan" (proper noun - oil name, KEEP)
+
+⚠️ SPECIAL CASES:
+- "granactive retinoid" → Trade name, KEEP as-is
+- "retinoid" → Technical term, commonly used as "retinoide" in Portuguese
+
+SUMMARY OF FIXES NEEDED:
+========================
+German: Fix only 4 words (vitality, brightness, weights, essentials, textured)
+Portuguese: Fix only 4 words (vitality, brightness, essentials, textured)

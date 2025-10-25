@@ -1,0 +1,611 @@
+/**
+ * Dashboard Builder Professional Styling
+ *
+ * Professional SaaS-grade enhancements for the dashboard builder
+ * Focus: Smooth transitions, professional shadows, consistent styling
+ */
+
+/* ================================================================
+   SMOOTH TRANSITIONS - Applied globally to interactive elements
+   ================================================================ */
+
+/* All interactive elements get smooth color transitions */
+button,
+a,
+input,
+select,
+textarea,
+[role="button"],
+[role="tab"],
+[role="menuitem"] {
+  transition: background-color 200ms ease-in-out,
+              border-color 200ms ease-in-out,
+              color 200ms ease-in-out,
+              box-shadow 200ms ease-in-out,
+              transform 150ms ease-in-out;
+}
+
+/* Smooth opacity transitions for hover states */
+.transition-opacity {
+  transition: opacity 200ms ease-in-out;
+}
+
+/* Smooth transform transitions for interactive elements */
+.transition-transform {
+  transition: transform 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Combined smooth transitions for cards and panels */
+.transition-all {
+  transition: all 200ms ease-in-out;
+}
+
+/* ================================================================
+   PROFESSIONAL SHADOWS - Consistent elevation system
+   ================================================================ */
+
+/* Shadow elevation system (matching Material Design principles) */
+.shadow-elevation-1 {
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+.shadow-elevation-2 {
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1),
+              0 1px 2px 0 rgba(0, 0, 0, 0.06);
+}
+
+.shadow-elevation-3 {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+              0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.shadow-elevation-4 {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1),
+              0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.shadow-elevation-5 {
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1),
+              0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+/* Topbar shadow - subtle but present */
+.topbar-shadow {
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.08);
+}
+
+/* Card shadow - standard for all cards */
+.card-shadow {
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1),
+              0 1px 2px 0 rgba(0, 0, 0, 0.06);
+}
+
+/* Card shadow on hover - elevated */
+.card-shadow-hover:hover {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+              0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+/* Modal shadow - maximum elevation */
+.modal-shadow {
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15),
+              0 10px 10px -5px rgba(0, 0, 0, 0.1);
+}
+
+/* ================================================================
+   PROFESSIONAL SCROLLBARS - Custom styling
+   ================================================================ */
+
+/* Webkit browsers (Chrome, Safari, Edge) */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--muted, #f8f9fa);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border, #dadce0);
+  border-radius: 4px;
+  border: 2px solid var(--muted, #f8f9fa);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--muted-foreground, #80868b);
+}
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border, #dadce0) var(--muted, #f8f9fa);
+}
+
+/* ================================================================
+   FOCUS STATES - Accessibility-friendly
+   ================================================================ */
+
+/* Professional focus ring for all interactive elements */
+*:focus-visible {
+  outline: 2px solid var(--ring, #4285f4);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Remove default focus for mouse users (but keep for keyboard) */
+*:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Button focus states */
+button:focus-visible,
+[role="button"]:focus-visible {
+  outline: 2px solid var(--ring, #4285f4);
+  outline-offset: 2px;
+}
+
+/* Input focus states */
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  border-color: var(--ring, #4285f4);
+  box-shadow: 0 0 0 3px rgba(66, 133, 244, 0.1);
+}
+
+/* ================================================================
+   HOVER STATES - Professional interactions
+   ================================================================ */
+
+/* Card hover - subtle lift effect */
+.card-hover {
+  transition: transform 200ms ease-in-out,
+              box-shadow 200ms ease-in-out;
+}
+
+.card-hover:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+              0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+/* Button hover - consistent across all buttons */
+button:hover:not(:disabled),
+[role="button"]:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+button:active:not(:disabled),
+[role="button"]:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+/* Link hover - smooth underline */
+a {
+  text-decoration: none;
+  position: relative;
+  transition: color 200ms ease-in-out;
+}
+
+a::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background-color: currentColor;
+  transition: width 200ms ease-in-out;
+}
+
+a:hover::after {
+  width: 100%;
+}
+
+/* ================================================================
+   LOADING STATES - Professional animations
+   ================================================================ */
+
+/* Spinner animation */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spinner {
+  animation: spin 0.8s linear infinite;
+}
+
+/* Pulse animation for loading states */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Skeleton loader */
+@keyframes skeleton-loading {
+  0% {
+    background-position: -200px 0;
+  }
+  100% {
+    background-position: calc(200px + 100%) 0;
+  }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--muted, #f8f9fa) 0%,
+    var(--muted-foreground, #e0e0e0) 20%,
+    var(--muted, #f8f9fa) 40%,
+    var(--muted, #f8f9fa) 100%
+  );
+  background-size: 200px 100%;
+  animation: skeleton-loading 1.5s ease-in-out infinite;
+}
+
+/* ================================================================
+   FADE ANIMATIONS - Smooth entry/exit
+   ================================================================ */
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+.fade-in {
+  animation: fadeIn 300ms ease-in-out;
+}
+
+.fade-out {
+  animation: fadeOut 300ms ease-in-out;
+}
+
+/* ================================================================
+   SLIDE ANIMATIONS - Professional transitions
+   ================================================================ */
+
+@keyframes slideInFromRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideInFromLeft {
+  from {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideInFromTop {
+  from {
+    transform: translateY(-20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.slide-in-right {
+  animation: slideInFromRight 300ms ease-out;
+}
+
+.slide-in-left {
+  animation: slideInFromLeft 300ms ease-out;
+}
+
+.slide-in-top {
+  animation: slideInFromTop 300ms ease-out;
+}
+
+/* ================================================================
+   ZOOM ANIMATIONS - For canvas zoom transitions
+   ================================================================ */
+
+@keyframes smoothZoom {
+  from {
+    transform: scale(var(--zoom-from, 1));
+  }
+  to {
+    transform: scale(var(--zoom-to, 1));
+  }
+}
+
+.smooth-zoom {
+  transition: transform 250ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ================================================================
+   GRID OVERLAY - For canvas alignment
+   ================================================================ */
+
+.grid-overlay {
+  background-image:
+    linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+/* Dark mode grid */
+.dark .grid-overlay {
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.1) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.1) 1px, transparent 1px);
+}
+
+/* ================================================================
+   EMPTY STATES - Professional messaging
+   ================================================================ */
+
+.empty-state {
+  padding: 4rem 2rem;
+  text-align: center;
+  color: var(--muted-foreground, #5f6368);
+}
+
+.empty-state-icon {
+  width: 4rem;
+  height: 4rem;
+  margin: 0 auto 1.5rem;
+  opacity: 0.4;
+  color: var(--muted-foreground, #5f6368);
+}
+
+.empty-state-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: var(--foreground, #202124);
+}
+
+.empty-state-description {
+  font-size: 0.875rem;
+  color: var(--muted-foreground, #5f6368);
+  max-width: 28rem;
+  margin: 0 auto;
+}
+
+/* ================================================================
+   ERROR STATES - Professional error handling
+   ================================================================ */
+
+.error-state {
+  padding: 2rem;
+  border-radius: 0.5rem;
+  background-color: rgba(234, 67, 53, 0.05);
+  border: 1px solid rgba(234, 67, 53, 0.2);
+  color: var(--destructive, #ea4335);
+}
+
+.error-state-title {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.error-state-message {
+  font-size: 0.875rem;
+  opacity: 0.9;
+}
+
+/* ================================================================
+   Z-INDEX LAYERING - Consistent stacking
+   ================================================================ */
+
+.z-canvas { z-index: 10; }
+.z-component { z-index: 20; }
+.z-sidebar { z-index: 40; }
+.z-topbar { z-index: 50; }
+.z-dropdown { z-index: 60; }
+.z-modal { z-index: 70; }
+.z-tooltip { z-index: 80; }
+.z-notification { z-index: 90; }
+
+/* ================================================================
+   BORDER STYLING - Consistent borders
+   ================================================================ */
+
+.border-professional {
+  border: 1px solid var(--border, #dadce0);
+}
+
+.border-professional-hover:hover {
+  border-color: var(--ring, #4285f4);
+}
+
+/* ================================================================
+   BACKGROUND COLORS - Consistent hierarchy
+   ================================================================ */
+
+.bg-canvas {
+  background-color: var(--muted, #f8f9fa);
+  background-color: rgba(var(--muted-rgb, 248 249 250) / 0.3);
+}
+
+.bg-surface {
+  background-color: var(--background, #ffffff);
+}
+
+.bg-surface-elevated {
+  background-color: var(--card, #ffffff);
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+}
+
+/* ================================================================
+   DASHBOARD BUILDER SPECIFIC STYLES
+   ================================================================ */
+
+/* Canvas container */
+.dashboard-canvas {
+  background-color: rgba(var(--muted-rgb, 248 249 250) / 0.3);
+  min-height: 100%;
+  position: relative;
+}
+
+/* Topbar styling */
+.dashboard-topbar {
+  background-color: var(--background, #ffffff);
+  border-bottom: 1px solid var(--border, #dadce0);
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.08);
+}
+
+/* Sidebar styling */
+.dashboard-sidebar {
+  background-color: var(--background, #ffffff);
+  border-left: 1px solid var(--border, #dadce0);
+  height: 100%;
+  overflow-y: auto;
+}
+
+/* Row container */
+.dashboard-row {
+  background-color: var(--background, #ffffff);
+  border: 1px solid var(--border, #dadce0);
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  transition: box-shadow 200ms ease-in-out;
+}
+
+.dashboard-row:hover {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+              0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+/* Component container */
+.dashboard-component {
+  background-color: var(--card, #ffffff);
+  border: 1px solid var(--border, #dadce0);
+  border-radius: 0.375rem;
+  padding: 1rem;
+  transition: border-color 200ms ease-in-out,
+              box-shadow 200ms ease-in-out;
+}
+
+.dashboard-component:hover {
+  border-color: var(--ring, #4285f4);
+}
+
+.dashboard-component.selected {
+  border-color: var(--ring, #4285f4);
+  box-shadow: 0 0 0 3px rgba(66, 133, 244, 0.1);
+}
+
+/* ================================================================
+   RESPONSIVE DESIGN - Mobile-friendly
+   ================================================================ */
+
+@media (max-width: 768px) {
+  /* Adjust sidebar width on mobile */
+  .dashboard-sidebar {
+    width: 100%;
+    max-width: 100vw;
+  }
+
+  /* Stack layout on mobile */
+  .dashboard-row {
+    flex-direction: column !important;
+  }
+
+  /* Adjust spacing on mobile */
+  .dashboard-canvas {
+    padding: 1rem;
+  }
+}
+
+/* ================================================================
+   DARK MODE ENHANCEMENTS
+   ================================================================ */
+
+.dark .topbar-shadow {
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.3);
+}
+
+.dark .card-shadow {
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.3),
+              0 1px 2px 0 rgba(0, 0, 0, 0.2);
+}
+
+.dark .modal-shadow {
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5),
+              0 10px 10px -5px rgba(0, 0, 0, 0.3);
+}
+
+.dark .dashboard-row {
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.2);
+}
+
+.dark .dashboard-row:hover {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3),
+              0 2px 4px -1px rgba(0, 0, 0, 0.2);
+}
+
+/* ================================================================
+   ACCESSIBILITY - Reduced motion support
+   ================================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ================================================================
+   PRINT STYLES - Clean printing
+   ================================================================ */
+
+@media print {
+  .dashboard-topbar,
+  .dashboard-sidebar,
+  .no-print {
+    display: none !important;
+  }
+
+  .dashboard-canvas {
+    background-color: white !important;
+  }
+
+  .dashboard-row,
+  .dashboard-component {
+    box-shadow: none !important;
+    border: 1px solid #e0e0e0 !important;
+  }
+}

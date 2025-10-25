@@ -1,248 +1,183 @@
-# WPP Media MCP Servers
+# Supabase CLI
 
-Enterprise-grade Model Context Protocol (MCP) servers for secure AI-powered marketing automation across Google platforms.
+[![Coverage Status](https://coveralls.io/repos/github/supabase/cli/badge.svg?branch=main)](https://coveralls.io/github/supabase/cli?branch=main) [![Bitbucket Pipelines](https://img.shields.io/bitbucket/pipelines/supabase-cli/setup-cli/master?style=flat-square&label=Bitbucket%20Canary)](https://bitbucket.org/supabase-cli/setup-cli/pipelines) [![Gitlab Pipeline Status](https://img.shields.io/gitlab/pipeline-status/sweatybridge%2Fsetup-cli?label=Gitlab%20Canary)
+](https://gitlab.com/sweatybridge/setup-cli/-/pipelines)
 
-## 🚀 Overview
+[Supabase](https://supabase.io) is an open source Firebase alternative. We're building the features of Firebase using enterprise-grade open source tools.
 
-This project provides a unified MCP server that connects AI agents (Claude, GPT-4, Gemini) to multiple Google Marketing APIs, enabling WPP Media's global network to automate marketing workflows while maintaining strict safety controls.
+This repository contains all the functionality for Supabase CLI.
 
-### Integrated APIs (7)
+- [x] Running Supabase locally
+- [x] Managing database migrations
+- [x] Creating and deploying Supabase Functions
+- [x] Generating types directly from your database schema
+- [x] Making authenticated HTTP requests to [Management API](https://supabase.com/docs/reference/api/introduction)
 
-1. **Google Search Console** - Organic search data, sitemaps, URL inspection (10 tools)
-2. **Chrome UX Report (CrUX)** - Core Web Vitals, performance metrics (5 tools)
-3. **Google Ads** - Campaign management, budgets, keywords, conversions, audiences (25 tools)
-4. **Google Analytics 4** - User behavior, conversions, reporting, property management (11 tools)
-5. **Google Business Profile** - Location management, reviews, local SEO (3 tools)
-6. **BigQuery** - Data blending, SQL queries, cross-platform analysis (3 tools)
-7. **Bright Data SERP** - Unlimited Google searches, rank tracking (1 tool)
+## Getting started
 
-**Total: 58 production-ready MCP tools** (+27 from expansion)
+### Install the CLI
 
-### Future Expansion
-
-- Google Ads: +15 additional tools (asset management, advanced bidding, batch operations)
-- Google Analytics: +19 additional Admin API methods
-- Business Profile: +9 tools (review management, posts, insights)
-- BigQuery: +17 tools (table management, data transfers)
-- Bright Data: +9 SERP tools (shopping, news, local, rank tracking)
-- BI Platform: Metabase/Superset integration
-
-## 🛡️ Safety Features
-
-### 9-Layer Protection System
-
-1. **Account Authorization** - Two-layer auth (OAuth + Manager approval)
-2. **Approval Workflow** - Preview → Confirm (60s) → Execute for all write operations
-3. **Vagueness Detection** - Blocks unclear requests, forces clarification
-4. **Budget Caps** - >500% budget changes automatically blocked
-5. **Bulk Limits** - Max 20/50 items per operation
-6. **Snapshot System** - Rollback capability with before/after states
-7. **Financial Impact** - Real-time cost calculation from Google Ads API
-8. **Dual Notifications** - Central admin (real-time) + agency managers (hourly batches)
-9. **Change Verification** - Cross-reference with Google Ads change history API
-
-## 📊 Current Status
-
-**Phase 1 & 2: COMPLETE** ✅ (100%)
-- All core functionality + safety features complete
-- 58 MCP tools across 7 APIs
-- 9 safety features implemented (95% - email sending pending)
-- 13 Claude Code workflow skills
-- HTTP server for OMA integration ready
-- 23 automated tests
-- 30+ comprehensive documentation files
-- 0 compilation errors
-
-**Phase 3: API Expansion** ⏳ (Partially Complete)
-- ✅ Google Ads: +13 tools (25 total) - Conversion tracking, audiences, keyword planning
-- ✅ Google Analytics: +6 Admin API tools (11 total) - Property setup, custom tracking
-- ✅ Business Profile: 3 tools - Location management
-- ✅ BigQuery: 3 tools - Data blending with SQL queries
-- ✅ Bright Data SERP: 1 tool - Unlimited Google searches
-- 📋 Remaining: 60 tools across API expansions (documented, ready to implement)
-
-## 🏗️ Architecture
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                     AI Agent (Claude)                        │
-└────────────────────────────┬────────────────────────────────┘
-                             │
-                             ▼
-┌─────────────────────────────────────────────────────────────┐
-│              MCP Server (TypeScript/Node.js)                 │
-│                                                               │
-│  ┌────────────────────────────────────────────────────────┐ │
-│  │ Safety Layer (9 features)                               │ │
-│  │ - Approval workflow                                     │ │
-│  │ - Vagueness detection                                   │ │
-│  │ - Budget caps & financial impact                        │ │
-│  │ - Rollback system                                       │ │
-│  └────────────────────────────────────────────────────────┘ │
-│                             │                                │
-│                             ▼                                │
-│  ┌────────────────────────────────────────────────────────┐ │
-│  │ MCP Tools (31 tools across 4 APIs)                     │ │
-│  └────────────────────────────────────────────────────────┘ │
-│                             │                                │
-│                             ▼                                │
-│  ┌────────────────────────────────────────────────────────┐ │
-│  │ Google API Clients (OAuth 2.0, auto-refresh)           │ │
-│  └────────────────────────────────────────────────────────┘ │
-└─────────────────────────────────────────────────────────────┘
-                             │
-                             ▼
-┌─────────────────────────────────────────────────────────────┐
-│                   Google Cloud APIs                          │
-│  Search Console, Ads, Analytics, CrUX                        │
-└─────────────────────────────────────────────────────────────┘
-```
-
-## 🚦 Quick Start
-
-### Prerequisites
-
-- Node.js 18+
-- Google OAuth 2.0 credentials
-- Google Ads Developer Token (for Ads API)
-- CrUX API Key (for Core Web Vitals)
-
-### Installation
+Available via [NPM](https://www.npmjs.com) as dev dependency. To install:
 
 ```bash
-npm install
-npm run build
+npm i supabase --save-dev
 ```
 
-### Configuration
+To install the beta release channel:
 
-1. Set up OAuth credentials in `.env`
-2. Run authentication setup:
 ```bash
-npm run setup:auth
+npm i supabase@beta --save-dev
 ```
 
-3. Configure account access in `config/gsc-config.json`
+When installing with yarn 4, you need to disable experimental fetch with the following nodejs config.
 
-### Running the Server
+```
+NODE_OPTIONS=--no-experimental-fetch yarn add supabase
+```
 
-**STDIO mode** (for local development with Claude Code):
+> **Note**
+For Bun versions below v1.0.17, you must add `supabase` as a [trusted dependency](https://bun.sh/guides/install/trusted) before running `bun add -D supabase`.
+
+<details>
+  <summary><b>macOS</b></summary>
+
+  Available via [Homebrew](https://brew.sh). To install:
+
+  ```sh
+  brew install supabase/tap/supabase
+  ```
+
+  To install the beta release channel:
+  
+  ```sh
+  brew install supabase/tap/supabase-beta
+  brew link --overwrite supabase-beta
+  ```
+  
+  To upgrade:
+
+  ```sh
+  brew upgrade supabase
+  ```
+</details>
+
+<details>
+  <summary><b>Windows</b></summary>
+
+  Available via [Scoop](https://scoop.sh). To install:
+
+  ```powershell
+  scoop bucket add supabase https://github.com/supabase/scoop-bucket.git
+  scoop install supabase
+  ```
+
+  To upgrade:
+
+  ```powershell
+  scoop update supabase
+  ```
+</details>
+
+<details>
+  <summary><b>Linux</b></summary>
+
+  Available via [Homebrew](https://brew.sh) and Linux packages.
+
+  #### via Homebrew
+
+  To install:
+
+  ```sh
+  brew install supabase/tap/supabase
+  ```
+
+  To upgrade:
+
+  ```sh
+  brew upgrade supabase
+  ```
+
+  #### via Linux packages
+
+  Linux packages are provided in [Releases](https://github.com/supabase/cli/releases). To install, download the `.apk`/`.deb`/`.rpm`/`.pkg.tar.zst` file depending on your package manager and run the respective commands.
+
+  ```sh
+  sudo apk add --allow-untrusted <...>.apk
+  ```
+
+  ```sh
+  sudo dpkg -i <...>.deb
+  ```
+
+  ```sh
+  sudo rpm -i <...>.rpm
+  ```
+
+  ```sh
+  sudo pacman -U <...>.pkg.tar.zst
+  ```
+</details>
+
+<details>
+  <summary><b>Other Platforms</b></summary>
+
+  You can also install the CLI via [go modules](https://go.dev/ref/mod#go-install) without the help of package managers.
+
+  ```sh
+  go install github.com/supabase/cli@latest
+  ```
+
+  Add a symlink to the binary in `$PATH` for easier access:
+
+  ```sh
+  ln -s "$(go env GOPATH)/bin/cli" /usr/bin/supabase
+  ```
+
+  This works on other non-standard Linux distros.
+</details>
+
+<details>
+  <summary><b>Community Maintained Packages</b></summary>
+
+  Available via [pkgx](https://pkgx.sh/). Package script [here](https://github.com/pkgxdev/pantry/blob/main/projects/supabase.com/cli/package.yml).
+  To install in your working directory:
+
+  ```bash
+  pkgx install supabase
+  ```
+
+  Available via [Nixpkgs](https://nixos.org/). Package script [here](https://github.com/NixOS/nixpkgs/blob/master/pkgs/development/tools/supabase-cli/default.nix).
+</details>
+
+### Run the CLI
+
 ```bash
-npm run start:gsc
+supabase bootstrap
 ```
 
-**HTTP mode** (for OMA integration):
+Or using npx:
+
 ```bash
-HTTP_PORT=3000 node dist/http-server/index.js
+npx supabase bootstrap
 ```
 
-## 📚 Documentation
+The bootstrap command will guide you through the process of setting up a Supabase project using one of the [starter](https://github.com/supabase-community/supabase-samples/blob/main/samples.json) templates.
 
-**Start Here:**
-- [Getting Started](GETTING-STARTED.md) - 5-minute quick start
-- [Documentation Index](docs/00-START-HERE.md) - Complete docs guide
+## Docs
 
-**Essential Reading:**
-- [Project Overview](docs/architecture/CLAUDE.md) - Complete architecture and design
-- [Safety Audit](docs/safety/SAFETY-AUDIT.md) - Risk analysis and protections
-- [Skills Guide](docs/guides/SKILLS-GUIDE.md) - 13 Claude Code workflow skills
+Command & config reference can be found [here](https://supabase.com/docs/reference/cli/about).
 
-**For Practitioners:**
-- [Skills Guide](docs/guides/SKILLS-GUIDE.md) - How to use 13 workflow skills
-- [Current Status](docs/status/CURRENT-STATUS.md) - What's available now
+## Breaking changes
 
-**For Developers:**
-- [Setup Guide](docs/guides/SETUP-GUIDE.md) - OAuth and authentication
-- [Integration Guide](docs/guides/INTEGRATION-GUIDE.md) - How to create new tools
-- [Testing Guide](docs/guides/TESTING-GUIDE.md) - Testing procedures
-- [Agent Handover](docs/internal/AGENT-HANDOVER.md) - Development guide
+We follow semantic versioning for changes that directly impact CLI commands, flags, and configurations.
 
-**For Deployment:**
-- [Production Readiness](docs/safety/PRODUCTION-READINESS.md) - Rollout plan
-- [AWS Deployment](docs/architecture/AWS-DEPLOYMENT-GUIDE.md) - Infrastructure guide
+However, due to dependencies on other service images, we cannot guarantee that schema migrations, seed.sql, and generated types will always work for the same CLI major version. If you need such guarantees, we encourage you to pin a specific version of CLI in package.json.
 
-**API References:**
-- [Google Ads](docs/api-reference/GOOGLE-ADS-API-REFERENCE.md) - 25 tools (40 documented)
-- [Search Console](docs/api-reference/GSC-API-REFERENCE.md) - 10 tools
-- [All APIs](docs/api-reference/) - Complete API documentation
+## Developing
 
-**Browse all docs:** [docs/00-START-HERE.md](docs/00-START-HERE.md)
+To run from source:
 
-## 🧪 Testing
-
-Run automated tests:
-```bash
-npm test
+```sh
+# Go >= 1.22
+go run . help
 ```
-
-Run manual integration tests:
-```bash
-npm run test:ads
-```
-
-## 💼 Business Impact
-
-### Investment
-- Development: ~$15K (15 hours)
-- Infrastructure: ~$1,100/month (AWS + Google APIs)
-
-### Return
-- Manual work savings: ~$150K/month
-- Error prevention: ~$20K/month
-- **Total ROI: 13,000%+ annually**
-- **Payback: <1 week**
-
-## 📈 Metrics
-
-- **Code:** 15,000 lines of TypeScript
-- **Tools:** 31 (4 APIs), expanding to 141+ (10 APIs)
-- **Safety Features:** 9 comprehensive layers
-- **Documentation:** 1,000+ pages
-- **Tests:** 23 automated tests
-- **Compilation:** 0 errors, 0 warnings
-
-## 🔧 Tech Stack
-
-- **Language:** TypeScript (strict mode)
-- **Runtime:** Node.js 18+
-- **Framework:** @modelcontextprotocol/sdk
-- **APIs:** googleapis, google-ads-api, @google-analytics/data
-- **Validation:** Zod
-- **HTTP Server:** Express
-- **Testing:** Jest
-
-## 🤝 Contributing
-
-This is an internal WPP Media project. For questions or collaboration:
-- Contact: dogancanbaris@wpp.com
-- Linear Team: MCP Servers
-
-## 📜 License
-
-Proprietary - WPP Media Internal Use Only
-
-## 🎯 Roadmap
-
-### ✅ Phase 1 & 2 Complete (Oct 2025)
-- Core MCP server with 31 tools
-- All safety features implemented
-- HTTP server for OMA integration
-- Comprehensive documentation
-
-### 📋 Phase 3 Planned (Nov 2025)
-- Google Ads expansion (+28 services)
-- Google Analytics Admin (+25 methods)
-- New APIs (Business Profile, BigQuery, Bright Data)
-- BI platform integration (Metabase/Superset)
-
-### 🚀 Phase 4 Future
-- AWS production deployment
-- Multi-user rollout (1,000+ practitioners)
-- Additional APIs (Facebook, LinkedIn, etc.)
-- Advanced ML-powered optimization
-
----
-
-**Built with ❤️ by the WPP Media Innovation Team**
-
-Last Updated: October 19, 2025

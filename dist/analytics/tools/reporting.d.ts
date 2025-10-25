@@ -53,7 +53,7 @@ export declare const runAnalyticsReportTool: {
             };
             dimensions: any[];
             metrics: any[];
-            rows: import("../types.js").ReportRow[];
+            rows: import("@google-analytics/data/build/protos/protos.js").google.analytics.data.v1beta.IRow[];
             rowCount: number;
             message: string;
         };
@@ -100,7 +100,7 @@ export declare const getRealtimeUsersTool: {
             timeframe: string;
             dimensions: any[];
             metrics: any[];
-            rows: import("../types.js").ReportRow[];
+            rows: import("@google-analytics/data/build/protos/protos.js").google.analytics.data.v1beta.IRow[];
             rowCount: number;
             message: string;
         };

@@ -91,11 +91,11 @@ export declare const InspectURLSchema: z.ZodObject<{
     property: z.ZodString;
     url: z.ZodString;
 }, "strip", z.ZodTypeAny, {
-    property: string;
     url: string;
+    property: string;
 }, {
-    property: string;
     url: string;
+    property: string;
 }>;
 /**
  * Add Property Schema

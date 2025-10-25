@@ -3,8 +3,9 @@
  * Includes: BiddingStrategyService, BiddingSeasonalityAdjustmentService
  */
 
-import { getGoogleAdsClient } from '../client.js';
 import { getLogger } from '../../shared/logger.js';
+import { extractRefreshToken } from '../../shared/oauth-client-factory.js';
+import { createGoogleAdsClientFromRefreshToken } from '../client.js';
 
 const logger = getLogger('ads.tools.bidding');
 
@@ -40,7 +41,20 @@ export const listBiddingStrategiesTool = {
     try {
       const { customerId } = input;
 
-      const client = getGoogleAdsClient();
+      // Extract OAuth tokens from request
+      const refreshToken = extractRefreshToken(input);
+      if (!refreshToken) {
+        throw new Error('Refresh token required for Google Ads API. OMA must provide X-Google-Refresh-Token header.');
+      }
+
+      const developerToken = process.env.GOOGLE_ADS_DEVELOPER_TOKEN;
+      if (!developerToken) {
+        throw new Error('GOOGLE_ADS_DEVELOPER_TOKEN not configured');
+      }
+
+      // Create Google Ads client with user's refresh token
+      const client = createGoogleAdsClientFromRefreshToken(refreshToken, developerToken);
+      const customer = client.getCustomer(customerId);
 
       logger.info('Listing bidding strategies', { customerId });
 
@@ -58,7 +72,6 @@ export const listBiddingStrategiesTool = {
         ORDER BY bidding_strategy.name
       `;
 
-      const customer = client.getCustomer(customerId);
       const results = await customer.query(query);
 
       const strategies = [];

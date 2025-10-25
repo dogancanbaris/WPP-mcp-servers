@@ -20,8 +20,6 @@ import { getAuditLogger } from './audit.js';
 import { initializeGoogleClient } from './google-client.js';
 import { initializeGoogleAdsClient } from '../ads/client.js';
 import { initializeAnalyticsClient } from '../analytics/client.js';
-import { initializeBusinessProfileClient } from '../business-profile/client.js';
-import { initializeBigQueryClient } from '../bigquery/client.js';
 import { initializeSerpApiClient } from '../serp/client.js';
 import { allTools } from './tools/index.js';
 
@@ -174,23 +172,11 @@ class GSCMCPServer {
         // Don't fail startup if Analytics isn't configured
       }
 
-      // Initialize Google Business Profile client
-      try {
-        const businessProfileClient = initializeBusinessProfileClient(this.authManager.getAuthenticatedClient());
-        await businessProfileClient.initialize();
-        logger.info('Google Business Profile API client initialized');
-      } catch (error) {
-        logger.warn('Google Business Profile API initialization failed (optional)', error as Error);
-      }
+      // Google Business Profile now uses OAuth per-request pattern (no global initialization needed)
+      logger.info('Google Business Profile API client uses per-request OAuth');
 
-      // Initialize BigQuery client
-      try {
-        const bigQueryClient = initializeBigQueryClient(this.authManager.getAuthenticatedClient());
-        await bigQueryClient.initialize();
-        logger.info('BigQuery API client initialized');
-      } catch (error) {
-        logger.warn('BigQuery API initialization failed (optional)', error as Error);
-      }
+      // BigQuery now uses OAuth per-request pattern (no global initialization needed)
+      logger.info('BigQuery API client uses per-request OAuth');
 
       // Initialize Bright Data SERP API client
       const brightDataApiKey = process.env.BRIGHT_DATA_API_KEY;

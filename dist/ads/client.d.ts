@@ -95,4 +95,8 @@ export declare function getGoogleAdsClient(): GoogleAdsClient;
  * Initialize Google Ads client
  */
 export declare function initializeGoogleAdsClient(clientId: string, clientSecret: string, developerToken: string, refreshToken: string): GoogleAdsClient;
+/**
+ * Create Google Ads client from refresh token (per-request)
+ */
+export declare function createGoogleAdsClientFromRefreshToken(refreshToken: string, developerToken: string): GoogleAdsClient;
 //# sourceMappingURL=client.d.ts.map

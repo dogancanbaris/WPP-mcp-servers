@@ -23,7 +23,7 @@ export declare const googleAdsTools: ({
         properties: {};
         required: never[];
     };
-    handler(_input: any): Promise<{
+    handler(input: any): Promise<{
         success: boolean;
         data: {
             accounts: {
@@ -1099,7 +1099,7 @@ export declare const readOnlyAdsTools: ({
         properties: {};
         required: never[];
     };
-    handler(_input: any): Promise<{
+    handler(input: any): Promise<{
         success: boolean;
         data: {
             accounts: {

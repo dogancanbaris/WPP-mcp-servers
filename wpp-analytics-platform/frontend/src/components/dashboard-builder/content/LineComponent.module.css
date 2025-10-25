@@ -1,0 +1,207 @@
+/**
+ * LineComponent CSS Module
+ *
+ * Additional styling for line components beyond inline styles.
+ * Most styling is handled via inline styles for maximum flexibility,
+ * but these classes provide optional enhancements.
+ */
+
+.line-component {
+  /* Base class - no styles needed as everything is inline */
+}
+
+/* Smooth transitions for hover effects */
+.line-component-animated {
+  transition: all 0.3s ease-in-out;
+}
+
+.line-component-animated:hover {
+  opacity: 0.7;
+}
+
+/* Gradient line variations (for advanced use cases) */
+.line-gradient-horizontal {
+  background: linear-gradient(
+    to right,
+    transparent 0%,
+    currentColor 50%,
+    transparent 100%
+  );
+  border: none !important;
+}
+
+.line-gradient-vertical {
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    currentColor 50%,
+    transparent 100%
+  );
+  border: none !important;
+}
+
+/* Shadow effects for elevated lines */
+.line-shadow-sm {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.line-shadow-md {
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.line-shadow-lg {
+  box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+}
+
+/* Glow effects for accent lines */
+.line-glow-blue {
+  box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+}
+
+.line-glow-green {
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
+}
+
+.line-glow-purple {
+  box-shadow: 0 0 10px rgba(139, 92, 246, 0.5);
+}
+
+/* Responsive utilities */
+@media (max-width: 768px) {
+  .line-component-responsive-hide {
+    display: none;
+  }
+}
+
+@media (min-width: 769px) {
+  .line-component-responsive-show-desktop {
+    display: block;
+  }
+}
+
+/* Print styles - ensure lines print correctly */
+@media print {
+  .line-component {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .line-component-auto-dark {
+    filter: invert(1) hue-rotate(180deg);
+  }
+}
+
+/* Accessibility - high contrast mode */
+@media (prefers-contrast: high) {
+  .line-component {
+    opacity: 1 !important;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .line-component-animated {
+    transition: none;
+  }
+}
+
+/* Interactive line (clickable/hoverable) */
+.line-component-interactive {
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+}
+
+.line-component-interactive:hover {
+  transform: scaleY(1.5);
+  opacity: 0.8;
+}
+
+.line-component-interactive:active {
+  transform: scaleY(1.2);
+  opacity: 0.6;
+}
+
+/* Loading state animation */
+@keyframes line-pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
+.line-component-loading {
+  animation: line-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Custom patterns using repeating gradients */
+.line-pattern-dots {
+  background-image: repeating-linear-gradient(
+    90deg,
+    currentColor,
+    currentColor 2px,
+    transparent 2px,
+    transparent 8px
+  );
+  border: none !important;
+}
+
+.line-pattern-diagonal {
+  background-image: repeating-linear-gradient(
+    45deg,
+    currentColor,
+    currentColor 4px,
+    transparent 4px,
+    transparent 8px
+  );
+  border: none !important;
+}
+
+/* Double line effect */
+.line-component-double {
+  position: relative;
+}
+
+.line-component-double::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 4px;
+  height: 1px;
+  background: currentColor;
+}
+
+/* Ornamental ends */
+.line-ornament-start::before {
+  content: '◆';
+  position: absolute;
+  left: -20px;
+  color: currentColor;
+}
+
+.line-ornament-end::after {
+  content: '◆';
+  position: absolute;
+  right: -20px;
+  color: currentColor;
+}
+
+.line-ornament-both::before,
+.line-ornament-both::after {
+  content: '◆';
+  position: absolute;
+  color: currentColor;
+}
+
+.line-ornament-both::before {
+  left: -20px;
+}
+
+.line-ornament-both::after {
+  right: -20px;
+}

@@ -2,10 +2,10 @@
  * MCP Tools for Google Analytics Admin API
  * Property management, data streams, custom dimensions/metrics, audiences, conversion events
  */
-import { getAnalyticsClient } from '../client.js';
 import { getLogger } from '../../shared/logger.js';
 import { getApprovalEnforcer, DryRunResultBuilder } from '../../shared/approval-enforcer.js';
 import { detectAndEnforceVagueness } from '../../shared/vagueness-detector.js';
+import { extractOAuthToken, createAnalyticsAdminClient } from '../../shared/oauth-client-factory.js';
 const logger = getLogger('analytics.tools.admin');
 /**
  * Create GA4 property
@@ -77,7 +77,13 @@ export const createPropertyTool = {
                 inputText: `create property ${displayName}`,
                 inputParams: { accountId, displayName },
             });
-            const client = getAnalyticsClient();
+            // Extract OAuth token from request
+            const oauthToken = extractOAuthToken(input);
+            if (!oauthToken) {
+                throw new Error('OAuth token required for Google Analytics API access');
+            }
+            // Create Analytics Admin client with user's OAuth token
+            const client = createAnalyticsAdminClient(oauthToken);
             // Build dry-run preview
             const approvalEnforcer = getApprovalEnforcer();
             const dryRunBuilder = new DryRunResultBuilder('create_analytics_property', 'Google Analytics', accountId);
@@ -108,14 +114,15 @@ export const createPropertyTool = {
             // Execute with confirmation
             logger.info('Creating GA4 property with confirmation', { accountId, displayName });
             const result = await approvalEnforcer.validateAndExecute(confirmationToken, dryRun, async () => {
-                const property = {
-                    parent: `accounts/${accountId}`,
-                    displayName,
-                    timeZone,
-                    currencyCode,
-                    industryCategory: industryCategory || undefined,
-                };
-                const [createdProperty] = await client.createProperty(accountId, property);
+                const [createdProperty] = await client.createProperty({
+                    property: {
+                        parent: `accounts/${accountId}`,
+                        displayName,
+                        timeZone,
+                        currencyCode,
+                        industryCategory: industryCategory || undefined,
+                    },
+                });
                 return createdProperty;
             });
             const propertyId = result.name?.split('/')[1] || '';
@@ -205,7 +212,13 @@ export const createDataStreamTool = {
             if (streamType === 'WEB' && !websiteUrl) {
                 throw new Error('websiteUrl is required for WEB data streams');
             }
-            const client = getAnalyticsClient();
+            // Extract OAuth token from request
+            const oauthToken = extractOAuthToken(input);
+            if (!oauthToken) {
+                throw new Error('OAuth token required for Google Analytics API access');
+            }
+            // Create Analytics Admin client with user's OAuth token
+            const client = createAnalyticsAdminClient(oauthToken);
             // Build dry-run preview
             const approvalEnforcer = getApprovalEnforcer();
             const dryRunBuilder = new DryRunResultBuilder('create_data_stream', 'Google Analytics', propertyId);
@@ -244,7 +257,10 @@ export const createDataStreamTool = {
                         defaultUri: websiteUrl,
                     };
                 }
-                const [createdStream] = await client.createDataStream(propertyId, dataStream);
+                const [createdStream] = await client.createDataStream({
+                    parent: `properties/${propertyId}`,
+                    dataStream,
+                });
                 return createdStream;
             });
             const streamId = result.name?.split('/')[3] || '';
@@ -341,7 +357,13 @@ Custom dimension: "Customer Tier" → parameter: customer_tier, scope: EVENT`,
                 inputText: `create custom dimension ${displayName}`,
                 inputParams: { propertyId, displayName, parameterName, scope },
             });
-            const client = getAnalyticsClient();
+            // Extract OAuth token from request
+            const oauthToken = extractOAuthToken(input);
+            if (!oauthToken) {
+                throw new Error('OAuth token required for Google Analytics API access');
+            }
+            // Create Analytics Admin client with user's OAuth token
+            const client = createAnalyticsAdminClient(oauthToken);
             // Build dry-run preview
             const approvalEnforcer = getApprovalEnforcer();
             const dryRunBuilder = new DryRunResultBuilder('create_custom_dimension', 'Google Analytics', propertyId);
@@ -371,13 +393,15 @@ Custom dimension: "Customer Tier" → parameter: customer_tier, scope: EVENT`,
             // Execute with confirmation
             logger.info('Creating custom dimension with confirmation', { propertyId, displayName });
             const result = await approvalEnforcer.validateAndExecute(confirmationToken, dryRun, async () => {
-                const dimension = {
-                    displayName,
-                    parameterName,
-                    scope,
-                    description: description || '',
-                };
-                const [createdDimension] = await client.createCustomDimension(propertyId, dimension);
+                const [createdDimension] = await client.createCustomDimension({
+                    parent: `properties/${propertyId}`,
+                    customDimension: {
+                        displayName,
+                        parameterName,
+                        scope,
+                        description: description || '',
+                    },
+                });
                 return createdDimension;
             });
             return {
@@ -467,7 +491,13 @@ export const createCustomMetricTool = {
                 inputText: `create custom metric ${displayName}`,
                 inputParams: { propertyId, displayName, parameterName },
             });
-            const client = getAnalyticsClient();
+            // Extract OAuth token from request
+            const oauthToken = extractOAuthToken(input);
+            if (!oauthToken) {
+                throw new Error('OAuth token required for Google Analytics API access');
+            }
+            // Create Analytics Admin client with user's OAuth token
+            const client = createAnalyticsAdminClient(oauthToken);
             const approvalEnforcer = getApprovalEnforcer();
             const dryRunBuilder = new DryRunResultBuilder('create_custom_metric', 'Google Analytics', propertyId);
             dryRunBuilder.addChange({
@@ -486,8 +516,15 @@ export const createCustomMetricTool = {
             }
             logger.info('Creating custom metric with confirmation', { propertyId, displayName });
             const result = await approvalEnforcer.validateAndExecute(confirmationToken, dryRun, async () => {
-                const metric = { displayName, parameterName, measurementUnit, scope };
-                const [created] = await client.createCustomMetric(propertyId, metric);
+                const [created] = await client.createCustomMetric({
+                    parent: `properties/${propertyId}`,
+                    customMetric: {
+                        displayName,
+                        parameterName,
+                        measurementUnit,
+                        scope,
+                    },
+                });
                 return created;
             });
             return {
@@ -547,7 +584,13 @@ export const createConversionEventTool = {
                 inputText: `mark ${eventName} as conversion`,
                 inputParams: { propertyId, eventName },
             });
-            const client = getAnalyticsClient();
+            // Extract OAuth token from request
+            const oauthToken = extractOAuthToken(input);
+            if (!oauthToken) {
+                throw new Error('OAuth token required for Google Analytics API access');
+            }
+            // Create Analytics Admin client with user's OAuth token
+            const client = createAnalyticsAdminClient(oauthToken);
             const approvalEnforcer = getApprovalEnforcer();
             const dryRunBuilder = new DryRunResultBuilder('create_conversion_event', 'Google Analytics', propertyId);
             dryRunBuilder.addChange({
@@ -566,7 +609,12 @@ export const createConversionEventTool = {
             }
             logger.info('Creating conversion event with confirmation', { propertyId, eventName });
             await approvalEnforcer.validateAndExecute(confirmationToken, dryRun, async () => {
-                const [created] = await client.createConversionEvent(propertyId, eventName);
+                const [created] = await client.createConversionEvent({
+                    parent: `properties/${propertyId}`,
+                    conversionEvent: {
+                        eventName,
+                    },
+                });
                 return created;
             });
             return {
@@ -623,7 +671,13 @@ export const createGoogleAdsLinkTool = {
                 inputText: `link property ${propertyId} to ads account ${googleAdsCustomerId}`,
                 inputParams: { propertyId, googleAdsCustomerId },
             });
-            const client = getAnalyticsClient();
+            // Extract OAuth token from request
+            const oauthToken = extractOAuthToken(input);
+            if (!oauthToken) {
+                throw new Error('OAuth token required for Google Analytics API access');
+            }
+            // Create Analytics Admin client with user's OAuth token
+            const client = createAnalyticsAdminClient(oauthToken);
             const approvalEnforcer = getApprovalEnforcer();
             const dryRunBuilder = new DryRunResultBuilder('create_google_ads_link', 'Google Analytics', propertyId);
             dryRunBuilder.addChange({
@@ -644,10 +698,12 @@ export const createGoogleAdsLinkTool = {
             }
             logger.info('Creating Google Ads link with confirmation', { propertyId, googleAdsCustomerId });
             const result = await approvalEnforcer.validateAndExecute(confirmationToken, dryRun, async () => {
-                const link = {
-                    customerId: googleAdsCustomerId,
-                };
-                const [createdLink] = await client.createGoogleAdsLink(propertyId, link);
+                const [createdLink] = await client.createGoogleAdsLink({
+                    parent: `properties/${propertyId}`,
+                    googleAdsLink: {
+                        customerId: googleAdsCustomerId,
+                    },
+                });
                 return createdLink;
             });
             return {

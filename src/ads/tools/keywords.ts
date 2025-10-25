@@ -2,11 +2,12 @@
  * MCP Tools for Google Ads Keyword Write Operations
  */
 
-import { getGoogleAdsClient } from '../client.js';
 import { amountToMicros } from '../validation.js';
 import { getLogger } from '../../shared/logger.js';
 import { getApprovalEnforcer, DryRunResultBuilder } from '../../shared/approval-enforcer.js';
 import { detectAndEnforceVagueness } from '../../shared/vagueness-detector.js';
+import { extractRefreshToken } from '../../shared/oauth-client-factory.js';
+import { createGoogleAdsClientFromRefreshToken } from '../client.js';
 
 const logger = getLogger('ads.tools.keywords');
 
@@ -120,6 +121,20 @@ export const addKeywordsTool = {
     try {
       const { customerId, adGroupId, keywords, confirmationToken } = input;
 
+      // Extract OAuth tokens from request
+      const refreshToken = extractRefreshToken(input);
+      if (!refreshToken) {
+        throw new Error('Refresh token required for Google Ads API. OMA must provide X-Google-Refresh-Token header.');
+      }
+
+      const developerToken = process.env.GOOGLE_ADS_DEVELOPER_TOKEN;
+      if (!developerToken) {
+        throw new Error('GOOGLE_ADS_DEVELOPER_TOKEN not configured');
+      }
+
+      // Create Google Ads client with user's refresh token
+      const client = createGoogleAdsClientFromRefreshToken(refreshToken, developerToken);
+
       // Vagueness detection - ensure specific IDs
       detectAndEnforceVagueness({
         operation: 'add_keywords',
@@ -133,8 +148,6 @@ export const addKeywordsTool = {
           `Cannot add ${keywords.length} keywords in one operation. Maximum is 50. Please batch into smaller operations.`
         );
       }
-
-      const client = getGoogleAdsClient();
 
       // Convert dollar bids to micros
       const keywordsWithMicros = keywords.map((kw: any) => ({
@@ -364,6 +377,20 @@ export const addNegativeKeywordsTool = {
     try {
       const { customerId, campaignId, keywords, confirmationToken } = input;
 
+      // Extract OAuth tokens from request
+      const refreshToken = extractRefreshToken(input);
+      if (!refreshToken) {
+        throw new Error('Refresh token required for Google Ads API. OMA must provide X-Google-Refresh-Token header.');
+      }
+
+      const developerToken = process.env.GOOGLE_ADS_DEVELOPER_TOKEN;
+      if (!developerToken) {
+        throw new Error('GOOGLE_ADS_DEVELOPER_TOKEN not configured');
+      }
+
+      // Create Google Ads client with user's refresh token
+      const client = createGoogleAdsClientFromRefreshToken(refreshToken, developerToken);
+
       // Vagueness detection
       detectAndEnforceVagueness({
         operation: 'add_negative_keywords',
@@ -377,8 +404,6 @@ export const addNegativeKeywordsTool = {
           `Cannot add ${keywords.length} negative keywords in one operation. Maximum is 50. Please batch into smaller operations.`
         );
       }
-
-      const client = getGoogleAdsClient();
 
       // Build dry-run preview
       const approvalEnforcer = getApprovalEnforcer();

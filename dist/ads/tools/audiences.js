@@ -2,10 +2,11 @@
  * MCP Tools for Google Ads Audience & Targeting
  * Includes: UserListService, AudienceService, CustomerMatchService
  */
-import { getGoogleAdsClient } from '../client.js';
 import { getLogger } from '../../shared/logger.js';
 import { getApprovalEnforcer, DryRunResultBuilder } from '../../shared/approval-enforcer.js';
 import { detectAndEnforceVagueness } from '../../shared/vagueness-detector.js';
+import { extractRefreshToken } from '../../shared/oauth-client-factory.js';
+import { createGoogleAdsClientFromRefreshToken } from '../client.js';
 const logger = getLogger('ads.tools.audiences');
 /**
  * List user lists (remarketing audiences)
@@ -46,7 +47,18 @@ export const listUserListsTool = {
     async handler(input) {
         try {
             const { customerId } = input;
-            const client = getGoogleAdsClient();
+            // Extract OAuth tokens from request
+            const refreshToken = extractRefreshToken(input);
+            if (!refreshToken) {
+                throw new Error('Refresh token required for Google Ads API. OMA must provide X-Google-Refresh-Token header.');
+            }
+            const developerToken = process.env.GOOGLE_ADS_DEVELOPER_TOKEN;
+            if (!developerToken) {
+                throw new Error('GOOGLE_ADS_DEVELOPER_TOKEN not configured');
+            }
+            // Create Google Ads client with user's refresh token
+            const client = createGoogleAdsClientFromRefreshToken(refreshToken, developerToken);
+            const customer = client.getCustomer(customerId);
             logger.info('Listing user lists', { customerId });
             const query = `
         SELECT
@@ -62,7 +74,6 @@ export const listUserListsTool = {
         WHERE user_list.status != 'REMOVED'
         ORDER BY user_list.name
       `;
-            const customer = client.getCustomer(customerId);
             const results = await customer.query(query);
             const userLists = [];
             for (const row of results) {
@@ -160,13 +171,24 @@ export const createUserListTool = {
     async handler(input) {
         try {
             const { customerId, name, membershipDays = 30, description, confirmationToken } = input;
+            // Extract OAuth tokens from request
+            const refreshToken = extractRefreshToken(input);
+            if (!refreshToken) {
+                throw new Error('Refresh token required for Google Ads API. OMA must provide X-Google-Refresh-Token header.');
+            }
+            const developerToken = process.env.GOOGLE_ADS_DEVELOPER_TOKEN;
+            if (!developerToken) {
+                throw new Error('GOOGLE_ADS_DEVELOPER_TOKEN not configured');
+            }
+            // Create Google Ads client with user's refresh token
+            const client = createGoogleAdsClientFromRefreshToken(refreshToken, developerToken);
+            const customer = client.getCustomer(customerId);
             // Vagueness detection
             detectAndEnforceVagueness({
                 operation: 'create_user_list',
                 inputText: `create user list ${name}`,
                 inputParams: { customerId, name },
             });
-            const client = getGoogleAdsClient();
             // Build dry-run preview
             const approvalEnforcer = getApprovalEnforcer();
             const dryRunBuilder = new DryRunResultBuilder('create_user_list', 'Google Ads', customerId);
@@ -199,7 +221,6 @@ export const createUserListTool = {
             // Execute with confirmation
             logger.info('Creating user list with confirmation', { customerId, name });
             const result = await approvalEnforcer.validateAndExecute(confirmationToken, dryRun, async () => {
-                const customer = client.getCustomer(customerId);
                 const userList = {
                     name,
                     membership_life_span: membershipDays,
@@ -316,6 +337,18 @@ export const uploadCustomerMatchListTool = {
     async handler(input) {
         try {
             const { customerId, userListId, customers, confirmationToken } = input;
+            // Extract OAuth tokens from request
+            const refreshToken = extractRefreshToken(input);
+            if (!refreshToken) {
+                throw new Error('Refresh token required for Google Ads API. OMA must provide X-Google-Refresh-Token header.');
+            }
+            const developerToken = process.env.GOOGLE_ADS_DEVELOPER_TOKEN;
+            if (!developerToken) {
+                throw new Error('GOOGLE_ADS_DEVELOPER_TOKEN not configured');
+            }
+            // Create Google Ads client with user's refresh token
+            const client = createGoogleAdsClientFromRefreshToken(refreshToken, developerToken);
+            const customer = client.getCustomer(customerId);
             // Vagueness detection
             detectAndEnforceVagueness({
                 operation: 'upload_customer_match_list',
@@ -326,7 +359,6 @@ export const uploadCustomerMatchListTool = {
             if (customers.length > 100000) {
                 throw new Error(`Cannot upload ${customers.length} customers at once. Maximum is 100,000. Please batch into smaller uploads.`);
             }
-            const client = getGoogleAdsClient();
             // Build dry-run preview
             const approvalEnforcer = getApprovalEnforcer();
             const dryRunBuilder = new DryRunResultBuilder('upload_customer_match_list', 'Google Ads', customerId);
@@ -361,7 +393,6 @@ export const uploadCustomerMatchListTool = {
                 count: customers.length,
             });
             const result = await approvalEnforcer.validateAndExecute(confirmationToken, dryRun, async () => {
-                const customer = client.getCustomer(customerId);
                 // Build offline user data jobs
                 const operations = customers.map((c) => ({
                     create: {
@@ -442,12 +473,23 @@ export const createAudienceTool = {
     async handler(input) {
         try {
             const { customerId, name, description, confirmationToken } = input;
+            // Extract OAuth tokens from request
+            const refreshToken = extractRefreshToken(input);
+            if (!refreshToken) {
+                throw new Error('Refresh token required for Google Ads API. OMA must provide X-Google-Refresh-Token header.');
+            }
+            const developerToken = process.env.GOOGLE_ADS_DEVELOPER_TOKEN;
+            if (!developerToken) {
+                throw new Error('GOOGLE_ADS_DEVELOPER_TOKEN not configured');
+            }
+            // Create Google Ads client with user's refresh token
+            const client = createGoogleAdsClientFromRefreshToken(refreshToken, developerToken);
+            const customer = client.getCustomer(customerId);
             detectAndEnforceVagueness({
                 operation: 'create_audience',
                 inputText: `create audience ${name}`,
                 inputParams: { customerId, name },
             });
-            const client = getGoogleAdsClient();
             const approvalEnforcer = getApprovalEnforcer();
             const dryRunBuilder = new DryRunResultBuilder('create_audience', 'Google Ads', customerId);
             dryRunBuilder.addChange({
@@ -473,7 +515,6 @@ export const createAudienceTool = {
             }
             logger.info('Creating audience with confirmation', { customerId, name });
             const result = await approvalEnforcer.validateAndExecute(confirmationToken, dryRun, async () => {
-                const customer = client.getCustomer(customerId);
                 const audience = {
                     name,
                     description: description || '',

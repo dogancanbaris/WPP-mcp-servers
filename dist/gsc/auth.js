@@ -36,6 +36,8 @@ export class GSCAuthManager {
             'https://www.googleapis.com/auth/adwords', // Google Ads API scope
             'https://www.googleapis.com/auth/analytics.readonly', // Google Analytics Data API (read-only)
             'https://www.googleapis.com/auth/analytics', // Google Analytics Data API (full access)
+            'https://www.googleapis.com/auth/bigquery', // BigQuery API - read/write access
+            'https://www.googleapis.com/auth/cloud-platform', // Google Cloud Platform - for project access
         ];
         return this.oauth2Client.generateAuthUrl({
             access_type: 'offline',

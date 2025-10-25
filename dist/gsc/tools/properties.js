@@ -1,7 +1,7 @@
 /**
  * MCP Tools for GSC Properties (Sites) operations
  */
-import { getGoogleClient } from '../google-client.js';
+import { extractOAuthToken, createGSCClient } from '../../shared/oauth-client-factory.js';
 import { getConfigManager } from '../config.js';
 import { getAuditLogger } from '../audit.js';
 import { DryRunResultBuilder, getApprovalManager, formatDryRunResult } from '../approval.js';
@@ -21,10 +21,17 @@ export const listPropertiesTool = {
     },
     async handler(_input) {
         try {
-            const client = getGoogleClient();
+            // Extract OAuth token from request
+            const oauthToken = extractOAuthToken(_input);
+            if (!oauthToken) {
+                throw new Error('OAuth token required for Google Search Console API access');
+            }
+            // Create GSC client with user's OAuth token
+            const gscClient = createGSCClient(oauthToken);
             const audit = getAuditLogger();
             logger.info('Listing properties');
-            const response = await client.listSites();
+            const res = await gscClient.sites.list();
+            const response = res.data;
             const sites = response.siteEntry || [];
             // Return all discovered properties (full property discovery mode - no filtering)
             const allProperties = sites.map((site) => ({
@@ -70,14 +77,21 @@ export const getPropertyTool = {
     async handler(input) {
         try {
             const { property } = input;
+            // Extract OAuth token from request
+            const oauthToken = extractOAuthToken(input);
+            if (!oauthToken) {
+                throw new Error('OAuth token required for Google Search Console API access');
+            }
+            // Create GSC client with user's OAuth token
+            const gscClient = createGSCClient(oauthToken);
             // Validate input
             validateGSCProperty(property);
-            const client = getGoogleClient();
             const audit = getAuditLogger();
             // Note: Access control removed for full property discovery mode
             // Google API will handle permission errors if user doesn't own the property
             logger.info('Getting property details', { property });
-            const site = await client.getSite(property);
+            const res = await gscClient.sites.get({ siteUrl: property });
+            const site = res.data;
             await audit.logReadOperation('user', 'get_property', property, {
                 permissionLevel: site.permissionLevel,
             });
@@ -115,10 +129,16 @@ export const addPropertyTool = {
     async handler(input) {
         try {
             const { siteUrl } = input;
+            // Extract OAuth token from request
+            const oauthToken = extractOAuthToken(input);
+            if (!oauthToken) {
+                throw new Error('OAuth token required for Google Search Console API access');
+            }
+            // Create GSC client with user's OAuth token
+            const gscClient = createGSCClient(oauthToken);
             // Validate input
             validateGSCProperty(siteUrl);
             const config = getConfigManager();
-            const client = getGoogleClient();
             const approval = getApprovalManager();
             const audit = getAuditLogger();
             // Check permission
@@ -150,7 +170,7 @@ export const addPropertyTool = {
                 };
             }
             // Execute
-            await client.addSite(siteUrl);
+            await gscClient.sites.add({ siteUrl });
             await audit.logWriteOperation('user', 'add_property', siteUrl);
             return {
                 success: true,

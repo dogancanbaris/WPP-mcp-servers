@@ -3,10 +3,11 @@
  * Includes: ConversionActionService, ConversionUploadService, ConversionAdjustmentService
  */
 
-import { getGoogleAdsClient } from '../client.js';
 import { getLogger } from '../../shared/logger.js';
 import { getApprovalEnforcer, DryRunResultBuilder } from '../../shared/approval-enforcer.js';
 import { detectAndEnforceVagueness } from '../../shared/vagueness-detector.js';
+import { extractRefreshToken } from '../../shared/oauth-client-factory.js';
+import { createGoogleAdsClientFromRefreshToken } from '../client.js';
 
 const logger = getLogger('ads.tools.conversions');
 
@@ -50,7 +51,20 @@ export const listConversionActionsTool = {
     try {
       const { customerId } = input;
 
-      const client = getGoogleAdsClient();
+      // Extract OAuth tokens from request
+      const refreshToken = extractRefreshToken(input);
+      if (!refreshToken) {
+        throw new Error('Refresh token required for Google Ads API. OMA must provide X-Google-Refresh-Token header.');
+      }
+
+      const developerToken = process.env.GOOGLE_ADS_DEVELOPER_TOKEN;
+      if (!developerToken) {
+        throw new Error('GOOGLE_ADS_DEVELOPER_TOKEN not configured');
+      }
+
+      // Create Google Ads client with user's refresh token
+      const client = createGoogleAdsClientFromRefreshToken(refreshToken, developerToken);
+      const customer = client.getCustomer(customerId);
 
       logger.info('Listing conversion actions', { customerId });
 
@@ -71,7 +85,6 @@ export const listConversionActionsTool = {
         ORDER BY conversion_action.name
       `;
 
-      const customer = client.getCustomer(customerId);
       const results = await customer.query(query);
 
       const conversionActions = [];
@@ -211,14 +224,26 @@ export const createConversionActionTool = {
         confirmationToken,
       } = input;
 
+      // Extract OAuth tokens from request
+      const refreshToken = extractRefreshToken(input);
+      if (!refreshToken) {
+        throw new Error('Refresh token required for Google Ads API. OMA must provide X-Google-Refresh-Token header.');
+      }
+
+      const developerToken = process.env.GOOGLE_ADS_DEVELOPER_TOKEN;
+      if (!developerToken) {
+        throw new Error('GOOGLE_ADS_DEVELOPER_TOKEN not configured');
+      }
+
+      // Create Google Ads client with user's refresh token
+      const client = createGoogleAdsClientFromRefreshToken(refreshToken, developerToken);
+
       // Vagueness detection
       detectAndEnforceVagueness({
         operation: 'create_conversion_action',
         inputText: `create conversion action ${name} category ${category}`,
         inputParams: { customerId, name, category },
       });
-
-      const client = getGoogleAdsClient();
 
       // Build dry-run preview
       const approvalEnforcer = getApprovalEnforcer();
@@ -436,6 +461,21 @@ export const uploadClickConversionsTool = {
     try {
       const { customerId, conversionActionId, conversions, confirmationToken } = input;
 
+      // Extract OAuth tokens from request
+      const refreshToken = extractRefreshToken(input);
+      if (!refreshToken) {
+        throw new Error('Refresh token required for Google Ads API. OMA must provide X-Google-Refresh-Token header.');
+      }
+
+      const developerToken = process.env.GOOGLE_ADS_DEVELOPER_TOKEN;
+      if (!developerToken) {
+        throw new Error('GOOGLE_ADS_DEVELOPER_TOKEN not configured');
+      }
+
+      // Create Google Ads client with user's refresh token
+      const client = createGoogleAdsClientFromRefreshToken(refreshToken, developerToken);
+      const customer = client.getCustomer(customerId);
+
       // Vagueness detection
       detectAndEnforceVagueness({
         operation: 'upload_click_conversions',
@@ -449,8 +489,6 @@ export const uploadClickConversionsTool = {
           `Cannot upload ${conversions.length} conversions at once. Maximum is 2,000. Please batch into smaller uploads.`
         );
       }
-
-      const client = getGoogleAdsClient();
 
       // Calculate total value
       const totalValue = conversions.reduce(
@@ -541,8 +579,6 @@ export const uploadClickConversionsTool = {
         confirmationToken,
         dryRun,
         async () => {
-          const customer = client.getCustomer(customerId);
-
           // Format conversions for API
           const clickConversions = conversions.map((c: any) => ({
             gclid: c.gclid,
@@ -674,6 +710,21 @@ export const uploadConversionAdjustmentsTool = {
     try {
       const { customerId, conversionActionId, adjustments, confirmationToken } = input;
 
+      // Extract OAuth tokens from request
+      const refreshToken = extractRefreshToken(input);
+      if (!refreshToken) {
+        throw new Error('Refresh token required for Google Ads API. OMA must provide X-Google-Refresh-Token header.');
+      }
+
+      const developerToken = process.env.GOOGLE_ADS_DEVELOPER_TOKEN;
+      if (!developerToken) {
+        throw new Error('GOOGLE_ADS_DEVELOPER_TOKEN not configured');
+      }
+
+      // Create Google Ads client with user's refresh token
+      const client = createGoogleAdsClientFromRefreshToken(refreshToken, developerToken);
+      const customer = client.getCustomer(customerId);
+
       // Vagueness detection
       detectAndEnforceVagueness({
         operation: 'upload_conversion_adjustments',
@@ -687,8 +738,6 @@ export const uploadConversionAdjustmentsTool = {
           `Cannot upload ${adjustments.length} adjustments at once. Maximum is 2,000. Please batch into smaller uploads.`
         );
       }
-
-      const client = getGoogleAdsClient();
 
       // Count retractions vs restatements
       const retractionCount = adjustments.filter((a: any) => a.adjustmentType === 'RETRACTION').length;
@@ -776,8 +825,6 @@ export const uploadConversionAdjustmentsTool = {
         confirmationToken,
         dryRun,
         async () => {
-          const customer = client.getCustomer(customerId);
-
           // Format adjustments for API
           const conversionAdjustments = adjustments.map((a: any) => ({
             gclid_date_time_pair: {
@@ -867,7 +914,20 @@ export const getConversionActionTool = {
     try {
       const { customerId, conversionActionId } = input;
 
-      const client = getGoogleAdsClient();
+      // Extract OAuth tokens from request
+      const refreshToken = extractRefreshToken(input);
+      if (!refreshToken) {
+        throw new Error('Refresh token required for Google Ads API. OMA must provide X-Google-Refresh-Token header.');
+      }
+
+      const developerToken = process.env.GOOGLE_ADS_DEVELOPER_TOKEN;
+      if (!developerToken) {
+        throw new Error('GOOGLE_ADS_DEVELOPER_TOKEN not configured');
+      }
+
+      // Create Google Ads client with user's refresh token
+      const client = createGoogleAdsClientFromRefreshToken(refreshToken, developerToken);
+      const customer = client.getCustomer(customerId);
 
       logger.info('Getting conversion action', { customerId, conversionActionId });
 
@@ -888,7 +948,6 @@ export const getConversionActionTool = {
         WHERE conversion_action.id = ${conversionActionId}
       `;
 
-      const customer = client.getCustomer(customerId);
       const results = await customer.query(query);
 
       let conversionAction = null;

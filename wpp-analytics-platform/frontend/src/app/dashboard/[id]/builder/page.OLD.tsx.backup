@@ -1,0 +1,1616 @@
+'use client';
+
+// Dashboard Builder - Looker Studio Style with Drag-and-Drop
+import { useState, useEffect, useMemo } from 'react';
+import { useParams } from 'next/navigation';
+import { Responsive, WidthProvider, Layout as GridLayout } from 'react-grid-layout';
+import 'react-grid-layout/css/styles.css';
+import 'react-resizable/css/styles.css';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Plus, Save, Eye, Settings, Filter, BarChart3, LineChart, PieChart, Table, Gauge, MousePointerClick, Loader2, CheckCircle2, Download, Share2, Edit } from 'lucide-react';
+import ReactECharts from 'echarts-for-react';
+import { cubeApi } from '@/lib/cubejs/client';
+import { useCubeQuery } from '@cubejs-client/react';
+import { getEChartsTheme } from '@/lib/themes/echarts-theme';
+import { saveDashboard, loadDashboard, type ChartConfig as DashboardChartConfig, type FilterConfig } from '@/lib/supabase/dashboard-service';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { X, Calendar } from 'lucide-react';
+import { Slider } from '@/components/ui/slider';
+import { useState as useReactState } from 'react';
+import { UserProfile } from '@/components/user-profile';
+import { ThemeToggle } from '@/components/theme-toggle';
+import { exportToPDF, exportToExcel, exportToCSV, prepareChartDataForExport } from '@/lib/export/export-utils';
+import { makeDashboardPublic, shareDashboard, listShares, removeShare } from '@/lib/supabase/sharing-service';
+import { useRef } from 'react';
+import { useKeyboardShortcuts } from '@/hooks/use-keyboard-shortcuts';
+
+// Responsive Grid Layout with WidthProvider
+const ResponsiveGridLayout = WidthProvider(Responsive);
+
+// Chart configuration type (keeping local interface, mapping to service type)
+interface ChartConfig {
+  id: string;
+  type: 'kpi' | 'line' | 'bar' | 'pie' | 'table' | 'treemap' | 'sankey' | 'heatmap' | 'gauge' | 'area' | 'scatter' | 'funnel' | 'radar';
+  measure: string;
+  dimension?: string;
+  title: string;
+  size: { w: number; h: number };
+  x?: number;
+  y?: number;
+}
+
+// Chart Renderer
+function ChartRenderer({
+  chart,
+  filters,
+  onCrossFilter
+}: {
+  chart: ChartConfig;
+  filters: any[];
+  onCrossFilter?: (dimension: string, value: string) => void;
+}) {
+  const queryConfig: any = {
+    measures: [chart.measure],
+    filters: filters || []
+  };
+
+  if (chart.dimension) {
+    if (chart.dimension === 'GscPerformance7days.date') {
+      queryConfig.timeDimensions = [{
+        dimension: chart.dimension,
+        granularity: 'day',
+        dateRange: 'last 7 days'
+      }];
+    } else {
+      queryConfig.dimensions = [chart.dimension];
+    }
+  }
+
+  const { resultSet, isLoading, error } = useCubeQuery(queryConfig, { cubeApi });
+
+  if (isLoading) return <div className="flex items-center justify-center h-32">Loading...</div>;
+  if (error) return <div className="text-red-500 p-4">Error: {error.toString()}</div>;
+
+  // Render based on chart type
+  switch (chart.type) {
+    case 'kpi':
+      return <KPICard chart={chart} resultSet={resultSet} />;
+    case 'line':
+      return <LineChartComponent chart={chart} resultSet={resultSet} onCrossFilter={onCrossFilter} />;
+    case 'bar':
+      return <BarChartComponent chart={chart} resultSet={resultSet} onCrossFilter={onCrossFilter} />;
+    case 'pie':
+      return <PieChartComponent chart={chart} resultSet={resultSet} onCrossFilter={onCrossFilter} />;
+    case 'table':
+      return <TableComponent chart={chart} resultSet={resultSet} />;
+    case 'treemap':
+      return <TreemapComponent chart={chart} resultSet={resultSet} onCrossFilter={onCrossFilter} />;
+    case 'sankey':
+      return <SankeyComponent chart={chart} resultSet={resultSet} onCrossFilter={onCrossFilter} />;
+    case 'heatmap':
+      return <HeatmapComponent chart={chart} resultSet={resultSet} onCrossFilter={onCrossFilter} />;
+    case 'gauge':
+      return <GaugeComponent chart={chart} resultSet={resultSet} />;
+    case 'area':
+      return <AreaChartComponent chart={chart} resultSet={resultSet} onCrossFilter={onCrossFilter} />;
+    case 'scatter':
+      return <ScatterComponent chart={chart} resultSet={resultSet} />;
+    case 'funnel':
+      return <FunnelComponent chart={chart} resultSet={resultSet} onCrossFilter={onCrossFilter} />;
+    case 'radar':
+      return <RadarComponent chart={chart} resultSet={resultSet} onCrossFilter={onCrossFilter} />;
+    default:
+      return <div>Unknown chart type</div>;
+  }
+}
+
+// KPI Card with Auto-Formatting
+function KPICard({ chart, resultSet }: any) {
+  const data = resultSet?.tablePivot()[0];
+  let value = data?.[chart.measure] || 0;
+
+  // Auto-formatting based on measure name
+  let formatted = value.toString();
+  if (chart.measure.includes('Ctr') || chart.measure.includes('ctr')) {
+    // CTR: 0.0217 → 2.17%
+    formatted = (value * 100).toFixed(2) + '%';
+  } else if (chart.measure.includes('count') || chart.measure.includes('clicks') || chart.measure.includes('impressions')) {
+    formatted = Math.round(value).toLocaleString();
+  } else {
+    formatted = value.toFixed(2);
+  }
+
+  return (
+    <div className="space-y-2">
+      <h3 className="text-sm font-medium text-muted-foreground">{chart.title}</h3>
+      <div className="text-3xl font-bold" style={{ color: 'hsl(var(--chart-1))' }}>
+        {formatted}
+      </div>
+    </div>
+  );
+}
+
+// Line Chart Component
+function LineChartComponent({ chart, resultSet, onCrossFilter }: any) {
+  const data = resultSet?.chartPivot() || [];
+
+  const option = {
+    tooltip: { trigger: 'axis' },
+    xAxis: {
+      type: 'category',
+      data: data.map((d: any) => d.x)
+    },
+    yAxis: { type: 'value' },
+    series: [{
+      data: data.map((d: any) => d[chart.measure]),
+      type: 'line',
+      smooth: true,
+      name: chart.title
+    }]
+  };
+
+  const onEvents = {
+    click: (params: any) => {
+      if (chart.dimension && onCrossFilter && params.name) {
+        onCrossFilter(chart.dimension, params.name);
+      }
+    }
+  };
+
+  return (
+    <div>
+      <h3 className="text-sm font-medium mb-2">{chart.title}</h3>
+      <ReactECharts
+        option={option}
+        theme={getEChartsTheme('light')}
+        style={{ height: '250px' }}
+        onEvents={onEvents}
+      />
+    </div>
+  );
+}
+
+// Bar Chart Component
+function BarChartComponent({ chart, resultSet, onCrossFilter }: any) {
+  const data = resultSet?.chartPivot() || [];
+
+  const option = {
+    tooltip: { trigger: 'axis' },
+    xAxis: {
+      type: 'category',
+      data: data.map((d: any) => d.x),
+      axisLabel: { rotate: 45 }
+    },
+    yAxis: { type: 'value' },
+    series: [{
+      data: data.map((d: any) => d[chart.measure]),
+      type: 'bar',
+      name: chart.title
+    }]
+  };
+
+  const onEvents = {
+    click: (params: any) => {
+      if (chart.dimension && onCrossFilter && params.name) {
+        onCrossFilter(chart.dimension, params.name);
+      }
+    }
+  };
+
+  return (
+    <div>
+      <h3 className="text-sm font-medium mb-2">{chart.title}</h3>
+      <ReactECharts
+        option={option}
+        theme={getEChartsTheme('light')}
+        style={{ height: '250px' }}
+        onEvents={onEvents}
+      />
+    </div>
+  );
+}
+
+// Pie Chart Component
+function PieChartComponent({ chart, resultSet, onCrossFilter }: any) {
+  const data = resultSet?.chartPivot() || [];
+
+  const option = {
+    tooltip: { trigger: 'item' },
+    series: [{
+      type: 'pie',
+      radius: '70%',
+      data: data.map((d: any) => ({
+        name: d.x,
+        value: d[chart.measure]
+      })),
+      emphasis: {
+        itemStyle: {
+          shadowBlur: 10,
+          shadowOffsetX: 0,
+          shadowColor: 'rgba(0, 0, 0, 0.5)'
+        }
+      }
+    }],
+    legend: { bottom: 0 }
+  };
+
+  const onEvents = {
+    click: (params: any) => {
+      if (chart.dimension && onCrossFilter) {
+        onCrossFilter(chart.dimension, params.name);
+      }
+    }
+  };
+
+  return (
+    <div>
+      <h3 className="text-sm font-medium mb-2">{chart.title}</h3>
+      <ReactECharts
+        option={option}
+        theme={getEChartsTheme('light')}
+        style={{ height: '250px' }}
+        onEvents={onEvents}
+      />
+    </div>
+  );
+}
+
+// Table Component
+function TableComponent({ chart, resultSet }: any) {
+  const data = resultSet?.tablePivot() || [];
+
+  return (
+    <div>
+      <h3 className="text-sm font-medium mb-2">{chart.title}</h3>
+      <div className="border rounded-lg overflow-hidden">
+        <table className="w-full text-sm">
+          <thead className="bg-muted">
+            <tr>
+              {Object.keys(data[0] || {}).map((key) => (
+                <th key={key} className="text-left p-2 font-medium">
+                  {key.split('.').pop()}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {data.slice(0, 10).map((row: any, i: number) => (
+              <tr key={i} className="border-t hover:bg-muted/50">
+                {Object.values(row).map((value: any, j: number) => (
+                  <td key={j} className="p-2">{value}</td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+// Treemap Component
+function TreemapComponent({ chart, resultSet, onCrossFilter }: any) {
+  const data = resultSet?.chartPivot() || [];
+
+  const option = {
+    tooltip: { trigger: 'item' },
+    series: [{
+      type: 'treemap',
+      data: data.map((d: any) => ({
+        name: d.x,
+        value: d[chart.measure]
+      })),
+      label: {
+        show: true,
+        formatter: '{b}\n{c}'
+      },
+      breadcrumb: { show: false }
+    }]
+  };
+
+  const onEvents = {
+    click: (params: any) => {
+      if (chart.dimension && onCrossFilter) {
+        onCrossFilter(chart.dimension, params.name);
+      }
+    }
+  };
+
+  return (
+    <div>
+      <h3 className="text-sm font-medium mb-2">{chart.title}</h3>
+      <ReactECharts
+        option={option}
+        theme={getEChartsTheme('light')}
+        style={{ height: '300px' }}
+        onEvents={onEvents}
+      />
+    </div>
+  );
+}
+
+// Sankey Component
+function SankeyComponent({ chart, resultSet, onCrossFilter }: any) {
+  const data = resultSet?.chartPivot() || [];
+
+  // Simple sankey: source -> target flow
+  const nodes = [
+    { name: 'Desktop' },
+    { name: 'Mobile' },
+    { name: 'Tablet' },
+    { name: 'Clicks' }
+  ];
+
+  const links = data.slice(0, 3).map((d: any, i: number) => ({
+    source: d.x,
+    target: 'Clicks',
+    value: d[chart.measure]
+  }));
+
+  const option = {
+    tooltip: { trigger: 'item' },
+    series: [{
+      type: 'sankey',
+      data: nodes,
+      links: links,
+      emphasis: { focus: 'adjacency' },
+      lineStyle: { color: 'gradient', curveness: 0.5 }
+    }]
+  };
+
+  return (
+    <div>
+      <h3 className="text-sm font-medium mb-2">{chart.title}</h3>
+      <ReactECharts
+        option={option}
+        theme={getEChartsTheme('light')}
+        style={{ height: '300px' }}
+      />
+    </div>
+  );
+}
+
+// Heatmap Component
+function HeatmapComponent({ chart, resultSet, onCrossFilter }: any) {
+  const data = resultSet?.chartPivot() || [];
+
+  // Create matrix data for heatmap
+  const hours = Array.from({ length: 24 }, (_, i) => i);
+  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+  const matrixData = data.slice(0, 168).map((d: any, i: number) => [
+    i % 24,
+    Math.floor(i / 24),
+    d[chart.measure] || 0
+  ]);
+
+  const option = {
+    tooltip: {
+      position: 'top',
+      formatter: (p: any) => `${days[p.value[1]]} ${p.value[0]}:00<br/>${p.value[2]}`
+    },
+    grid: { height: '70%', top: '10%' },
+    xAxis: {
+      type: 'category',
+      data: hours,
+      splitArea: { show: true }
+    },
+    yAxis: {
+      type: 'category',
+      data: days,
+      splitArea: { show: true }
+    },
+    visualMap: {
+      min: 0,
+      max: Math.max(...matrixData.map(d => d[2])),
+      calculable: true,
+      orient: 'horizontal',
+      left: 'center',
+      bottom: '0%'
+    },
+    series: [{
+      type: 'heatmap',
+      data: matrixData,
+      label: { show: false },
+      emphasis: {
+        itemStyle: {
+          shadowBlur: 10,
+          shadowColor: 'rgba(0, 0, 0, 0.5)'
+        }
+      }
+    }]
+  };
+
+  return (
+    <div>
+      <h3 className="text-sm font-medium mb-2">{chart.title}</h3>
+      <ReactECharts
+        option={option}
+        theme={getEChartsTheme('light')}
+        style={{ height: '350px' }}
+      />
+    </div>
+  );
+}
+
+// Gauge Component
+function GaugeComponent({ chart, resultSet }: any) {
+  const data = resultSet?.tablePivot()[0];
+  let value = data?.[chart.measure] || 0;
+
+  // Auto-format for CTR
+  if (chart.measure.includes('Ctr') || chart.measure.includes('ctr')) {
+    value = value * 100;
+  }
+
+  const option = {
+    series: [{
+      type: 'gauge',
+      startAngle: 180,
+      endAngle: 0,
+      min: 0,
+      max: chart.measure.includes('Ctr') ? 10 : 100,
+      splitNumber: 8,
+      axisLine: {
+        lineStyle: {
+          width: 6,
+          color: [
+            [0.3, '#67e0e3'],
+            [0.7, '#37a2da'],
+            [1, '#fd666d']
+          ]
+        }
+      },
+      pointer: { itemStyle: { color: 'auto' } },
+      axisTick: { distance: -30, length: 8, lineStyle: { color: '#fff', width: 2 } },
+      splitLine: { distance: -30, length: 30, lineStyle: { color: '#fff', width: 4 } },
+      axisLabel: { distance: -20, color: 'auto', fontSize: 10 },
+      detail: {
+        valueAnimation: true,
+        formatter: chart.measure.includes('Ctr') ? '{value}%' : '{value}',
+        color: 'auto',
+        fontSize: 20
+      },
+      data: [{ value: value.toFixed(2), name: chart.title }]
+    }]
+  };
+
+  return (
+    <div>
+      <ReactECharts
+        option={option}
+        theme={getEChartsTheme('light')}
+        style={{ height: '250px' }}
+      />
+    </div>
+  );
+}
+
+// Area Chart Component
+function AreaChartComponent({ chart, resultSet, onCrossFilter }: any) {
+  const data = resultSet?.chartPivot() || [];
+
+  const option = {
+    tooltip: { trigger: 'axis' },
+    xAxis: {
+      type: 'category',
+      boundaryGap: false,
+      data: data.map((d: any) => d.x)
+    },
+    yAxis: { type: 'value' },
+    series: [{
+      data: data.map((d: any) => d[chart.measure]),
+      type: 'line',
+      smooth: true,
+      name: chart.title,
+      areaStyle: {}
+    }]
+  };
+
+  const onEvents = {
+    click: (params: any) => {
+      if (chart.dimension && onCrossFilter && params.name) {
+        onCrossFilter(chart.dimension, params.name);
+      }
+    }
+  };
+
+  return (
+    <div>
+      <h3 className="text-sm font-medium mb-2">{chart.title}</h3>
+      <ReactECharts
+        option={option}
+        theme={getEChartsTheme('light')}
+        style={{ height: '250px' }}
+        onEvents={onEvents}
+      />
+    </div>
+  );
+}
+
+// Scatter Chart Component
+function ScatterComponent({ chart, resultSet }: any) {
+  const data = resultSet?.tablePivot() || [];
+
+  const scatterData = data.map((d: any) => [
+    d[chart.dimension || 'GscPerformance7days.impressions'] || 0,
+    d[chart.measure] || 0
+  ]);
+
+  const option = {
+    tooltip: {
+      trigger: 'item',
+      formatter: (p: any) => `Impressions: ${p.value[0]}<br/>Clicks: ${p.value[1]}`
+    },
+    xAxis: { type: 'value', name: 'Impressions' },
+    yAxis: { type: 'value', name: 'Clicks' },
+    series: [{
+      type: 'scatter',
+      data: scatterData,
+      symbolSize: 10
+    }]
+  };
+
+  return (
+    <div>
+      <h3 className="text-sm font-medium mb-2">{chart.title}</h3>
+      <ReactECharts
+        option={option}
+        theme={getEChartsTheme('light')}
+        style={{ height: '250px' }}
+      />
+    </div>
+  );
+}
+
+// Funnel Chart Component
+function FunnelComponent({ chart, resultSet, onCrossFilter }: any) {
+  const data = resultSet?.chartPivot() || [];
+
+  const option = {
+    tooltip: { trigger: 'item' },
+    series: [{
+      type: 'funnel',
+      left: '10%',
+      top: 60,
+      bottom: 60,
+      width: '80%',
+      min: 0,
+      max: 100,
+      minSize: '0%',
+      maxSize: '100%',
+      sort: 'descending',
+      gap: 2,
+      label: {
+        show: true,
+        position: 'inside'
+      },
+      labelLine: { length: 10, lineStyle: { width: 1, type: 'solid' } },
+      itemStyle: { borderColor: '#fff', borderWidth: 1 },
+      emphasis: {
+        label: { fontSize: 14 }
+      },
+      data: data.map((d: any) => ({
+        value: d[chart.measure],
+        name: d.x
+      }))
+    }]
+  };
+
+  return (
+    <div>
+      <h3 className="text-sm font-medium mb-2">{chart.title}</h3>
+      <ReactECharts
+        option={option}
+        theme={getEChartsTheme('light')}
+        style={{ height: '300px' }}
+      />
+    </div>
+  );
+}
+
+// Radar Chart Component
+function RadarComponent({ chart, resultSet, onCrossFilter }: any) {
+  const data = resultSet?.chartPivot() || [];
+
+  const indicators = data.slice(0, 6).map((d: any) => ({
+    name: d.x,
+    max: Math.max(...data.map((item: any) => item[chart.measure]))
+  }));
+
+  const option = {
+    tooltip: { trigger: 'item' },
+    radar: { indicator: indicators },
+    series: [{
+      type: 'radar',
+      data: [{
+        value: data.slice(0, 6).map((d: any) => d[chart.measure]),
+        name: chart.title
+      }]
+    }]
+  };
+
+  return (
+    <div>
+      <h3 className="text-sm font-medium mb-2">{chart.title}</h3>
+      <ReactECharts
+        option={option}
+        theme={getEChartsTheme('light')}
+        style={{ height: '300px' }}
+      />
+    </div>
+  );
+}
+
+export default function DashboardBuilder() {
+  const params = useParams();
+  const dashboardId = params.id as string;
+
+  const [charts, setCharts] = useState<ChartConfig[]>([
+    {
+      id: '1',
+      type: 'kpi',
+      measure: 'GscPerformance7days.clicks',
+      title: 'Total Clicks',
+      size: { w: 3, h: 2 },
+      x: 0,
+      y: 0
+    },
+    {
+      id: '2',
+      type: 'kpi',
+      measure: 'GscPerformance7days.impressions',
+      title: 'Total Impressions',
+      size: { w: 3, h: 2 },
+      x: 3,
+      y: 0
+    },
+    {
+      id: '3',
+      type: 'kpi',
+      measure: 'GscPerformance7days.avgCtr',
+      title: 'Average CTR',
+      size: { w: 3, h: 2 },
+      x: 6,
+      y: 0
+    },
+    {
+      id: '4',
+      type: 'kpi',
+      measure: 'GscPerformance7days.avgPosition',
+      title: 'Average Position',
+      size: { w: 3, h: 2 },
+      x: 9,
+      y: 0
+    },
+    {
+      id: '5',
+      type: 'line',
+      measure: 'GscPerformance7days.clicks',
+      dimension: 'GscPerformance7days.date',
+      title: 'Daily Clicks Trend',
+      size: { w: 12, h: 6 },
+      x: 0,
+      y: 2
+    },
+    {
+      id: '6',
+      type: 'pie',
+      measure: 'GscPerformance7days.clicks',
+      dimension: 'GscPerformance7days.device',
+      title: 'Clicks by Device',
+      size: { w: 6, h: 6 },
+      x: 0,
+      y: 8
+    }
+  ]);
+
+  const [filters, setFilters] = useState<any[]>([]);
+  const [isAddingChart, setIsAddingChart] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+
+  // Enhanced filter states
+  const [dateRange, setDateRange] = useState('last_7_days');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedDevices, setSelectedDevices] = useState<string[]>([]);
+  const [selectedCountries, setSelectedCountries] = useState<string[]>([]);
+  const [selectedCities, setSelectedCities] = useState<string[]>([]);
+  const [availableCities, setAvailableCities] = useState<string[]>([]);
+  const [positionRange, setPositionRange] = useState([1, 100]);
+  const [showExportMenu, setShowExportMenu] = useState(false);
+  const [showShareDialog, setShowShareDialog] = useState(false);
+  const [shareEmail, setShareEmail] = useState('');
+  const [isSharing, setIsSharing] = useState(false);
+  const dashboardRef = useRef<HTMLDivElement>(null);
+
+  // Load dashboard on mount
+  useEffect(() => {
+    async function load() {
+      setIsLoading(true);
+      const result = await loadDashboard(dashboardId);
+
+      if (result.success && result.data) {
+        setCharts(result.data.charts);
+        setFilters(result.data.filters || []);
+      }
+
+      setIsLoading(false);
+    }
+
+    if (dashboardId && dashboardId !== 'example') {
+      load();
+    } else {
+      setIsLoading(false);
+    }
+  }, [dashboardId]);
+
+  // Cascading filter: Load cities when country changes
+  useEffect(() => {
+    if (selectedCountries.length > 0) {
+      // Query Cube.js for available cities in selected countries
+      cubeApi.load({
+        dimensions: ['GscPerformance7days.city'],
+        filters: [{
+          member: 'GscPerformance7days.country',
+          operator: 'equals',
+          values: selectedCountries
+        }]
+      }).then((resultSet) => {
+        const cities = resultSet.tablePivot().map((row: any) => row['GscPerformance7days.city']);
+        setAvailableCities(cities);
+      }).catch(() => {
+        setAvailableCities([]);
+      });
+    } else {
+      setAvailableCities([]);
+      setSelectedCities([]);
+    }
+  }, [selectedCountries]);
+
+  // Build filters array from state
+  useEffect(() => {
+    const newFilters: any[] = [];
+
+    // Device filter
+    if (selectedDevices.length > 0) {
+      newFilters.push({
+        member: 'GscPerformance7days.device',
+        operator: 'equals',
+        values: selectedDevices
+      });
+    }
+
+    // Country filter
+    if (selectedCountries.length > 0) {
+      newFilters.push({
+        member: 'GscPerformance7days.country',
+        operator: 'equals',
+        values: selectedCountries
+      });
+    }
+
+    // City filter (cascaded from country)
+    if (selectedCities.length > 0) {
+      newFilters.push({
+        member: 'GscPerformance7days.city',
+        operator: 'equals',
+        values: selectedCities
+      });
+    }
+
+    // Position range filter
+    if (positionRange[0] > 1 || positionRange[1] < 100) {
+      newFilters.push({
+        member: 'GscPerformance7days.avgPosition',
+        operator: 'gte',
+        values: [positionRange[0].toString()]
+      });
+      newFilters.push({
+        member: 'GscPerformance7days.avgPosition',
+        operator: 'lte',
+        values: [positionRange[1].toString()]
+      });
+    }
+
+    // Search query filter
+    if (searchQuery) {
+      newFilters.push({
+        member: 'GscPerformance7days.query',
+        operator: 'contains',
+        values: [searchQuery]
+      });
+    }
+
+    setFilters(newFilters);
+  }, [selectedDevices, selectedCountries, selectedCities, positionRange, searchQuery, dateRange]);
+
+  // Remove filter
+  const removeFilter = (type: string) => {
+    switch (type) {
+      case 'device':
+        setSelectedDevices([]);
+        break;
+      case 'country':
+        setSelectedCountries([]);
+        setSelectedCities([]); // Clear cities when country cleared
+        break;
+      case 'city':
+        setSelectedCities([]);
+        break;
+      case 'position':
+        setPositionRange([1, 100]);
+        break;
+      case 'search':
+        setSearchQuery('');
+        break;
+      case 'date':
+        setDateRange('last_7_days');
+        break;
+    }
+  };
+
+  // Clear all filters
+  const clearAllFilters = () => {
+    setSelectedDevices([]);
+    setSelectedCountries([]);
+    setSelectedCities([]);
+    setPositionRange([1, 100]);
+    setSearchQuery('');
+    setDateRange('last_7_days');
+  };
+
+  // Export handlers
+  const handleExportPDF = async () => {
+    if (!dashboardRef.current) return;
+    const result = await exportToPDF('Nike GSC Performance', dashboardRef.current);
+    if (!result.success) alert(`Export failed: ${result.error}`);
+  };
+
+  const handleExportExcel = () => {
+    // Prepare all chart data (would need to access resultSets from each chart)
+    const chartsData = charts.map(chart => ({
+      title: chart.title,
+      type: chart.type,
+      data: [] // TODO: Collect from rendered charts
+    }));
+    const result = exportToExcel('Nike GSC Performance', chartsData);
+    if (!result.success) alert(`Export failed: ${result.error}`);
+  };
+
+  const handleExportCSV = () => {
+    // Export all dashboard data as CSV
+    const allData: any[] = [];
+
+    // Would need to collect from all chart resultSets
+    // For now, export structure info
+    const dashboardInfo = charts.map(chart => ({
+      Chart: chart.title,
+      Type: chart.type,
+      Measure: chart.measure,
+      Dimension: chart.dimension || 'None',
+      Size: `${chart.size.w}x${chart.size.h}`
+    }));
+
+    const result = exportToCSV('Nike_GSC_Performance', dashboardInfo);
+    if (!result.success) alert(`Export failed: ${result.error}`);
+  };
+
+  // Share handlers
+  const handleShare = async () => {
+    if (!shareEmail) return;
+
+    setIsSharing(true);
+    const result = await shareDashboard(dashboardId, shareEmail, 'view');
+    setIsSharing(false);
+
+    if (result.success) {
+      alert('Dashboard shared successfully!');
+      setShowShareDialog(false);
+      setShareEmail('');
+    } else {
+      alert(`Share failed: ${result.error}`);
+    }
+  };
+
+  const handleMakePublic = async () => {
+    const result = await makeDashboardPublic(dashboardId, 'view');
+
+    if (result.success) {
+      alert(`Dashboard is now public! Share this link:\n${result.shareUrl}`);
+    } else {
+      alert(`Failed to make public: ${result.error}`);
+    }
+  };
+
+  // Save dashboard handler
+  const handleSave = async () => {
+    setIsSaving(true);
+    setSaveSuccess(false);
+
+    const result = await saveDashboard(dashboardId, {
+      name: 'Nike GSC Performance', // TODO: Make editable
+      description: 'GSC performance dashboard',
+      datasource: 'gsc_performance_7days',
+      charts,
+      filters: filters.map((f: any) => ({
+        field: f.member || f.field,
+        operator: f.operator,
+        values: f.values
+      }))
+    });
+
+    setIsSaving(false);
+
+    if (result.success) {
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3000);
+    } else {
+      alert(`Error saving dashboard: ${result.error}`);
+    }
+  };
+
+  // Keyboard shortcuts
+  useKeyboardShortcuts({
+    onSave: handleSave,
+    onAddChart: () => setIsAddingChart(true),
+    onToggleFilters: () => setShowFilters(!showFilters),
+    onExport: handleExportPDF
+  });
+
+  // Convert charts to react-grid-layout format
+  const layout = charts.map((chart, index) => ({
+    i: chart.id,
+    x: chart.x ?? (index * 3) % 12,
+    y: chart.y ?? Math.floor((index * 3) / 12) * 2,
+    w: chart.size.w,
+    h: chart.size.h,
+    minW: chart.type === 'kpi' || chart.type === 'gauge' ? 2 : 3,
+    minH: 2
+  }));
+
+  // Handle layout changes (drag or resize)
+  const handleLayoutChange = (newLayout: GridLayout[]) => {
+    const updatedCharts = charts.map(chart => {
+      const layoutItem = newLayout.find(l => l.i === chart.id);
+      if (layoutItem) {
+        return {
+          ...chart,
+          size: { w: layoutItem.w, h: layoutItem.h },
+          x: layoutItem.x,
+          y: layoutItem.y
+        };
+      }
+      return chart;
+    });
+    setCharts(updatedCharts);
+  };
+
+  // Cross-filtering: Click chart element → Add filter
+  const handleCrossFilter = (dimension: string, value: string) => {
+    // Check if filter already exists
+    const existingFilterIndex = filters.findIndex(f => f.member === dimension);
+
+    if (existingFilterIndex >= 0) {
+      // Update existing filter
+      const newFilters = [...filters];
+      if (newFilters[existingFilterIndex].values.includes(value)) {
+        // Remove value if already filtered
+        newFilters[existingFilterIndex].values = newFilters[existingFilterIndex].values.filter((v: string) => v !== value);
+        if (newFilters[existingFilterIndex].values.length === 0) {
+          newFilters.splice(existingFilterIndex, 1);
+        }
+      } else {
+        // Add value to filter
+        newFilters[existingFilterIndex].values.push(value);
+      }
+      setFilters(newFilters);
+    } else {
+      // Add new filter
+      setFilters([...filters, {
+        member: dimension,
+        operator: 'equals',
+        values: [value]
+      }]);
+    }
+
+    // Update filter UI state based on dimension
+    if (dimension.includes('device')) {
+      const deviceValue = value.toUpperCase();
+      setSelectedDevices(prev =>
+        prev.includes(deviceValue) ? prev.filter(d => d !== deviceValue) : [...prev, deviceValue]
+      );
+    } else if (dimension.includes('country')) {
+      setSelectedCountries(prev =>
+        prev.includes(value) ? prev.filter(c => c !== value) : [...prev, value]
+      );
+    }
+  };
+
+  const addChart = (type: string, measure: string, dimension?: string) => {
+    // Auto-sizing based on chart type
+    let size = { w: 6, h: 6 }; // default
+
+    switch (type) {
+      case 'kpi':
+      case 'gauge':
+        size = { w: 3, h: 2 };
+        break;
+      case 'line':
+      case 'area':
+      case 'heatmap':
+      case 'table':
+        size = { w: 12, h: 6 };
+        break;
+      case 'bar':
+      case 'pie':
+      case 'funnel':
+        size = { w: 6, h: 6 };
+        break;
+      case 'treemap':
+      case 'sankey':
+      case 'radar':
+      case 'scatter':
+        size = { w: 6, h: 6 };
+        break;
+    }
+
+    const newChart: ChartConfig = {
+      id: Date.now().toString(),
+      type: type as any,
+      measure,
+      dimension,
+      title: `New ${type.charAt(0).toUpperCase() + type.slice(1)} Chart`,
+      size
+    };
+
+    setCharts([...charts, newChart]);
+    setIsAddingChart(false);
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-muted/30 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-muted/30">
+      {/* Top Toolbar */}
+      <div className="bg-background border-b sticky top-0 z-50">
+        <div className="flex items-center justify-between p-4">
+          <div className="flex items-center gap-4">
+            <h1 className="text-xl font-semibold">Nike GSC Performance</h1>
+            <span className="text-sm text-muted-foreground">Connected to: gsc_performance_7days</span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <UserProfile />
+
+            <Button variant="outline" size="sm" onClick={() => setShowFilters(!showFilters)}>
+              <Filter className="h-4 w-4 mr-2" />
+              Filters
+            </Button>
+
+            <Button variant="outline" size="sm" onClick={() => setIsAddingChart(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Add Chart
+            </Button>
+
+            {/* Export Menu */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <Download className="h-4 w-4 mr-2" />
+                  Export
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuItem onClick={handleExportPDF}>
+                  Export as PDF
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleExportExcel}>
+                  Export as Excel
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleExportCSV}>
+                  Export as CSV
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* Share Button */}
+            <Button variant="outline" size="sm" onClick={() => setShowShareDialog(true)}>
+              <Share2 className="h-4 w-4 mr-2" />
+              Share
+            </Button>
+
+            <Button size="sm" onClick={handleSave} disabled={isSaving}>
+              {isSaving ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : saveSuccess ? (
+                <>
+                  <CheckCircle2 className="h-4 w-4 mr-2" />
+                  Saved!
+                </>
+              ) : (
+                <>
+                  <Save className="h-4 w-4 mr-2" />
+                  Save
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
+
+        {/* Enhanced Filter Bar */}
+        {showFilters && (
+          <div className="border-t p-4 bg-muted/50 space-y-4">
+            {/* Filter Chips - Active Filters */}
+            {(selectedDevices.length > 0 || selectedCountries.length > 0 || selectedCities.length > 0 || searchQuery || dateRange !== 'last_7_days' || positionRange[0] > 1 || positionRange[1] < 100) && (
+              <div className="flex items-center gap-2 flex-wrap pb-2 border-b">
+                <span className="text-sm font-medium text-muted-foreground">Active Filters:</span>
+
+                {selectedDevices.map(device => (
+                  <Badge key={device} variant="secondary" className="gap-1">
+                    Device: {device}
+                    <X className="h-3 w-3 cursor-pointer" onClick={() => setSelectedDevices(selectedDevices.filter(d => d !== device))} />
+                  </Badge>
+                ))}
+
+                {selectedCountries.map(country => (
+                  <Badge key={country} variant="secondary" className="gap-1">
+                    Country: {country}
+                    <X className="h-3 w-3 cursor-pointer" onClick={() => setSelectedCountries(selectedCountries.filter(c => c !== country))} />
+                  </Badge>
+                ))}
+
+                {selectedCities.map(city => (
+                  <Badge key={city} variant="secondary" className="gap-1">
+                    City: {city}
+                    <X className="h-3 w-3 cursor-pointer" onClick={() => setSelectedCities(selectedCities.filter(c => c !== city))} />
+                  </Badge>
+                ))}
+
+                {searchQuery && (
+                  <Badge variant="secondary" className="gap-1">
+                    Search: "{searchQuery}"
+                    <X className="h-3 w-3 cursor-pointer" onClick={() => setSearchQuery('')} />
+                  </Badge>
+                )}
+
+                {dateRange !== 'last_7_days' && (
+                  <Badge variant="secondary" className="gap-1">
+                    Date: {dateRange.replace('_', ' ')}
+                    <X className="h-3 w-3 cursor-pointer" onClick={() => setDateRange('last_7_days')} />
+                  </Badge>
+                )}
+
+                {(positionRange[0] > 1 || positionRange[1] < 100) && (
+                  <Badge variant="secondary" className="gap-1">
+                    Position: {positionRange[0]}-{positionRange[1]}
+                    <X className="h-3 w-3 cursor-pointer" onClick={() => setPositionRange([1, 100])} />
+                  </Badge>
+                )}
+
+                <Button variant="ghost" size="sm" onClick={clearAllFilters}>Clear All</Button>
+              </div>
+            )}
+
+            {/* Filter Controls */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* Date Range Picker */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Date Range</label>
+                <Select value={dateRange} onValueChange={setDateRange}>
+                  <SelectTrigger>
+                    <Calendar className="h-4 w-4 mr-2" />
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="last_7_days">Last 7 Days</SelectItem>
+                    <SelectItem value="last_30_days">Last 30 Days</SelectItem>
+                    <SelectItem value="last_90_days">Last 90 Days</SelectItem>
+                    <SelectItem value="this_month">This Month</SelectItem>
+                    <SelectItem value="last_month">Last Month</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Search Filter */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Search Queries</label>
+                <Input
+                  placeholder="Filter by query..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full"
+                />
+              </div>
+
+              {/* Device Multi-Select */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Device</label>
+                <div className="flex gap-2">
+                  {['DESKTOP', 'MOBILE', 'TABLET'].map(device => (
+                    <Button
+                      key={device}
+                      variant={selectedDevices.includes(device) ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => {
+                        setSelectedDevices(
+                          selectedDevices.includes(device)
+                            ? selectedDevices.filter(d => d !== device)
+                            : [...selectedDevices, device]
+                        );
+                      }}
+                    >
+                      {device.charAt(0) + device.slice(1).toLowerCase()}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Country Multi-Select */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Country</label>
+                <div className="flex gap-2">
+                  {['USA', 'UK', 'CA'].map(country => (
+                    <Button
+                      key={country}
+                      variant={selectedCountries.includes(country) ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => {
+                        setSelectedCountries(
+                          selectedCountries.includes(country)
+                            ? selectedCountries.filter(c => c !== country)
+                            : [...selectedCountries, country]
+                        );
+                      }}
+                    >
+                      {country}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Cascading City Filter (only shows when countries selected) */}
+            {availableCities.length > 0 && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium">
+                  City (filtered by: {selectedCountries.join(', ')})
+                </label>
+                <Select
+                  value={selectedCities[0] || ''}
+                  onValueChange={(city) => {
+                    if (city) {
+                      setSelectedCities([city]);
+                    }
+                  }}
+                >
+                  <SelectTrigger className="w-[280px]">
+                    <SelectValue placeholder="Select city..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableCities.slice(0, 50).map(city => (
+                      <SelectItem key={city} value={city}>
+                        {city}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Showing cities in selected {selectedCountries.length === 1 ? 'country' : 'countries'}
+                </p>
+              </div>
+            )}
+
+            {/* Position Range Slider */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">
+                Position Range: {positionRange[0]} - {positionRange[1]}
+              </label>
+              <Slider
+                min={1}
+                max={100}
+                step={1}
+                value={positionRange}
+                onValueChange={setPositionRange}
+                className="w-full"
+              />
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Main Canvas with React Grid Layout */}
+      <div className="p-6" ref={dashboardRef}>
+        <ResponsiveGridLayout
+          className="layout"
+          layouts={{ lg: layout }}
+          breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
+          cols={{ lg: 12, md: 12, sm: 6, xs: 4, xxs: 2 }}
+          rowHeight={60}
+          onLayoutChange={handleLayoutChange}
+          isDraggable={true}
+          isResizable={true}
+          compactType="vertical"
+          preventCollision={false}
+        >
+          {charts.map((chart) => (
+            <div key={chart.id} className="bg-card border rounded-lg p-4">
+              <ChartRenderer chart={chart} filters={filters} onCrossFilter={handleCrossFilter} />
+            </div>
+          ))}
+        </ResponsiveGridLayout>
+
+        {charts.length === 0 && (
+          <div className="text-center py-12">
+            <BarChart3 className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+            <h3 className="text-lg font-medium mb-2">No charts yet</h3>
+            <p className="text-muted-foreground mb-4">Add your first chart to get started</p>
+            <Button onClick={() => setIsAddingChart(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Add Chart
+            </Button>
+          </div>
+        )}
+      </div>
+
+      {/* Add Chart Modal */}
+      <Dialog open={isAddingChart} onOpenChange={setIsAddingChart}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Add Chart</DialogTitle>
+          </DialogHeader>
+
+          <Tabs defaultValue="kpi" className="w-full">
+            <TabsList className="grid w-full grid-cols-7">
+              <TabsTrigger value="kpi">KPI</TabsTrigger>
+              <TabsTrigger value="line">Line</TabsTrigger>
+              <TabsTrigger value="bar">Bar</TabsTrigger>
+              <TabsTrigger value="pie">Pie</TabsTrigger>
+              <TabsTrigger value="advanced">Advanced</TabsTrigger>
+              <TabsTrigger value="special">Special</TabsTrigger>
+              <TabsTrigger value="table">Table</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="kpi" className="space-y-4">
+              <h3 className="font-medium">Select Metric</h3>
+              <div className="grid grid-cols-2 gap-2">
+                <Button variant="outline" className="h-20 flex-col" onClick={() => addChart('kpi', 'GscPerformance7days.clicks')}>
+                  <BarChart3 className="h-6 w-6 mb-2" />
+                  Total Clicks
+                </Button>
+                <Button variant="outline" className="h-20 flex-col" onClick={() => addChart('kpi', 'GscPerformance7days.impressions')}>
+                  <Eye className="h-6 w-6 mb-2" />
+                  Total Impressions
+                </Button>
+                <Button variant="outline" className="h-20 flex-col" onClick={() => addChart('kpi', 'GscPerformance7days.avgCtr')}>
+                  <Gauge className="h-6 w-6 mb-2" />
+                  Avg CTR
+                </Button>
+                <Button variant="outline" className="h-20 flex-col" onClick={() => addChart('kpi', 'GscPerformance7days.avgPosition')}>
+                  <BarChart3 className="h-6 w-6 mb-2" />
+                  Avg Position
+                </Button>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="line" className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Metric</label>
+                <Select onValueChange={(m) => addChart('line', m, 'GscPerformance7days.date')}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select metric" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="GscPerformance7days.clicks">Clicks</SelectItem>
+                    <SelectItem value="GscPerformance7days.impressions">Impressions</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="bar" className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Metric</label>
+                  <Select>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select metric" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="clicks">Clicks</SelectItem>
+                      <SelectItem value="impressions">Impressions</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Dimension</label>
+                  <Select onValueChange={(d) => addChart('bar', 'GscPerformance7days.clicks', d)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select dimension" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="GscPerformance7days.device">Device</SelectItem>
+                      <SelectItem value="GscPerformance7days.country">Country</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="pie" className="space-y-4">
+              <Button
+                variant="outline"
+                className="w-full h-16"
+                onClick={() => addChart('pie', 'GscPerformance7days.clicks', 'GscPerformance7days.device')}
+              >
+                Clicks by Device
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full h-16"
+                onClick={() => addChart('pie', 'GscPerformance7days.clicks', 'GscPerformance7days.country')}
+              >
+                Clicks by Country
+              </Button>
+            </TabsContent>
+
+            <TabsContent value="advanced" className="space-y-4">
+              <h3 className="font-medium">Advanced Charts</h3>
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  variant="outline"
+                  className="h-20 flex-col"
+                  onClick={() => addChart('area', 'GscPerformance7days.clicks', 'GscPerformance7days.date')}
+                >
+                  <LineChart className="h-6 w-6 mb-2" />
+                  Area Chart
+                </Button>
+                <Button
+                  variant="outline"
+                  className="h-20 flex-col"
+                  onClick={() => addChart('scatter', 'GscPerformance7days.clicks', 'GscPerformance7days.impressions')}
+                >
+                  <BarChart3 className="h-6 w-6 mb-2" />
+                  Scatter Plot
+                </Button>
+                <Button
+                  variant="outline"
+                  className="h-20 flex-col"
+                  onClick={() => addChart('heatmap', 'GscPerformance7days.clicks')}
+                >
+                  <Gauge className="h-6 w-6 mb-2" />
+                  Heatmap
+                </Button>
+                <Button
+                  variant="outline"
+                  className="h-20 flex-col"
+                  onClick={() => addChart('gauge', 'GscPerformance7days.avgCtr')}
+                >
+                  <Gauge className="h-6 w-6 mb-2" />
+                  Gauge
+                </Button>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="special" className="space-y-4">
+              <h3 className="font-medium">Special Visualizations</h3>
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  variant="outline"
+                  className="h-20 flex-col"
+                  onClick={() => addChart('treemap', 'GscPerformance7days.clicks', 'GscPerformance7days.device')}
+                >
+                  <BarChart3 className="h-6 w-6 mb-2" />
+                  Treemap
+                </Button>
+                <Button
+                  variant="outline"
+                  className="h-20 flex-col"
+                  onClick={() => addChart('sankey', 'GscPerformance7days.clicks', 'GscPerformance7days.device')}
+                >
+                  <LineChart className="h-6 w-6 mb-2" />
+                  Sankey
+                </Button>
+                <Button
+                  variant="outline"
+                  className="h-20 flex-col"
+                  onClick={() => addChart('funnel', 'GscPerformance7days.clicks', 'GscPerformance7days.device')}
+                >
+                  <Filter className="h-6 w-6 mb-2" />
+                  Funnel
+                </Button>
+                <Button
+                  variant="outline"
+                  className="h-20 flex-col"
+                  onClick={() => addChart('radar', 'GscPerformance7days.clicks', 'GscPerformance7days.device')}
+                >
+                  <Settings className="h-6 w-6 mb-2" />
+                  Radar
+                </Button>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="table" className="space-y-4">
+              <Button
+                variant="outline"
+                className="w-full h-16"
+                onClick={() => addChart('table', 'GscPerformance7days.clicks', 'GscPerformance7days.query')}
+              >
+                Top Queries Table
+              </Button>
+            </TabsContent>
+          </Tabs>
+        </DialogContent>
+      </Dialog>
+
+      {/* Share Dialog */}
+      <Dialog open={showShareDialog} onOpenChange={setShowShareDialog}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Share Dashboard</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Share with User</label>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Enter email address"
+                  value={shareEmail}
+                  onChange={(e) => setShareEmail(e.target.value)}
+                  type="email"
+                />
+                <Button onClick={handleShare} disabled={isSharing || !shareEmail}>
+                  {isSharing ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Share'}
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                User must have an account to receive shared dashboard
+              </p>
+            </div>
+
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground">Or</span>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Make Public</label>
+              <Button variant="outline" onClick={handleMakePublic} className="w-full">
+                Generate Public Link
+              </Button>
+              <p className="text-xs text-muted-foreground">
+                Anyone with the link can view this dashboard
+              </p>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}

@@ -1,0 +1,526 @@
+/**
+ * Global Theme CSS Variables
+ * These variables are populated by ThemeManager.applyThemeToDom()
+ * Import this file in your root component for theme support
+ */
+
+:root {
+  /* Looker Studio Color Variables - Exact Match */
+  --color-primary: #4285F4;
+  --color-primary-hover: #1967D2;
+  --color-primary-active: #174EA6;
+  --color-secondary: #5F6368;
+  --color-secondary-hover: #3C4043;
+  --color-accent: #1E8E3E;
+  --color-background: #FFFFFF;
+  --color-surface: #F8F9FA;
+  --color-surface-hover: #F1F3F4;
+  --color-border: #DADCE0;
+  --color-text: #202124;
+  --color-text-secondary: #5F6368;
+  --color-text-muted: #80868B;
+  --color-success: #1E8E3E;
+  --color-warning: #F9AB00;
+  --color-error: #EA4335;
+  --color-info: #4285F4;
+
+  /* Typography Variables */
+  --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-family-heading: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
+  /* Spacing Variables */
+  --spacing-xs: 0.5rem;
+  --spacing-sm: 0.75rem;
+  --spacing-md: 1rem;
+  --spacing-lg: 1.5rem;
+  --spacing-xl: 2rem;
+
+  /* Border Radius Variables */
+  --radius-sm: 0.25rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+
+  /* Shadow Variables */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+
+  /* Transition Variables */
+  --transition-fast: 150ms ease-in-out;
+  --transition-base: 200ms ease-in-out;
+  --transition-slow: 300ms ease-in-out;
+}
+
+/* Base Styles Using Theme Variables */
+body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-family);
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--color-text);
+  background-color: var(--color-background);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Heading Styles */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-family-heading);
+  color: var(--color-text);
+  margin: 0;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+h1 { font-size: 2.25rem; margin-bottom: var(--spacing-lg); }
+h2 { font-size: 1.875rem; margin-bottom: var(--spacing-md); }
+h3 { font-size: 1.5rem; margin-bottom: var(--spacing-md); }
+h4 { font-size: 1.25rem; margin-bottom: var(--spacing-sm); }
+h5 { font-size: 1.125rem; margin-bottom: var(--spacing-sm); }
+h6 { font-size: 1rem; margin-bottom: var(--spacing-sm); }
+
+/* Paragraph Styles */
+p {
+  margin: 0 0 var(--spacing-md) 0;
+  color: var(--color-text-secondary);
+}
+
+/* Link Styles */
+a {
+  color: var(--color-primary);
+  text-decoration: none;
+  transition: color var(--transition-fast);
+}
+
+a:hover {
+  color: var(--color-primary-hover);
+}
+
+a:active {
+  color: var(--color-primary-active);
+}
+
+/* Button Base Styles */
+button {
+  font-family: var(--font-family);
+  cursor: pointer;
+  transition: all var(--transition-base);
+}
+
+/* Input Base Styles */
+input,
+textarea,
+select {
+  font-family: var(--font-family);
+  font-size: 0.875rem;
+  color: var(--color-text);
+  background-color: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  transition: border-color var(--transition-fast);
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+/* Utility Classes */
+.text-primary { color: var(--color-primary); }
+.text-secondary { color: var(--color-text-secondary); }
+.text-muted { color: var(--color-text-muted); }
+.text-success { color: var(--color-success); }
+.text-warning { color: var(--color-warning); }
+.text-error { color: var(--color-error); }
+.text-info { color: var(--color-info); }
+
+.bg-primary { background-color: var(--color-primary); }
+.bg-surface { background-color: var(--color-surface); }
+.bg-background { background-color: var(--color-background); }
+
+.border-primary { border-color: var(--color-primary); }
+.border-default { border-color: var(--color-border); }
+
+.rounded-sm { border-radius: var(--radius-sm); }
+.rounded-md { border-radius: var(--radius-md); }
+.rounded-lg { border-radius: var(--radius-lg); }
+.rounded-xl { border-radius: var(--radius-xl); }
+
+.shadow-sm { box-shadow: var(--shadow-sm); }
+.shadow-md { box-shadow: var(--shadow-md); }
+.shadow-lg { box-shadow: var(--shadow-lg); }
+.shadow-xl { box-shadow: var(--shadow-xl); }
+
+.p-xs { padding: var(--spacing-xs); }
+.p-sm { padding: var(--spacing-sm); }
+.p-md { padding: var(--spacing-md); }
+.p-lg { padding: var(--spacing-lg); }
+.p-xl { padding: var(--spacing-xl); }
+
+.m-xs { margin: var(--spacing-xs); }
+.m-sm { margin: var(--spacing-sm); }
+.m-md { margin: var(--spacing-md); }
+.m-lg { margin: var(--spacing-lg); }
+.m-xl { margin: var(--spacing-xl); }
+
+/* Component Base Styles */
+.card {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-lg);
+  box-shadow: var(--shadow-md);
+  transition: all var(--transition-base);
+}
+
+.card:hover {
+  background-color: var(--color-surface-hover);
+  box-shadow: var(--shadow-lg);
+}
+
+.btn {
+  padding: var(--spacing-sm) var(--spacing-lg);
+  border: none;
+  border-radius: var(--radius-md);
+  font-weight: 500;
+  font-size: 0.875rem;
+  transition: all var(--transition-base);
+}
+
+.btn-primary {
+  background-color: var(--color-primary);
+  color: #FFFFFF;
+}
+
+.btn-primary:hover {
+  background-color: var(--color-primary-hover);
+}
+
+.btn-primary:active {
+  background-color: var(--color-primary-active);
+}
+
+.btn-secondary {
+  background-color: var(--color-secondary);
+  color: #FFFFFF;
+}
+
+.btn-secondary:hover {
+  background-color: var(--color-secondary-hover);
+}
+
+.btn-outline {
+  background-color: transparent;
+  color: var(--color-primary);
+  border: 1px solid var(--color-primary);
+}
+
+.btn-outline:hover {
+  background-color: var(--color-primary);
+  color: #FFFFFF;
+}
+
+/* Alert Styles */
+.alert {
+  padding: var(--spacing-md);
+  border-radius: var(--radius-md);
+  border-left: 4px solid;
+  margin-bottom: var(--spacing-md);
+}
+
+.alert-success {
+  background-color: rgba(16, 185, 129, 0.1);
+  border-color: var(--color-success);
+  color: var(--color-success);
+}
+
+.alert-warning {
+  background-color: rgba(245, 158, 11, 0.1);
+  border-color: var(--color-warning);
+  color: var(--color-warning);
+}
+
+.alert-error {
+  background-color: rgba(239, 68, 68, 0.1);
+  border-color: var(--color-error);
+  color: var(--color-error);
+}
+
+.alert-info {
+  background-color: rgba(59, 130, 246, 0.1);
+  border-color: var(--color-info);
+  color: var(--color-info);
+}
+
+/* Badge Styles - Looker Studio Match */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 500;
+  border-radius: 12px;
+  line-height: 16px;
+}
+
+.badge-primary {
+  background-color: var(--color-primary);
+  color: #FFFFFF;
+}
+
+.badge-success {
+  background-color: var(--color-success);
+  color: #FFFFFF;
+}
+
+.badge-warning {
+  background-color: var(--color-warning);
+  color: #FFFFFF;
+}
+
+.badge-error {
+  background-color: var(--color-error);
+  color: #FFFFFF;
+}
+
+/* Looker Studio Dimension/Metric Badges */
+.badge-dimension {
+  background-color: #E8F5E9;
+  color: #1E8E3E;
+  border: 1px solid #C8E6C9;
+}
+
+.badge-metric {
+  background-color: #E8F0FE;
+  color: #1967D2;
+  border: 1px solid #AECBFA;
+}
+
+/* Loading Animation */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.spinner {
+  border: 2px solid var(--color-border);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  animation: spin 0.6s linear infinite;
+}
+
+/* Fade Animation */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.fade-in {
+  animation: fadeIn var(--transition-base);
+}
+
+/* Slide Animation */
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.slide-in {
+  animation: slideIn var(--transition-base);
+}
+
+/* Looker Studio - Hover States */
+.looker-hover {
+  transition: background-color 150ms ease-in-out;
+}
+
+.looker-hover:hover {
+  background-color: #F8F9FA;
+}
+
+.looker-hover-blue:hover {
+  background-color: #E8F0FE;
+}
+
+.looker-hover-green:hover {
+  background-color: #E8F5E9;
+}
+
+.looker-hover-red:hover {
+  background-color: #FCE8E6;
+}
+
+/* Looker Studio - Button Styles */
+.looker-button-primary {
+  background-color: #4285F4;
+  color: #FFFFFF;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 150ms ease-in-out;
+}
+
+.looker-button-primary:hover {
+  background-color: #1967D2;
+}
+
+.looker-button-secondary {
+  background-color: transparent;
+  color: #5F6368;
+  border: 1px solid #DADCE0;
+  padding: 7px 15px;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 150ms ease-in-out;
+}
+
+.looker-button-secondary:hover {
+  background-color: #F8F9FA;
+  border-color: #80868B;
+}
+
+/* Looker Studio - Input Styles */
+.looker-input {
+  border: 1px solid #DADCE0;
+  border-radius: 4px;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: #202124;
+  transition: border-color 150ms ease-in-out;
+}
+
+.looker-input:hover {
+  border-color: #80868B;
+}
+
+.looker-input:focus {
+  border-color: #4285F4;
+  outline: none;
+  box-shadow: 0 0 0 1px #4285F4;
+}
+
+/* Looker Studio - Select Styles */
+.looker-select {
+  border: 1px solid #DADCE0;
+  border-radius: 4px;
+  padding: 7px 32px 7px 12px;
+  font-size: 13px;
+  color: #202124;
+  background-color: #FFFFFF;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%235F6368' d='M6 8L2 4h8z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  cursor: pointer;
+  transition: border-color 150ms ease-in-out;
+}
+
+.looker-select:hover {
+  border-color: #80868B;
+}
+
+.looker-select:focus {
+  border-color: #4285F4;
+  outline: none;
+  box-shadow: 0 0 0 1px #4285F4;
+}
+
+/* Scrollbar Styling - Looker Studio Style */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #F8F9FA;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #DADCE0;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #80868B;
+}
+
+/* Focus Styles */
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* Selection Styles */
+::selection {
+  background-color: var(--color-primary);
+  color: #FFFFFF;
+}
+
+/* Responsive Typography */
+@media (max-width: 768px) {
+  h1 { font-size: 1.875rem; }
+  h2 { font-size: 1.5rem; }
+  h3 { font-size: 1.25rem; }
+  h4 { font-size: 1.125rem; }
+  h5 { font-size: 1rem; }
+  h6 { font-size: 0.875rem; }
+}
+
+/* Print Styles */
+@media print {
+  body {
+    background-color: white;
+    color: black;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+}
+
+/* Dark Mode Support (when dark-mode theme is applied) */
+@media (prefers-color-scheme: dark) {
+  /* Theme system will override these via CSS variables */
+  /* But we can provide fallbacks here if needed */
+}
+
+/* Accessibility - Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* High Contrast Mode */
+@media (prefers-contrast: high) {
+  :root {
+    --color-border: #000000;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    border-width: 2px;
+  }
+}

@@ -2,7 +2,7 @@
  * MCP Tools for Google Business Profile API
  * Location management, reviews, posts, media, performance
  */
-import { getBusinessProfileClient } from './client.js';
+import { extractOAuthToken, createBusinessProfileClient } from '../shared/oauth-client-factory.js';
 import { getLogger } from '../shared/logger.js';
 import { getApprovalEnforcer, DryRunResultBuilder } from '../shared/approval-enforcer.js';
 import { detectAndEnforceVagueness } from '../shared/vagueness-detector.js';
@@ -41,9 +41,19 @@ export const listLocationsTool = {
     async handler(input) {
         try {
             const { accountId } = input;
-            const client = getBusinessProfileClient();
+            // Extract OAuth token from request
+            const oauthToken = extractOAuthToken(input);
+            if (!oauthToken) {
+                throw new Error('OAuth token required for Business Profile API access');
+            }
+            // Create Business Profile client with user's OAuth token
+            const client = createBusinessProfileClient(oauthToken);
             logger.info('Listing business locations', { accountId });
-            const locations = await client.listLocations(accountId);
+            const response = await client.businessinformation.accounts.locations.list({
+                parent: `accounts/${accountId}`,
+                readMask: 'name,title,storefrontAddress,websiteUri,phoneNumbers,categories,profile',
+            });
+            const locations = response.data.locations || [];
             const formatted = locations.map((loc) => ({
                 name: loc.name,
                 locationId: loc.name?.split('/')[3] || '',
@@ -103,9 +113,19 @@ export const getLocationTool = {
     async handler(input) {
         try {
             const { locationName } = input;
-            const client = getBusinessProfileClient();
+            // Extract OAuth token from request
+            const oauthToken = extractOAuthToken(input);
+            if (!oauthToken) {
+                throw new Error('OAuth token required for Business Profile API access');
+            }
+            // Create Business Profile client with user's OAuth token
+            const client = createBusinessProfileClient(oauthToken);
             logger.info('Getting location details', { locationName });
-            const location = await client.getLocation(locationName);
+            const response = await client.businessinformation.locations.get({
+                name: locationName,
+                readMask: 'name,title,storefrontAddress,websiteUri,phoneNumbers,categories,regularHours,profile',
+            });
+            const location = response.data;
             return {
                 success: true,
                 data: {
@@ -178,12 +198,18 @@ export const updateLocationTool = {
     async handler(input) {
         try {
             const { locationName, updates, confirmationToken } = input;
+            // Extract OAuth token from request
+            const oauthToken = extractOAuthToken(input);
+            if (!oauthToken) {
+                throw new Error('OAuth token required for Business Profile API access');
+            }
             detectAndEnforceVagueness({
                 operation: 'update_business_location',
                 inputText: `update location ${locationName}`,
                 inputParams: { locationName, updates },
             });
-            const client = getBusinessProfileClient();
+            // Create Business Profile client with user's OAuth token
+            const client = createBusinessProfileClient(oauthToken);
             const approvalEnforcer = getApprovalEnforcer();
             const dryRunBuilder = new DryRunResultBuilder('update_business_location', 'Google Business Profile', locationName);
             Object.keys(updates).forEach((field) => {
@@ -206,7 +232,12 @@ export const updateLocationTool = {
             logger.info('Updating location with confirmation', { locationName });
             await approvalEnforcer.validateAndExecute(confirmationToken, dryRun, async () => {
                 const updateMask = Object.keys(updates);
-                return await client.updateLocation(locationName, updates, updateMask);
+                const response = await client.businessinformation.locations.patch({
+                    name: locationName,
+                    updateMask: updateMask.join(','),
+                    requestBody: updates,
+                });
+                return response.data;
             });
             return {
                 success: true,

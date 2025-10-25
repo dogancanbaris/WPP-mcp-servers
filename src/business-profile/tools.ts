@@ -3,7 +3,7 @@
  * Location management, reviews, posts, media, performance
  */
 
-import { getBusinessProfileClient } from './client.js';
+import { extractOAuthToken, createBusinessProfileClient } from '../shared/oauth-client-factory.js';
 import { getLogger } from '../shared/logger.js';
 import { getApprovalEnforcer, DryRunResultBuilder } from '../shared/approval-enforcer.js';
 import { detectAndEnforceVagueness } from '../shared/vagueness-detector.js';
@@ -45,11 +45,23 @@ export const listLocationsTool = {
     try {
       const { accountId } = input;
 
-      const client = getBusinessProfileClient();
+      // Extract OAuth token from request
+      const oauthToken = extractOAuthToken(input);
+      if (!oauthToken) {
+        throw new Error('OAuth token required for Business Profile API access');
+      }
+
+      // Create Business Profile client with user's OAuth token
+      const client = createBusinessProfileClient(oauthToken);
 
       logger.info('Listing business locations', { accountId });
 
-      const locations = await client.listLocations(accountId);
+      const response = await client.businessinformation.accounts.locations.list({
+        parent: `accounts/${accountId}`,
+        readMask: 'name,title,storefrontAddress,websiteUri,phoneNumbers,categories,profile',
+      });
+
+      const locations = response.data.locations || [];
 
       const formatted = locations.map((loc: any) => ({
         name: loc.name,
@@ -112,11 +124,23 @@ export const getLocationTool = {
     try {
       const { locationName } = input;
 
-      const client = getBusinessProfileClient();
+      // Extract OAuth token from request
+      const oauthToken = extractOAuthToken(input);
+      if (!oauthToken) {
+        throw new Error('OAuth token required for Business Profile API access');
+      }
+
+      // Create Business Profile client with user's OAuth token
+      const client = createBusinessProfileClient(oauthToken);
 
       logger.info('Getting location details', { locationName });
 
-      const location = await client.getLocation(locationName);
+      const response = await client.businessinformation.locations.get({
+        name: locationName,
+        readMask: 'name,title,storefrontAddress,websiteUri,phoneNumbers,categories,regularHours,profile',
+      });
+
+      const location = response.data;
 
       return {
         success: true,
@@ -191,13 +215,20 @@ export const updateLocationTool = {
     try {
       const { locationName, updates, confirmationToken } = input;
 
+      // Extract OAuth token from request
+      const oauthToken = extractOAuthToken(input);
+      if (!oauthToken) {
+        throw new Error('OAuth token required for Business Profile API access');
+      }
+
       detectAndEnforceVagueness({
         operation: 'update_business_location',
         inputText: `update location ${locationName}`,
         inputParams: { locationName, updates },
       });
 
-      const client = getBusinessProfileClient();
+      // Create Business Profile client with user's OAuth token
+      const client = createBusinessProfileClient(oauthToken);
 
       const approvalEnforcer = getApprovalEnforcer();
       const dryRunBuilder = new DryRunResultBuilder(
@@ -240,7 +271,12 @@ export const updateLocationTool = {
         dryRun,
         async () => {
           const updateMask = Object.keys(updates);
-          return await client.updateLocation(locationName, updates, updateMask);
+          const response = await client.businessinformation.locations.patch({
+            name: locationName,
+            updateMask: updateMask.join(','),
+            requestBody: updates,
+          });
+          return response.data;
         }
       );
 

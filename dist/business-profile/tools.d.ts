@@ -55,7 +55,7 @@ export declare const getLocationTool: {
     handler(input: any): Promise<{
         success: boolean;
         data: {
-            location: any;
+            location: import("googleapis").mybusinessbusinessinformation_v1.Schema$Location;
             message: string;
         };
     }>;
@@ -165,7 +165,7 @@ export declare const businessProfileTools: ({
     handler(input: any): Promise<{
         success: boolean;
         data: {
-            location: any;
+            location: import("googleapis").mybusinessbusinessinformation_v1.Schema$Location;
             message: string;
         };
     }>;

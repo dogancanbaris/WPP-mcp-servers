@@ -1,0 +1,266 @@
+'use client';
+
+import React, { useState } from 'react';
+import { useDashboardStore } from '@/store/dashboardStore';
+import { MenuButton } from './MenuButton';
+import { ToolbarSection } from './ToolbarButton';
+import { cn } from '@/lib/utils';
+import {
+  createFileMenuItems,
+  createEditMenuItems,
+  getViewMenuItems,
+  INSERT_MENU_ITEMS,
+  PAGE_MENU_ITEMS,
+  ARRANGE_MENU_ITEMS,
+  RESOURCE_MENU_ITEMS,
+  HELP_MENU_ITEMS,
+} from './menu-definitions';
+import {
+  TOOLBAR_LEFT,
+  TOOLBAR_CENTER,
+  TOOLBAR_RIGHT,
+} from './toolbar-definitions';
+import { VersionHistory } from '../VersionHistory';
+import { GlobalFilters } from '../GlobalFilters';
+import { ThemeEditor } from '../ThemeEditor';
+import { useKeyboardShortcuts } from '@/hooks/use-keyboard-shortcuts';
+import { useFilterStore } from '@/store/filterStore';
+import { useViewActions } from '../actions/view-actions';
+import { useEditActions } from '../actions/edit-actions';
+import { useFileActions } from '../actions/file-actions';
+
+interface EditorTopbarProps {
+  dashboardId: string;
+}
+
+/**
+ * Complete two-row topbar matching Looker Studio exactly
+ *
+ * Row 1 (40px): Logo + Report Title + Menu Bar (File, Edit, View, Insert, Page, Arrange, Resource, Help)
+ * Row 2 (48px): Tool Bar (Undo/Redo + Tools + Actions)
+ *
+ * Based on COMPREHENSIVE-COMPONENT-SPECIFICATIONS.md Part 1
+ */
+export const EditorTopbar: React.FC<EditorTopbarProps> = ({ dashboardId }) => {
+  const { config, setTitle } = useDashboardStore();
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [titleValue, setTitleValue] = useState(config.title);
+
+  // Feature dialog states
+  const [isVersionHistoryOpen, setIsVersionHistoryOpen] = useState(false);
+  const [isThemeEditorOpen, setIsThemeEditorOpen] = useState(false);
+
+  // Global filters store
+  const { isFilterBarVisible, toggleFilterBar } = useFilterStore();
+
+  // Action hooks
+  const fileActions = useFileActions();
+  const editActions = useEditActions();
+  const viewActions = useViewActions();
+
+  // Initialize keyboard shortcuts (simple hook)
+  useKeyboardShortcuts({
+    onSave: () => console.log('Save dashboard'),
+    onUndo: editActions.onUndo,
+    onRedo: editActions.onRedo,
+  });
+
+  const handleTitleBlur = () => {
+    setIsEditingTitle(false);
+    if (titleValue.trim() && titleValue !== config.title) {
+      setTitle(titleValue.trim());
+    } else {
+      setTitleValue(config.title);
+    }
+  };
+
+  const handleTitleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleTitleBlur();
+    } else if (e.key === 'Escape') {
+      setTitleValue(config.title);
+      setIsEditingTitle(false);
+    }
+  };
+
+  // Create connected menu items
+  const fileMenuItems = createFileMenuItems({
+    ...fileActions,
+    onVersionHistory: () => setIsVersionHistoryOpen(true),
+  });
+
+  const editMenuItems = createEditMenuItems(editActions);
+
+  const connectedHelpMenu = HELP_MENU_ITEMS.map((item) => {
+    if ('label' in item && item.label === 'Keyboard shortcuts') {
+      return {
+        ...item,
+        action: () => console.log('Keyboard shortcuts - dialog temporarily disabled'),
+      };
+    }
+    return item;
+  });
+
+  const connectedToolbarLeft = TOOLBAR_LEFT.map((item) => {
+    if ('id' in item) {
+      if (item.id === 'undo') {
+        return {
+          ...item,
+          action: editActions.onUndo,
+          disabled: !editActions.canUndo,
+        };
+      }
+      if (item.id === 'redo') {
+        return {
+          ...item,
+          action: editActions.onRedo,
+          disabled: !editActions.canRedo,
+        };
+      }
+    }
+    return item;
+  });
+
+  const connectedToolbarCenter = TOOLBAR_CENTER.map((item) => {
+    if ('id' in item) {
+      if (item.id === 'filters') {
+        return {
+          ...item,
+          action: () => toggleFilterBar(),
+          active: isFilterBarVisible,
+        };
+      }
+      if (item.id === 'theme') {
+        return {
+          ...item,
+          action: () => setIsThemeEditorOpen(true),
+        };
+      }
+    }
+    return item;
+  });
+
+  const connectedToolbarRight = TOOLBAR_RIGHT.map((item) => {
+    if ('type' in item && item.type === 'dropdown' && item.id === 'help') {
+      return {
+        ...item,
+        items: item.items.map((menuItem) => {
+          if ('label' in menuItem && menuItem.label === 'Keyboard shortcuts') {
+            return {
+              ...menuItem,
+              action: () => console.log('Keyboard shortcuts - dialog temporarily disabled'),
+            };
+          }
+          return menuItem;
+        }),
+      };
+    }
+    return item;
+  });
+
+  return (
+    <div className="topbar flex flex-col w-full bg-background border-b shrink-0 z-50">
+      {/* ================================================================
+          ROW 1: MENU BAR - Height: 40px (h-10)
+          Logo + Report Title + Menu Items (File-Edit-View | Insert-Page-Arrange | Resource-Help)
+          ================================================================ */}
+      <div className="flex items-center h-10 border-b px-4 gap-2 bg-background">
+        {/* Logo */}
+        <div className="flex items-center shrink-0">
+          <div className="h-7 w-7 rounded-md bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center text-white font-bold text-xs shadow-sm">
+            W
+          </div>
+        </div>
+
+        {/* Report Title - Editable inline */}
+        <div className="flex items-center">
+          {isEditingTitle ? (
+            <input
+              type="text"
+              value={titleValue}
+              onChange={(e) => setTitleValue(e.target.value)}
+              onBlur={handleTitleBlur}
+              onKeyDown={handleTitleKeyDown}
+              autoFocus
+              className={cn(
+                'h-8 px-3 text-sm font-medium',
+                'border border-primary rounded-md',
+                'focus:outline-none focus:ring-2 focus:ring-primary/20',
+                'min-w-[200px] max-w-[400px]',
+                'transition-all'
+              )}
+            />
+          ) : (
+            <button
+              onClick={() => setIsEditingTitle(true)}
+              className={cn(
+                'h-8 px-3 text-sm font-medium',
+                'hover:bg-muted rounded-md',
+                'transition-colors'
+              )}
+            >
+              {config.title}
+            </button>
+          )}
+        </div>
+
+        {/* Separator */}
+        <div className="h-5 w-px bg-border mx-1" />
+
+        {/* Menu Bar - Group 1: File, Edit, View */}
+        <div className="flex items-center gap-1">
+          <MenuButton label="File" items={fileMenuItems} />
+          <MenuButton label="Edit" items={editMenuItems} />
+          <MenuButton label="View" items={getViewMenuItems(viewActions)} />
+        </div>
+
+        {/* Separator */}
+        <div className="h-5 w-px bg-border mx-1" />
+
+        {/* Menu Bar - Group 2: Insert, Page, Arrange */}
+        <div className="flex items-center gap-1">
+          <MenuButton label="Insert" items={INSERT_MENU_ITEMS} />
+          <MenuButton label="Page" items={PAGE_MENU_ITEMS} />
+          <MenuButton label="Arrange" items={ARRANGE_MENU_ITEMS} />
+        </div>
+
+        {/* Separator */}
+        <div className="h-5 w-px bg-border mx-1" />
+
+        {/* Menu Bar - Group 3: Resource, Help */}
+        <div className="flex items-center gap-1">
+          <MenuButton label="Resource" items={RESOURCE_MENU_ITEMS} />
+          <MenuButton label="Help" items={connectedHelpMenu} />
+        </div>
+      </div>
+
+      {/* ================================================================
+          ROW 2: TOOLBAR - Height: 48px (h-12)
+          Left: Undo, Redo, Cursor, Add page, Add data, Blend
+          Center: Add chart, Tools, Add control, Align, Theme
+          Right: Reset, Share, View, More, Help, Profile, Pause
+          ================================================================ */}
+      <div className="flex items-center h-12 px-4 justify-between bg-muted/30">
+        {/* Left Section */}
+        <ToolbarSection items={connectedToolbarLeft} />
+
+        {/* Center Section */}
+        <ToolbarSection items={connectedToolbarCenter} />
+
+        {/* Right Section */}
+        <ToolbarSection items={connectedToolbarRight} />
+      </div>
+
+      {/* Feature Dialogs */}
+      <VersionHistory
+        dashboardId={dashboardId}
+        open={isVersionHistoryOpen}
+        onOpenChange={setIsVersionHistoryOpen}
+      />
+
+      {isThemeEditorOpen && (
+        <ThemeEditor onClose={() => setIsThemeEditorOpen(false)} />
+      )}
+    </div>
+  );
+};

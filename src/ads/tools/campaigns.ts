@@ -2,11 +2,12 @@
  * MCP Tools for Google Ads Campaign Write Operations
  */
 
-import { getGoogleAdsClient } from '../client.js';
 import { UpdateCampaignStatusSchema } from '../validation.js';
 import { getLogger } from '../../shared/logger.js';
 import { getApprovalEnforcer, DryRunResultBuilder } from '../../shared/approval-enforcer.js';
 import { detectAndEnforceVagueness } from '../../shared/vagueness-detector.js';
+import { extractRefreshToken } from '../../shared/oauth-client-factory.js';
+import { createGoogleAdsClientFromRefreshToken } from '../client.js';
 
 const logger = getLogger('ads.tools.campaigns');
 
@@ -94,14 +95,26 @@ export const updateCampaignStatusTool = {
 
       const { customerId, campaignId, status, confirmationToken } = input;
 
+      // Extract OAuth tokens from request
+      const refreshToken = extractRefreshToken(input);
+      if (!refreshToken) {
+        throw new Error('Refresh token required for Google Ads API. OMA must provide X-Google-Refresh-Token header.');
+      }
+
+      const developerToken = process.env.GOOGLE_ADS_DEVELOPER_TOKEN;
+      if (!developerToken) {
+        throw new Error('GOOGLE_ADS_DEVELOPER_TOKEN not configured');
+      }
+
+      // Create Google Ads client with user's refresh token
+      const client = createGoogleAdsClientFromRefreshToken(refreshToken, developerToken);
+
       // Vagueness detection - ensure campaignId is specific
       detectAndEnforceVagueness({
         operation: 'update_campaign_status',
         inputText: `update campaign ${campaignId} to ${status}`,
         inputParams: { customerId, campaignId, status },
       });
-
-      const client = getGoogleAdsClient();
 
       // Get current campaign info for preview
       const campaigns = await client.listCampaigns(customerId);
@@ -292,7 +305,19 @@ export const createCampaignTool = {
     try {
       const { customerId, name, budgetId, campaignType, status } = input;
 
-      const client = getGoogleAdsClient();
+      // Extract OAuth tokens from request
+      const refreshToken = extractRefreshToken(input);
+      if (!refreshToken) {
+        throw new Error('Refresh token required for Google Ads API. OMA must provide X-Google-Refresh-Token header.');
+      }
+
+      const developerToken = process.env.GOOGLE_ADS_DEVELOPER_TOKEN;
+      if (!developerToken) {
+        throw new Error('GOOGLE_ADS_DEVELOPER_TOKEN not configured');
+      }
+
+      // Create Google Ads client with user's refresh token
+      const client = createGoogleAdsClientFromRefreshToken(refreshToken, developerToken);
 
       logger.info('Creating campaign', { customerId, name, campaignType });
 

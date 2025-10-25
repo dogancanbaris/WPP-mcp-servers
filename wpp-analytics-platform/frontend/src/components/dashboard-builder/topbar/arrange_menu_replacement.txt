@@ -1,0 +1,97 @@
+// ============================================================================
+// ARRANGE MENU
+// ============================================================================
+// Note: Actions are connected in EditorTopbar.tsx using useArrangeActions hook
+export const getArrangeMenuItems = (arrangeActions: {
+  onBringToFront: () => void;
+  onSendToBack: () => void;
+  onMoveForward: () => void;
+  onMoveBackward: () => void;
+  onAlignLeft: () => void;
+  onAlignCenter: () => void;
+  onAlignRight: () => void;
+  onAlignTop: () => void;
+  onAlignMiddle: () => void;
+  onAlignBottom: () => void;
+  onDistributeHorizontally: () => void;
+  onDistributeVertically: () => void;
+  onGroup: () => void;
+  onUngroup: () => void;
+}): MenuItem[] => [
+  {
+    label: 'Bring to front',
+    icon: BringToFront,
+    shortcut: 'Ctrl+]',
+    action: arrangeActions.onBringToFront,
+  },
+  {
+    label: 'Send to back',
+    icon: SendToBack,
+    shortcut: 'Ctrl+[',
+    action: arrangeActions.onSendToBack,
+  },
+  {
+    label: 'Bring forward',
+    icon: ChevronUp,
+    action: arrangeActions.onMoveForward,
+  },
+  {
+    label: 'Send backward',
+    icon: ChevronDown,
+    action: arrangeActions.onMoveBackward,
+  },
+  { type: 'separator' },
+  {
+    label: 'Align',
+    icon: AlignLeft,
+    submenu: [
+      { label: 'Left', icon: AlignLeft, action: arrangeActions.onAlignLeft },
+      {
+        label: 'Center horizontally',
+        icon: AlignCenterHorizontal,
+        action: arrangeActions.onAlignCenter,
+      },
+      {
+        label: 'Right',
+        icon: AlignRight,
+        action: arrangeActions.onAlignRight,
+      },
+      { type: 'separator' },
+      { label: 'Top', icon: AlignStartVertical, action: arrangeActions.onAlignTop },
+      {
+        label: 'Center vertically',
+        icon: AlignCenterVertical,
+        action: arrangeActions.onAlignMiddle,
+      },
+      {
+        label: 'Bottom',
+        icon: AlignEndVertical,
+        action: arrangeActions.onAlignBottom,
+      },
+    ],
+  },
+  {
+    label: 'Distribute',
+    icon: LayoutGrid,
+    submenu: [
+      {
+        label: 'Horizontally',
+        action: arrangeActions.onDistributeHorizontally,
+      },
+      { label: 'Vertically', action: arrangeActions.onDistributeVertically },
+    ],
+  },
+  { type: 'separator' },
+  {
+    label: 'Group',
+    icon: Group,
+    shortcut: 'Ctrl+G',
+    action: arrangeActions.onGroup,
+  },
+  {
+    label: 'Ungroup',
+    icon: Ungroup,
+    shortcut: 'Ctrl+Shift+G',
+    action: arrangeActions.onUngroup,
+  },
+];

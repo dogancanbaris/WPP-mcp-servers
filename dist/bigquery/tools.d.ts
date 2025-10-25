@@ -94,9 +94,9 @@ export declare const runQueryTool: {
     handler(input: any): Promise<{
         success: boolean;
         data: {
-            rows: any;
-            rowCount: any;
-            jobId: any;
+            rows: any[];
+            rowCount: number;
+            jobId: string | undefined;
             message: string;
         };
     }>;
@@ -185,9 +185,9 @@ export declare const bigQueryTools: ({
     handler(input: any): Promise<{
         success: boolean;
         data: {
-            rows: any;
-            rowCount: any;
-            jobId: any;
+            rows: any[];
+            rowCount: number;
+            jobId: string | undefined;
             message: string;
         };
     }>;

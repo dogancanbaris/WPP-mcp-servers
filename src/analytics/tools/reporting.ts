@@ -2,9 +2,9 @@
  * MCP Tools for Google Analytics Reporting
  */
 
-import { getAnalyticsClient } from '../client.js';
 import { RunReportSchema, RunRealtimeReportSchema } from '../validation.js';
 import { getLogger } from '../../shared/logger.js';
+import { extractOAuthToken, createAnalyticsDataClient } from '../../shared/oauth-client-factory.js';
 
 const logger = getLogger('analytics.tools.reporting');
 
@@ -162,12 +162,19 @@ export const runAnalyticsReportTool = {
 
       const { propertyId, startDate, endDate, dimensions, metrics, limit } = input;
 
-      const client = getAnalyticsClient();
+      // Extract OAuth token from request
+      const oauthToken = extractOAuthToken(input);
+      if (!oauthToken) {
+        throw new Error('OAuth token required for Google Analytics API access');
+      }
+
+      // Create Analytics client with user's OAuth token
+      const client = createAnalyticsDataClient(oauthToken);
 
       logger.info('Running Analytics report', { propertyId, startDate, endDate });
 
-      const report = await client.runReport({
-        propertyId,
+      const [response] = await client.runReport({
+        property: `properties/${propertyId}`,
         dateRanges: [{ startDate, endDate }],
         dimensions: dimensions?.map((d: string) => ({ name: d })),
         metrics: metrics?.map((m: string) => ({ name: m })),
@@ -179,11 +186,11 @@ export const runAnalyticsReportTool = {
         data: {
           propertyId,
           dateRange: { startDate, endDate },
-          dimensions: report.dimensionHeaders.map((h: any) => h.name),
-          metrics: report.metricHeaders.map((h: any) => h.name),
-          rows: report.rows,
-          rowCount: report.rowCount,
-          message: `Retrieved ${report.rowCount} row(s) from Google Analytics`,
+          dimensions: (response.dimensionHeaders || []).map((h: any) => h.name),
+          metrics: (response.metricHeaders || []).map((h: any) => h.name),
+          rows: response.rows || [],
+          rowCount: parseInt(String(response.rowCount || 0)),
+          message: `Retrieved ${response.rowCount || 0} row(s) from Google Analytics`,
         },
       };
     } catch (error) {
@@ -268,12 +275,19 @@ export const getRealtimeUsersTool = {
 
       const { propertyId, dimensions, metrics, limit } = input;
 
-      const client = getAnalyticsClient();
+      // Extract OAuth token from request
+      const oauthToken = extractOAuthToken(input);
+      if (!oauthToken) {
+        throw new Error('OAuth token required for Google Analytics API access');
+      }
+
+      // Create Analytics client with user's OAuth token
+      const client = createAnalyticsDataClient(oauthToken);
 
       logger.info('Running realtime Analytics report', { propertyId });
 
-      const report = await client.runRealtimeReport({
-        propertyId,
+      const [response] = await client.runRealtimeReport({
+        property: `properties/${propertyId}`,
         dimensions: dimensions?.map((d: string) => ({ name: d })),
         metrics: metrics?.map((m: string) => ({ name: m })) || [{ name: 'activeUsers' }],
         limit: limit || 10,
@@ -284,11 +298,11 @@ export const getRealtimeUsersTool = {
         data: {
           propertyId,
           timeframe: 'Last 30 minutes',
-          dimensions: report.dimensionHeaders.map((h: any) => h.name),
-          metrics: report.metricHeaders.map((h: any) => h.name),
-          rows: report.rows,
-          rowCount: report.rowCount,
-          message: `${report.rowCount} active user segment(s) in last 30 minutes`,
+          dimensions: (response.dimensionHeaders || []).map((h: any) => h.name),
+          metrics: (response.metricHeaders || []).map((h: any) => h.name),
+          rows: response.rows || [],
+          rowCount: parseInt(String(response.rowCount || 0)),
+          message: `${response.rowCount || 0} active user segment(s) in last 30 minutes`,
         },
       };
     } catch (error) {

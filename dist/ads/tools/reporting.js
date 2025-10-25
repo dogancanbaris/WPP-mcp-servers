@@ -1,9 +1,10 @@
 /**
  * MCP Tools for Google Ads Performance Reporting
  */
-import { getGoogleAdsClient } from '../client.js';
 import { GetCampaignPerformanceSchema, GetSearchTermsSchema, GetKeywordPerformanceSchema, microsToAmount } from '../validation.js';
 import { getLogger } from '../../shared/logger.js';
+import { extractRefreshToken } from '../../shared/oauth-client-factory.js';
+import { createGoogleAdsClientFromRefreshToken } from '../client.js';
 const logger = getLogger('ads.tools.reporting');
 /**
  * List campaigns
@@ -41,7 +42,17 @@ export const listCampaignsTool = {
     async handler(input) {
         try {
             const { customerId } = input;
-            const client = getGoogleAdsClient();
+            // Extract OAuth tokens from request
+            const refreshToken = extractRefreshToken(input);
+            if (!refreshToken) {
+                throw new Error('Refresh token required for Google Ads API. OMA must provide X-Google-Refresh-Token header.');
+            }
+            const developerToken = process.env.GOOGLE_ADS_DEVELOPER_TOKEN;
+            if (!developerToken) {
+                throw new Error('GOOGLE_ADS_DEVELOPER_TOKEN not configured');
+            }
+            // Create Google Ads client with user's refresh token
+            const client = createGoogleAdsClientFromRefreshToken(refreshToken, developerToken);
             logger.info('Listing campaigns', { customerId });
             const campaigns = await client.listCampaigns(customerId);
             return {
@@ -119,7 +130,17 @@ export const getCampaignPerformanceTool = {
         try {
             GetCampaignPerformanceSchema.parse(input);
             const { customerId, campaignId, startDate, endDate } = input;
-            const client = getGoogleAdsClient();
+            // Extract OAuth tokens from request
+            const refreshToken = extractRefreshToken(input);
+            if (!refreshToken) {
+                throw new Error('Refresh token required for Google Ads API. OMA must provide X-Google-Refresh-Token header.');
+            }
+            const developerToken = process.env.GOOGLE_ADS_DEVELOPER_TOKEN;
+            if (!developerToken) {
+                throw new Error('GOOGLE_ADS_DEVELOPER_TOKEN not configured');
+            }
+            // Create Google Ads client with user's refresh token
+            const client = createGoogleAdsClientFromRefreshToken(refreshToken, developerToken);
             logger.info('Getting campaign performance', { customerId, campaignId });
             const dateRange = startDate && endDate ? { startDate, endDate } : undefined;
             const performance = await client.getCampaignPerformance(customerId, campaignId, dateRange);
@@ -214,7 +235,17 @@ export const getSearchTermsReportTool = {
         try {
             GetSearchTermsSchema.parse(input);
             const { customerId, campaignId, startDate, endDate } = input;
-            const client = getGoogleAdsClient();
+            // Extract OAuth tokens from request
+            const refreshToken = extractRefreshToken(input);
+            if (!refreshToken) {
+                throw new Error('Refresh token required for Google Ads API. OMA must provide X-Google-Refresh-Token header.');
+            }
+            const developerToken = process.env.GOOGLE_ADS_DEVELOPER_TOKEN;
+            if (!developerToken) {
+                throw new Error('GOOGLE_ADS_DEVELOPER_TOKEN not configured');
+            }
+            // Create Google Ads client with user's refresh token
+            const client = createGoogleAdsClientFromRefreshToken(refreshToken, developerToken);
             logger.info('Getting search terms report', { customerId, campaignId });
             const dateRange = startDate && endDate ? { startDate, endDate } : undefined;
             const searchTerms = await client.getSearchTermsReport(customerId, campaignId, dateRange);
@@ -277,7 +308,17 @@ export const listBudgetsTool = {
     async handler(input) {
         try {
             const { customerId } = input;
-            const client = getGoogleAdsClient();
+            // Extract OAuth tokens from request
+            const refreshToken = extractRefreshToken(input);
+            if (!refreshToken) {
+                throw new Error('Refresh token required for Google Ads API. OMA must provide X-Google-Refresh-Token header.');
+            }
+            const developerToken = process.env.GOOGLE_ADS_DEVELOPER_TOKEN;
+            if (!developerToken) {
+                throw new Error('GOOGLE_ADS_DEVELOPER_TOKEN not configured');
+            }
+            // Create Google Ads client with user's refresh token
+            const client = createGoogleAdsClientFromRefreshToken(refreshToken, developerToken);
             logger.info('Listing budgets', { customerId });
             const budgets = await client.listBudgets(customerId);
             // Process to show dollar amounts
@@ -367,7 +408,17 @@ export const getKeywordPerformanceTool = {
         try {
             GetKeywordPerformanceSchema.parse(input);
             const { customerId, campaignId, startDate, endDate } = input;
-            const client = getGoogleAdsClient();
+            // Extract OAuth tokens from request
+            const refreshToken = extractRefreshToken(input);
+            if (!refreshToken) {
+                throw new Error('Refresh token required for Google Ads API. OMA must provide X-Google-Refresh-Token header.');
+            }
+            const developerToken = process.env.GOOGLE_ADS_DEVELOPER_TOKEN;
+            if (!developerToken) {
+                throw new Error('GOOGLE_ADS_DEVELOPER_TOKEN not configured');
+            }
+            // Create Google Ads client with user's refresh token
+            const client = createGoogleAdsClientFromRefreshToken(refreshToken, developerToken);
             logger.info('Getting keyword performance', { customerId, campaignId });
             const dateRange = startDate && endDate ? { startDate, endDate } : undefined;
             const keywords = await client.getKeywordPerformance(customerId, campaignId, dateRange);

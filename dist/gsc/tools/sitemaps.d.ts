@@ -62,7 +62,7 @@ export declare const getSitemapTool: {
             lastDownloaded: string | null | undefined;
             errors: string | number;
             warnings: string | number;
-            contents: import("googleapis").webmasters_v3.Schema$WmxSitemapContent[];
+            contents: import("googleapis").searchconsole_v1.Schema$WmxSitemapContent[];
         };
     }>;
 };

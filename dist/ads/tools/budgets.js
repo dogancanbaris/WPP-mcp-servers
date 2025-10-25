@@ -1,11 +1,12 @@
 /**
  * MCP Tools for Google Ads Budget Write Operations
  */
-import { getGoogleAdsClient } from '../client.js';
 import { UpdateBudgetSchema, microsToAmount, amountToMicros } from '../validation.js';
 import { validateBudgetChange } from '../../shared/interceptor.js';
 import { getLogger } from '../../shared/logger.js';
 import { getApprovalEnforcer, DryRunResultBuilder } from '../../shared/approval-enforcer.js';
+import { extractRefreshToken } from '../../shared/oauth-client-factory.js';
+import { createGoogleAdsClientFromRefreshToken } from '../client.js';
 const logger = getLogger('ads.tools.budgets');
 /**
  * Create budget
@@ -68,8 +69,18 @@ export const createBudgetTool = {
     async handler(input) {
         try {
             const { customerId, name, dailyAmountDollars, confirmationToken } = input;
+            // Extract OAuth tokens from request
+            const refreshToken = extractRefreshToken(input);
+            if (!refreshToken) {
+                throw new Error('Refresh token required for Google Ads API. OMA must provide X-Google-Refresh-Token header.');
+            }
+            const developerToken = process.env.GOOGLE_ADS_DEVELOPER_TOKEN;
+            if (!developerToken) {
+                throw new Error('GOOGLE_ADS_DEVELOPER_TOKEN not configured');
+            }
+            // Create Google Ads client with user's refresh token
+            const client = createGoogleAdsClientFromRefreshToken(refreshToken, developerToken);
             const amountMicros = amountToMicros(dailyAmountDollars);
-            const client = getGoogleAdsClient();
             // Build dry-run preview
             const approvalEnforcer = getApprovalEnforcer();
             const dryRunBuilder = new DryRunResultBuilder('create_budget', 'Google Ads', customerId);
@@ -218,8 +229,18 @@ Before calling this tool, you MUST:
         try {
             UpdateBudgetSchema.parse(input);
             const { customerId, budgetId, newDailyAmountDollars, confirmationToken } = input;
+            // Extract OAuth tokens from request
+            const refreshToken = extractRefreshToken(input);
+            if (!refreshToken) {
+                throw new Error('Refresh token required for Google Ads API. OMA must provide X-Google-Refresh-Token header.');
+            }
+            const developerToken = process.env.GOOGLE_ADS_DEVELOPER_TOKEN;
+            if (!developerToken) {
+                throw new Error('GOOGLE_ADS_DEVELOPER_TOKEN not configured');
+            }
+            // Create Google Ads client with user's refresh token
+            const client = createGoogleAdsClientFromRefreshToken(refreshToken, developerToken);
             const newAmountMicros = amountToMicros(newDailyAmountDollars);
-            const client = getGoogleAdsClient();
             // Get current budget for comparison
             const budgets = await client.listBudgets(customerId);
             const currentBudget = budgets.find((b) => b.campaign_budget.id === budgetId);

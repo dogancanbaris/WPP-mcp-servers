@@ -1,7 +1,7 @@
 /**
  * MCP Tools for Search Analytics operations
  */
-import { getGoogleClient } from '../google-client.js';
+import { extractOAuthToken, createGSCClient } from '../../shared/oauth-client-factory.js';
 import { getAuditLogger } from '../audit.js';
 import { validateGSCProperty } from '../validation.js';
 import { getLogger } from '../../shared/logger.js';
@@ -47,9 +47,15 @@ export const querySearchAnalyticsTool = {
     async handler(input) {
         try {
             const { property, startDate, endDate, dimensions, searchType, rowLimit } = input;
+            // Extract OAuth token from request
+            const oauthToken = extractOAuthToken(input);
+            if (!oauthToken) {
+                throw new Error('OAuth token required for Google Search Console API access');
+            }
+            // Create GSC client with user's OAuth token
+            const gscClient = createGSCClient(oauthToken);
             // Validate input
             validateGSCProperty(property);
-            const client = getGoogleClient();
             const audit = getAuditLogger();
             // Note: Access control removed for full property discovery mode
             // Google API will handle permission errors if user doesn't own the property
@@ -78,7 +84,11 @@ export const querySearchAnalyticsTool = {
                 requestBody.rowLimit = 1000;
             }
             // Query API
-            const response = await client.querySearchAnalytics(property, requestBody);
+            const res = await gscClient.searchanalytics.query({
+                siteUrl: property,
+                requestBody: requestBody,
+            });
+            const response = res.data;
             // Format response
             const rows = response.rows || [];
             const formattedRows = rows.map((row) => ({

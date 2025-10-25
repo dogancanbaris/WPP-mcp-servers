@@ -518,3 +518,16 @@ export function initializeGoogleAdsClient(
   logger.info('Google Ads client instance created');
   return googleAdsClientInstance;
 }
+
+/**
+ * Create Google Ads client from refresh token (per-request)
+ */
+export function createGoogleAdsClientFromRefreshToken(
+  refreshToken: string,
+  developerToken: string
+): GoogleAdsClient {
+  const clientId = process.env.GOOGLE_CLIENT_ID || '';
+  const clientSecret = process.env.GOOGLE_CLIENT_SECRET || '';
+
+  return new GoogleAdsClient(clientId, clientSecret, developerToken, refreshToken);
+}

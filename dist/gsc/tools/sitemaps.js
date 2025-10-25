@@ -1,7 +1,7 @@
 /**
  * MCP Tools for Sitemaps operations
  */
-import { getGoogleClient } from '../google-client.js';
+import { extractOAuthToken, createGSCClient } from '../../shared/oauth-client-factory.js';
 import { getConfigManager } from '../config.js';
 import { getAuditLogger } from '../audit.js';
 import { validateGSCProperty } from '../validation.js';
@@ -28,14 +28,21 @@ export const listSitemapsTool = {
     async handler(input) {
         try {
             const { property } = input;
+            // Extract OAuth token from request
+            const oauthToken = extractOAuthToken(input);
+            if (!oauthToken) {
+                throw new Error('OAuth token required for Google Search Console API access');
+            }
+            // Create GSC client with user's OAuth token
+            const gscClient = createGSCClient(oauthToken);
             // Validate input
             validateGSCProperty(property);
-            const client = getGoogleClient();
             const audit = getAuditLogger();
             // Note: Access control removed for full property discovery mode
             // Google API will handle permission errors if user doesn't own the property
             logger.info('Listing sitemaps', { property });
-            const response = await client.listSitemaps(property);
+            const res = await gscClient.sitemaps.list({ siteUrl: property });
+            const response = res.data;
             const sitemaps = response.sitemap || [];
             const formatted = sitemaps.map((sitemap) => ({
                 url: sitemap.path,
@@ -88,14 +95,21 @@ export const getSitemapTool = {
     async handler(input) {
         try {
             const { property, sitemapUrl } = input;
+            // Extract OAuth token from request
+            const oauthToken = extractOAuthToken(input);
+            if (!oauthToken) {
+                throw new Error('OAuth token required for Google Search Console API access');
+            }
+            // Create GSC client with user's OAuth token
+            const gscClient = createGSCClient(oauthToken);
             // Validate input
             validateGSCProperty(property);
-            const client = getGoogleClient();
             const audit = getAuditLogger();
             // Note: Access control removed for full property discovery mode
             // Google API will handle permission errors if user doesn't own the property
             logger.info('Getting sitemap details', { property, sitemapUrl });
-            const sitemap = await client.getSitemap(property, sitemapUrl);
+            const res = await gscClient.sitemaps.get({ siteUrl: property, feedpath: sitemapUrl });
+            const sitemap = res.data;
             await audit.logReadOperation('user', 'get_sitemap', property, {
                 sitemapUrl,
             });
@@ -145,6 +159,13 @@ export const submitSitemapTool = {
     async handler(input) {
         try {
             const { property, sitemapUrl, confirmationToken } = input;
+            // Extract OAuth token from request
+            const oauthToken = extractOAuthToken(input);
+            if (!oauthToken) {
+                throw new Error('OAuth token required for Google Search Console API access');
+            }
+            // Create GSC client with user's OAuth token
+            const gscClient = createGSCClient(oauthToken);
             // Validate input
             validateGSCProperty(property);
             // Vagueness detection
@@ -154,7 +175,6 @@ export const submitSitemapTool = {
                 inputParams: { property, sitemapUrl },
             });
             const config = getConfigManager();
-            const client = getGoogleClient();
             // Check permission
             if (!config.hasPermission('editor')) {
                 throw new Error('Insufficient permissions for write operations');
@@ -189,7 +209,7 @@ export const submitSitemapTool = {
             // Execute with confirmation
             logger.info('Submitting sitemap with confirmation', { property, sitemapUrl });
             await approvalEnforcer.validateAndExecute(confirmationToken, dryRun, async () => {
-                await client.submitSitemap(property, sitemapUrl);
+                await gscClient.sitemaps.submit({ siteUrl: property, feedpath: sitemapUrl });
                 await getAuditLogger().logWriteOperation('user', 'submit_sitemap', property, {
                     sitemapUrl,
                 });
@@ -238,6 +258,13 @@ export const deleteSitemapTool = {
     async handler(input) {
         try {
             const { property, sitemapUrl, confirmationToken } = input;
+            // Extract OAuth token from request
+            const oauthToken = extractOAuthToken(input);
+            if (!oauthToken) {
+                throw new Error('OAuth token required for Google Search Console API access');
+            }
+            // Create GSC client with user's OAuth token
+            const gscClient = createGSCClient(oauthToken);
             // Validate input
             validateGSCProperty(property);
             // Vagueness detection
@@ -247,7 +274,6 @@ export const deleteSitemapTool = {
                 inputParams: { property, sitemapUrl },
             });
             const config = getConfigManager();
-            const client = getGoogleClient();
             // Check permission
             if (!config.hasPermission('admin')) {
                 throw new Error('Only admins can delete sitemaps');
@@ -284,7 +310,7 @@ export const deleteSitemapTool = {
             // Execute with confirmation
             logger.info('Deleting sitemap with confirmation', { property, sitemapUrl });
             await approvalEnforcer.validateAndExecute(confirmationToken, dryRun, async () => {
-                await client.deleteSitemap(property, sitemapUrl);
+                await gscClient.sitemaps.delete({ siteUrl: property, feedpath: sitemapUrl });
                 await getAuditLogger().logWriteOperation('user', 'delete_sitemap', property, {
                     sitemapUrl,
                 });

@@ -2,7 +2,7 @@
  * MCP Tools for BigQuery API
  * Datasets, tables, queries, data loading
  */
-import { getBigQueryClient } from './client.js';
+import { extractOAuthToken, createBigQueryClient } from '../shared/oauth-client-factory.js';
 import { getLogger } from '../shared/logger.js';
 import { getApprovalEnforcer, DryRunResultBuilder } from '../shared/approval-enforcer.js';
 import { detectAndEnforceVagueness } from '../shared/vagueness-detector.js';
@@ -31,10 +31,16 @@ export const listDatasetsTool = {
     },
     async handler(_input) {
         try {
-            const client = getBigQueryClient();
+            // Extract OAuth token from request
+            const oauthToken = extractOAuthToken(_input);
+            if (!oauthToken) {
+                throw new Error('OAuth token required for BigQuery API access');
+            }
+            // Create BigQuery client with user's OAuth token
+            const bigquery = createBigQueryClient(oauthToken);
             logger.info('Listing BigQuery datasets');
-            const datasets = await client.listDatasets();
-            const formatted = datasets.map((ds) => ({
+            const [datasets] = await bigquery.getDatasets();
+            const formatted = (datasets || []).map((ds) => ({
                 id: ds.id,
                 friendlyName: ds.metadata?.friendlyName,
                 location: ds.metadata?.location,
@@ -101,7 +107,13 @@ export const createDatasetTool = {
                 inputText: `create dataset ${datasetId}`,
                 inputParams: { datasetId },
             });
-            const client = getBigQueryClient();
+            // Extract OAuth token from request
+            const oauthToken = extractOAuthToken(input);
+            if (!oauthToken) {
+                throw new Error('OAuth token required for BigQuery API access');
+            }
+            // Create BigQuery client with user's OAuth token
+            const bigquery = createBigQueryClient(oauthToken);
             const approvalEnforcer = getApprovalEnforcer();
             const dryRunBuilder = new DryRunResultBuilder('create_bigquery_dataset', 'BigQuery', datasetId);
             dryRunBuilder.addChange({
@@ -120,7 +132,8 @@ export const createDatasetTool = {
             }
             logger.info('Creating dataset with confirmation', { datasetId });
             await approvalEnforcer.validateAndExecute(confirmationToken, dryRun, async () => {
-                return await client.createDataset(datasetId, { location, description });
+                const [dataset] = await bigquery.createDataset(datasetId, { location, description });
+                return dataset;
             });
             return {
                 success: true,
@@ -183,16 +196,27 @@ export const runQueryTool = {
     async handler(input) {
         try {
             const { sql, maxResults = 1000 } = input;
-            const client = getBigQueryClient();
+            // Extract OAuth token from request
+            const oauthToken = extractOAuthToken(input);
+            if (!oauthToken) {
+                throw new Error('OAuth token required for BigQuery API access');
+            }
+            // Create BigQuery client with user's OAuth token
+            const bigquery = createBigQueryClient(oauthToken);
             logger.info('Running BigQuery query', { sqlLength: sql.length });
-            const result = await client.runQuery(sql, { maxResults });
+            // Execute query directly with BigQuery client
+            const [job] = await bigquery.createQueryJob({
+                query: sql,
+                maxResults,
+            });
+            const [rows] = await job.getQueryResults();
             return {
                 success: true,
                 data: {
-                    rows: result.rows.slice(0, maxResults),
-                    rowCount: result.rows.length,
-                    jobId: result.jobId,
-                    message: `Query completed: ${result.rows.length} row(s) returned`,
+                    rows: (rows || []).slice(0, maxResults),
+                    rowCount: rows?.length || 0,
+                    jobId: job.id,
+                    message: `Query completed: ${rows?.length || 0} row(s) returned`,
                 },
             };
         }

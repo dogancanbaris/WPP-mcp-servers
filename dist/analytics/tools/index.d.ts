@@ -404,7 +404,7 @@ export declare const analyticsTools: ({
             };
             dimensions: any[];
             metrics: any[];
-            rows: import("../types.js").ReportRow[];
+            rows: import("@google-analytics/data/build/protos/protos.js").google.analytics.data.v1beta.IRow[];
             rowCount: number;
             message: string;
         };
@@ -447,7 +447,7 @@ export declare const analyticsTools: ({
             timeframe: string;
             dimensions: any[];
             metrics: any[];
-            rows: import("../types.js").ReportRow[];
+            rows: import("@google-analytics/data/build/protos/protos.js").google.analytics.data.v1beta.IRow[];
             rowCount: number;
             message: string;
         };
@@ -853,7 +853,7 @@ export declare const readOnlyAnalyticsTools: ({
             };
             dimensions: any[];
             metrics: any[];
-            rows: import("../types.js").ReportRow[];
+            rows: import("@google-analytics/data/build/protos/protos.js").google.analytics.data.v1beta.IRow[];
             rowCount: number;
             message: string;
         };
@@ -896,7 +896,7 @@ export declare const readOnlyAnalyticsTools: ({
             timeframe: string;
             dimensions: any[];
             metrics: any[];
-            rows: import("../types.js").ReportRow[];
+            rows: import("@google-analytics/data/build/protos/protos.js").google.analytics.data.v1beta.IRow[];
             rowCount: number;
             message: string;
         };

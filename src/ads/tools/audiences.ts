@@ -3,10 +3,11 @@
  * Includes: UserListService, AudienceService, CustomerMatchService
  */
 
-import { getGoogleAdsClient } from '../client.js';
 import { getLogger } from '../../shared/logger.js';
 import { getApprovalEnforcer, DryRunResultBuilder } from '../../shared/approval-enforcer.js';
 import { detectAndEnforceVagueness } from '../../shared/vagueness-detector.js';
+import { extractRefreshToken } from '../../shared/oauth-client-factory.js';
+import { createGoogleAdsClientFromRefreshToken } from '../client.js';
 
 const logger = getLogger('ads.tools.audiences');
 
@@ -50,7 +51,20 @@ export const listUserListsTool = {
     try {
       const { customerId } = input;
 
-      const client = getGoogleAdsClient();
+      // Extract OAuth tokens from request
+      const refreshToken = extractRefreshToken(input);
+      if (!refreshToken) {
+        throw new Error('Refresh token required for Google Ads API. OMA must provide X-Google-Refresh-Token header.');
+      }
+
+      const developerToken = process.env.GOOGLE_ADS_DEVELOPER_TOKEN;
+      if (!developerToken) {
+        throw new Error('GOOGLE_ADS_DEVELOPER_TOKEN not configured');
+      }
+
+      // Create Google Ads client with user's refresh token
+      const client = createGoogleAdsClientFromRefreshToken(refreshToken, developerToken);
+      const customer = client.getCustomer(customerId);
 
       logger.info('Listing user lists', { customerId });
 
@@ -69,7 +83,6 @@ export const listUserListsTool = {
         ORDER BY user_list.name
       `;
 
-      const customer = client.getCustomer(customerId);
       const results = await customer.query(query);
 
       const userLists = [];
@@ -171,14 +184,27 @@ export const createUserListTool = {
     try {
       const { customerId, name, membershipDays = 30, description, confirmationToken } = input;
 
+      // Extract OAuth tokens from request
+      const refreshToken = extractRefreshToken(input);
+      if (!refreshToken) {
+        throw new Error('Refresh token required for Google Ads API. OMA must provide X-Google-Refresh-Token header.');
+      }
+
+      const developerToken = process.env.GOOGLE_ADS_DEVELOPER_TOKEN;
+      if (!developerToken) {
+        throw new Error('GOOGLE_ADS_DEVELOPER_TOKEN not configured');
+      }
+
+      // Create Google Ads client with user's refresh token
+      const client = createGoogleAdsClientFromRefreshToken(refreshToken, developerToken);
+      const customer = client.getCustomer(customerId);
+
       // Vagueness detection
       detectAndEnforceVagueness({
         operation: 'create_user_list',
         inputText: `create user list ${name}`,
         inputParams: { customerId, name },
       });
-
-      const client = getGoogleAdsClient();
 
       // Build dry-run preview
       const approvalEnforcer = getApprovalEnforcer();
@@ -241,8 +267,6 @@ export const createUserListTool = {
         confirmationToken,
         dryRun,
         async () => {
-          const customer = client.getCustomer(customerId);
-
           const userList: any = {
             name,
             membership_life_span: membershipDays,
@@ -365,6 +389,21 @@ export const uploadCustomerMatchListTool = {
     try {
       const { customerId, userListId, customers, confirmationToken } = input;
 
+      // Extract OAuth tokens from request
+      const refreshToken = extractRefreshToken(input);
+      if (!refreshToken) {
+        throw new Error('Refresh token required for Google Ads API. OMA must provide X-Google-Refresh-Token header.');
+      }
+
+      const developerToken = process.env.GOOGLE_ADS_DEVELOPER_TOKEN;
+      if (!developerToken) {
+        throw new Error('GOOGLE_ADS_DEVELOPER_TOKEN not configured');
+      }
+
+      // Create Google Ads client with user's refresh token
+      const client = createGoogleAdsClientFromRefreshToken(refreshToken, developerToken);
+      const customer = client.getCustomer(customerId);
+
       // Vagueness detection
       detectAndEnforceVagueness({
         operation: 'upload_customer_match_list',
@@ -378,8 +417,6 @@ export const uploadCustomerMatchListTool = {
           `Cannot upload ${customers.length} customers at once. Maximum is 100,000. Please batch into smaller uploads.`
         );
       }
-
-      const client = getGoogleAdsClient();
 
       // Build dry-run preview
       const approvalEnforcer = getApprovalEnforcer();
@@ -443,8 +480,6 @@ export const uploadCustomerMatchListTool = {
         confirmationToken,
         dryRun,
         async () => {
-          const customer = client.getCustomer(customerId);
-
           // Build offline user data jobs
           const operations = customers.map((c: any) => ({
             create: {
@@ -531,13 +566,26 @@ export const createAudienceTool = {
     try {
       const { customerId, name, description, confirmationToken } = input;
 
+      // Extract OAuth tokens from request
+      const refreshToken = extractRefreshToken(input);
+      if (!refreshToken) {
+        throw new Error('Refresh token required for Google Ads API. OMA must provide X-Google-Refresh-Token header.');
+      }
+
+      const developerToken = process.env.GOOGLE_ADS_DEVELOPER_TOKEN;
+      if (!developerToken) {
+        throw new Error('GOOGLE_ADS_DEVELOPER_TOKEN not configured');
+      }
+
+      // Create Google Ads client with user's refresh token
+      const client = createGoogleAdsClientFromRefreshToken(refreshToken, developerToken);
+      const customer = client.getCustomer(customerId);
+
       detectAndEnforceVagueness({
         operation: 'create_audience',
         inputText: `create audience ${name}`,
         inputParams: { customerId, name },
       });
-
-      const client = getGoogleAdsClient();
 
       const approvalEnforcer = getApprovalEnforcer();
       const dryRunBuilder = new DryRunResultBuilder('create_audience', 'Google Ads', customerId);
@@ -581,8 +629,6 @@ export const createAudienceTool = {
         confirmationToken,
         dryRun,
         async () => {
-          const customer = client.getCustomer(customerId);
-
           const audience: any = {
             name,
             description: description || '',

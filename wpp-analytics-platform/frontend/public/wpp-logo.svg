@@ -1,0 +1,22 @@
+<svg width="120" height="40" viewBox="0 0 120 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- WPP Logo - Professional Brand Mark -->
+  <defs>
+    <linearGradient id="wpp-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#191D63;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#2A2F8F;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- Background Rectangle (Optional - for standalone usage) -->
+  <rect width="120" height="40" rx="4" fill="transparent"/>
+
+  <!-- WPP Text -->
+  <text x="10" y="28" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="700" fill="#191D63" letter-spacing="1">
+    WPP
+  </text>
+
+  <!-- Optional: Analytics Badge -->
+  <text x="70" y="26" font-family="Arial, Helvetica, sans-serif" font-size="10" font-weight="400" fill="#5F6368">
+    Analytics
+  </text>
+</svg>

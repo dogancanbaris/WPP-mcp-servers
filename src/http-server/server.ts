@@ -100,6 +100,43 @@ export class MCPHttpServer {
       return;
     }
 
+    // CRITICAL: Extract user's Google OAuth tokens from headers
+    const authHeader = req.headers['authorization'] as string;
+
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      res.status(401).json({
+        success: false,
+        error: 'Missing OAuth access token',
+        message: 'Authorization: Bearer <access-token> header is required for Google API access',
+      });
+      return;
+    }
+
+    // Extract and validate OAuth access token
+    const accessToken = authHeader.substring(7); // Remove 'Bearer ' prefix
+
+    if (!accessToken || accessToken.length < 20) {
+      res.status(401).json({
+        success: false,
+        error: 'Invalid OAuth token format',
+        message: 'OAuth access token appears to be malformed',
+      });
+      return;
+    }
+
+    // Extract refresh token (required for Google Ads API)
+    const refreshToken = req.headers['x-google-refresh-token'] as string;
+
+    // Store OAuth tokens in request for tool execution
+    (req as any).userOAuthToken = accessToken;
+    (req as any).userRefreshToken = refreshToken; // May be undefined for non-Ads tools
+
+    logger.debug('OAuth tokens extracted from request', {
+      accessTokenPrefix: accessToken.substring(0, 10) + '...',
+      accessTokenLength: accessToken.length,
+      hasRefreshToken: !!refreshToken
+    });
+
     // Load approved accounts from request
     const encryptedAccounts = req.headers['x-oma-approved-accounts'] as string;
     const accountsSignature = req.headers['x-oma-accounts-signature'] as string;
@@ -211,7 +248,9 @@ export class MCPHttpServer {
         return;
       }
 
-      // Get account authorization manager from request
+      // Get OAuth tokens and account authorization manager from request
+      const accessToken = (req as any).userOAuthToken as string;
+      const refreshToken = (req as any).userRefreshToken as string | undefined;
       const authManager = (req as any).accountAuthManager as AccountAuthorizationManager;
 
       // Set globally for tool execution (tools will use getAccountAuthorizationManager())
@@ -220,8 +259,15 @@ export class MCPHttpServer {
         setAccountAuthorizationManager(authManager);
       }
 
-      // Execute tool handler
-      const result = await tool.handler(input);
+      // Add OAuth tokens to input for tool execution
+      const inputWithOAuth = {
+        ...input,
+        __oauthToken: accessToken, // Access token for most Google APIs
+        __refreshToken: refreshToken, // Refresh token for Google Ads API
+      };
+
+      // Execute tool handler with OAuth tokens
+      const result = await tool.handler(inputWithOAuth);
 
       res.json({
         success: true,

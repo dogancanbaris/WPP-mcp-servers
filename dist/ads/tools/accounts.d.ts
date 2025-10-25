@@ -12,7 +12,7 @@ export declare const listAccessibleAccountsTool: {
         properties: {};
         required: never[];
     };
-    handler(_input: any): Promise<{
+    handler(input: any): Promise<{
         success: boolean;
         data: {
             accounts: {

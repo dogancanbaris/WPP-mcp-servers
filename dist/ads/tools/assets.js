@@ -2,8 +2,9 @@
  * MCP Tools for Google Ads Assets & Creative
  * Includes: AssetService, AssetGroupService
  */
-import { getGoogleAdsClient } from '../client.js';
 import { getLogger } from '../../shared/logger.js';
+import { extractRefreshToken } from '../../shared/oauth-client-factory.js';
+import { createGoogleAdsClientFromRefreshToken } from '../client.js';
 const logger = getLogger('ads.tools.assets');
 /**
  * List assets
@@ -48,7 +49,18 @@ export const listAssetsTool = {
     async handler(input) {
         try {
             const { customerId, assetType } = input;
-            const client = getGoogleAdsClient();
+            // Extract OAuth tokens from request
+            const refreshToken = extractRefreshToken(input);
+            if (!refreshToken) {
+                throw new Error('Refresh token required for Google Ads API. OMA must provide X-Google-Refresh-Token header.');
+            }
+            const developerToken = process.env.GOOGLE_ADS_DEVELOPER_TOKEN;
+            if (!developerToken) {
+                throw new Error('GOOGLE_ADS_DEVELOPER_TOKEN not configured');
+            }
+            // Create Google Ads client with user's refresh token
+            const client = createGoogleAdsClientFromRefreshToken(refreshToken, developerToken);
+            const customer = client.getCustomer(customerId);
             logger.info('Listing assets', { customerId, assetType });
             let query = `
         SELECT
@@ -65,7 +77,6 @@ export const listAssetsTool = {
                 query += ` AND asset.type = '${assetType}'`;
             }
             query += ' ORDER BY asset.name';
-            const customer = client.getCustomer(customerId);
             const results = await customer.query(query);
             const assets = [];
             for (const row of results) {
