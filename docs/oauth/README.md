@@ -4,6 +4,15 @@ Complete documentation for the WPP MCP Servers OAuth 2.0 implementation.
 
 ## 📚 Contents
 
+### [OMA-INTEGRATION-SPEC.md](./OMA-INTEGRATION-SPEC.md)
+Complete OAuth integration specification for OMA platform:
+- OAuth 2.0 authentication flow
+- Required headers and token types
+- Per-request OAuth architecture
+- Tool-specific requirements (GSC, Ads, Analytics, Business Profile)
+- OMA implementation checklist
+- Error handling and best practices
+
 ### [TOKEN-SOLUTION.md](./TOKEN-SOLUTION.md)
 Detailed implementation guide for OAuth token handling:
 - Token file format and structure

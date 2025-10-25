@@ -4,6 +4,22 @@ Complete guides and reference documentation for developers and practitioners.
 
 ## 📚 Contents
 
+### [AGENT-GUIDE.md](./AGENT-GUIDE.md)
+Comprehensive guide for AI agents using MCP tools:
+- 58 tools organized by platform
+- Common workflows (5+ detailed examples)
+- Safety system and approval workflows
+- Tool reference with examples
+- Error handling and best practices
+
+### [GETTING-STARTED.md](./GETTING-STARTED.md)
+Quick start guide for practitioners and developers:
+- What is WPP MCP Servers
+- For practitioners (using MCP)
+- For developers (building features)
+- Configuration and setup
+- First steps and next steps
+
 ### [DEVELOPER-GUIDE.md](./DEVELOPER-GUIDE.md)
 Comprehensive technical implementation guide:
 - MCP server architecture overview

@@ -8,6 +8,7 @@ Welcome to the WPP MCP Servers documentation. This is the comprehensive referenc
 Everything about Google OAuth 2.0 authentication and token handling.
 
 **Key Documents:**
+- **[OMA-INTEGRATION-SPEC.md](./oauth/OMA-INTEGRATION-SPEC.md)** - OAuth integration spec for OMA platform
 - **[TOKEN-SOLUTION.md](./oauth/TOKEN-SOLUTION.md)** - Token file format, auto-refresh, and handling
 - **[MIGRATION-GUIDE.md](./oauth/MIGRATION-GUIDE.md)** - How to migrate tools to OAuth pattern
 - **[MIGRATION-STATUS.md](./oauth/MIGRATION-STATUS.md)** - Current implementation status
@@ -40,6 +41,8 @@ Dashboard builder, visualization engine, and analytics interface.
 Technical implementation guides and architecture references.
 
 **Key Documents:**
+- **[AGENT-GUIDE.md](./guides/AGENT-GUIDE.md)** - AI agent usage guide with tool workflows
+- **[GETTING-STARTED.md](./guides/GETTING-STARTED.md)** - Quick start for practitioners and developers
 - **[DEVELOPER-GUIDE.md](./guides/DEVELOPER-GUIDE.md)** - Complete technical reference
 
 **Quick Links:**
@@ -48,6 +51,7 @@ Technical implementation guides and architecture references.
 - Data transformation examples
 - Testing and deployment
 - Troubleshooting
+- Common workflows with examples
 
 ---
 
