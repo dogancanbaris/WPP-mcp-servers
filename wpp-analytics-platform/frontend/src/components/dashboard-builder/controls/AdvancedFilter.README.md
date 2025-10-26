@@ -14,7 +14,7 @@ A comprehensive, production-ready React component for building complex filter co
 ✅ **Type Safety**: Full TypeScript support with comprehensive types
 ✅ **Responsive**: Mobile-friendly design
 ✅ **Dark Mode**: Automatic dark mode support
-✅ **Export Ready**: Convert to SQL, Cube.js, MongoDB, REST API formats
+✅ **Export Ready**: Convert to SQL, dataset API, MongoDB, REST API formats
 
 ## Installation
 
@@ -261,7 +261,7 @@ const sql = convertFilterToSQL(filter);
 const query = `SELECT * FROM campaigns WHERE ${sql}`;
 ```
 
-### Cube.js
+### dataset API
 
 ```tsx
 import { convertFilterToCubeJS } from './AdvancedFilter.example';
@@ -414,16 +414,16 @@ The component automatically supports dark mode via CSS media queries:
 
 ## Integration Examples
 
-### With Cube.js
+### With dataset API
 
 ```tsx
-import { useCubeQuery } from '@cubejs-client/react';
+import { useDatasetQuery } from 'dataset query hook';
 import { AdvancedFilter } from './AdvancedFilter';
 
 function Dashboard() {
   const [filter, setFilter] = useState(initialFilter);
 
-  const { resultSet, isLoading } = useCubeQuery({
+  const { resultSet, isLoading } = useDatasetQuery({
     measures: ['GoogleAds.impressions', 'GoogleAds.clicks'],
     dimensions: ['GoogleAds.campaignName'],
     filters: convertGroupToCubeFilters(filter),
@@ -632,7 +632,7 @@ For issues, questions, or contributions, please open an issue on GitHub.
 - Enable/disable toggles
 - Duplicate conditions
 - Validation utilities
-- Export to SQL/Cube.js/MongoDB/REST
+- Export to SQL/dataset API/MongoDB/REST
 - Comprehensive test suite
 - Dark mode support
 - Responsive design

@@ -6,7 +6,7 @@
  * NEW ARCHITECTURE:
  * - Queries registered dataset via /api/datasets/[id]/query
  * - Backend handles caching, BigQuery connection
- * - Simple fetch pattern, no Cube.js
+ * - Simple fetch pattern, dataset API
  */
 
 import { useQuery } from '@tanstack/react-query';

@@ -204,7 +204,7 @@ interface FilterState {
 
   // Query generation
   getActiveFilters: () => GlobalFilter[];
-  getCubeJSFilters: () => any[];
+  getDatasetFilters: () => any[];
   getFilterSummary: () => string;
 
   // Simple active date range (for dashboard-wide filtering)
@@ -366,8 +366,8 @@ export const useFilterStore = create<FilterState>()(
           return get().filters.filter((f) => f.enabled);
         },
 
-        // Convert filters to Cube.js format
-        getCubeJSFilters: () => {
+        // Convert filters to dataset format
+        getDatasetFilters: () => {
           const activeFilters = get().getActiveFilters();
 
           return activeFilters.map((filter) => {

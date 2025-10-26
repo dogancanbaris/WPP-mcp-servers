@@ -1486,5 +1486,53 @@
       "server": "GSC MCP started",
       "version": "1.0.0"
     }
+  },
+  {
+    "timestamp": "2025-10-25T17:50:06.180Z",
+    "user": "system",
+    "action": "authentication",
+    "property": "system",
+    "operationType": "read",
+    "result": "success",
+    "details": {
+      "server": "GSC MCP started",
+      "version": "1.0.0"
+    }
+  },
+  {
+    "timestamp": "2025-10-25T19:21:30.905Z",
+    "user": "system",
+    "action": "authentication",
+    "property": "system",
+    "operationType": "read",
+    "result": "success",
+    "details": {
+      "server": "GSC MCP started",
+      "version": "1.0.0"
+    }
+  },
+  {
+    "timestamp": "2025-10-26T10:35:31.656Z",
+    "user": "system",
+    "action": "authentication",
+    "property": "system",
+    "operationType": "read",
+    "result": "success",
+    "details": {
+      "server": "GSC MCP started",
+      "version": "1.0.0"
+    }
+  },
+  {
+    "timestamp": "2025-10-26T10:35:41.765Z",
+    "user": "system",
+    "action": "authentication",
+    "property": "system",
+    "operationType": "read",
+    "result": "success",
+    "details": {
+      "server": "GSC MCP started",
+      "version": "1.0.0"
+    }
   }
 ]

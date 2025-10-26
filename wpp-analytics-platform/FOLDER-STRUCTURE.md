@@ -115,7 +115,7 @@ cube-backend/
 │   ├── Analytics.js (Future)
 │   └── AvailableFields.js (NEW - Field metadata)
 │
-└── README.md (Cube.js schema documentation)
+└── README.md (Dataset API schema documentation)
 
 backend/ (NEW folder for custom APIs)
 ├── api/

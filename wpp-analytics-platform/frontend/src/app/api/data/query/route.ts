@@ -4,7 +4,7 @@
  * POST /api/data/query
  *
  * Executes BigQuery queries based on declarative configuration.
- * Replaces Cube.js semantic layer with direct BigQuery access.
+ * Replaces Dataset metadata registry with direct BigQuery access.
  */
 
 import { NextRequest, NextResponse } from 'next/server';

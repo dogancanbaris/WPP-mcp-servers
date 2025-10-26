@@ -1,6 +1,6 @@
 # SankeyChart Component
 
-A powerful, production-ready Sankey diagram component with full Cube.js integration for visualizing flow data in the WPP Analytics Platform.
+A powerful, production-ready Sankey diagram component with full dataset API integration for visualizing flow data in the WPP Analytics Platform.
 
 ## 🎯 Overview
 
@@ -61,7 +61,7 @@ function MyDashboard() {
 
 | Prop | Type | Required | Description |
 |------|------|----------|-------------|
-| `query` | `Query` | ✅ | Cube.js query configuration |
+| `query` | `Query` | ✅ | dataset API query configuration |
 | `flowLevels` | `string[]` | ✅ | Dimension names representing flow levels (in order) |
 | `valueMeasure` | `string` | ✅ | Measure to use for flow values (e.g., 'sessions', 'revenue') |
 
@@ -374,7 +374,7 @@ const levelColors = {
   {...}
 />
 
-// ✅ GOOD: Aggregates in Cube.js, returns top 100
+// ✅ GOOD: Aggregates in dataset API, returns top 100
 <SankeyChart
   query={{
     measures: ['TrafficSource.sessions'],
@@ -390,7 +390,7 @@ const levelColors = {
 ### Pre-Aggregations
 
 ```javascript
-// Configure in Cube.js data model for instant queries
+// Configure in dataset API data model for instant queries
 cube('TrafficSource', {
   preAggregations: {
     trafficFlow: {
@@ -418,9 +418,9 @@ cube('TrafficSource', {
 />
 ```
 
-## 🔧 Integration with Cube.js
+## 🔧 Integration with dataset API
 
-### Basic Cube.js Setup
+### Basic dataset API Setup
 
 ```javascript
 // cubeModel/TrafficSource.js
@@ -487,11 +487,11 @@ cube('HolisticSearch', {
 1. Check that `flowLevels` match your dimension names exactly
 2. Verify `valueMeasure` exists in query results
 3. Check if `minLinkValue` is filtering out all data
-4. Ensure Cube.js query returns data
+4. Ensure dataset API query returns data
 
 ```tsx
 // Debug query results
-const { resultSet } = useCubeQuery(query);
+const { resultSet } = useDatasetQuery(query);
 console.log('Raw data:', resultSet?.tablePivot());
 ```
 
@@ -501,7 +501,7 @@ console.log('Raw data:', resultSet?.tablePivot());
 
 **Solutions**:
 1. Reduce data with `limit` and `minLinkValue`
-2. Use Cube.js pre-aggregations
+2. Use dataset API pre-aggregations
 3. Decrease `layoutIterations` (try 16 instead of 32)
 4. Simplify to fewer flow levels
 
@@ -521,7 +521,7 @@ console.log('Raw data:', resultSet?.tablePivot());
 ### Tenant Filtering
 
 ```tsx
-// Automatic tenant filtering via Cube.js security context
+// Automatic tenant filtering via dataset API security context
 cube('TrafficSource', {
   sql: `
     SELECT * FROM traffic_data
@@ -621,18 +621,18 @@ function DrillDownSankey() {
 ## 📚 Additional Resources
 
 - **ECharts Sankey Documentation**: https://echarts.apache.org/en/option.html#series-sankey
-- **Cube.js Query Format**: https://cube.dev/docs/query-format
+- **dataset API Query Format**: https://cube.dev/docs/query-format
 - **WPP Platform Docs**: `/frontend/docs/architecture/CLAUDE.md`
 
 ## 🎯 Best Practices
 
-1. **Always aggregate in Cube.js** - Return ≤400 rows, not 50,000
+1. **Always aggregate in dataset API** - Return ≤400 rows, not 50,000
 2. **Use pre-aggregations** - For instant query performance
 3. **Filter noise** - Set `minLinkValue` to hide insignificant flows
 4. **Optimize layout** - Adjust `nodeGap`, `nodeWidth`, `layoutIterations`
 5. **Handle states** - Provide custom loading/error components
 6. **Mobile-first** - Test vertical orientation for small screens
-7. **Multi-tenant** - Trust Cube.js security context for filtering
+7. **Multi-tenant** - Trust dataset API security context for filtering
 
 ## 📝 License
 

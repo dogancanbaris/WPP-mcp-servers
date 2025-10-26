@@ -1,12 +1,12 @@
-# RadarChart Component - Cube.js Integration
+# RadarChart Component - dataset API Integration
 
 ## Overview
 
-The `RadarChart` component is a fully-featured, Cube.js-connected radar chart for multi-dimensional data visualization. It's perfect for comparing multiple metrics across different dimensions or analyzing performance patterns across categories.
+The `RadarChart` component is a fully-featured, dataset API-connected radar chart for multi-dimensional data visualization. It's perfect for comparing multiple metrics across different dimensions or analyzing performance patterns across categories.
 
 ## Key Features
 
-✅ **Full Cube.js Integration** - Direct connection to semantic layer
+✅ **Full dataset API Integration** - Direct connection to semantic layer
 ✅ **Multi-Metric Support** - Compare multiple measures on one chart
 ✅ **Breakdown Dimension** - Compare series across categories
 ✅ **Date Range Filtering** - Built-in time dimension support
@@ -33,9 +33,9 @@ function MyDashboard() {
 }
 ```
 
-## Cube.js Query Structure
+## dataset API Query Structure
 
-The component automatically builds a Cube.js query with this structure:
+The component automatically builds a dataset API query with this structure:
 
 ```javascript
 {
@@ -59,10 +59,10 @@ The component automatically builds a Cube.js query with this structure:
 
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
-| `datasource` | `string` | `'gsc_performance_7days'` | Cube.js cube name |
+| `datasource` | `string` | `'gsc_performance_7days'` | dataset API cube name |
 | `dimension` | `string \| null` | `null` | Primary dimension (radar axis labels) |
 | `breakdownDimension` | `string \| null` | `null` | Secondary dimension (multiple series) |
-| `metrics` | `string[]` | `[]` | Array of Cube.js measures |
+| `metrics` | `string[]` | `[]` | Array of dataset API measures |
 | `filters` | `FilterConfig[]` | `[]` | Filter conditions |
 | `dateRange` | `DateRangeConfig` | `undefined` | Start/end dates |
 
@@ -242,7 +242,7 @@ function RealTimeDashboard() {
 ### Single Metric, No Breakdown
 
 ```
-Cube.js Data:
+dataset API Data:
 [
   { query: "seo tools", clicks: 1500 },
   { query: "analytics", clicks: 1200 },
@@ -257,7 +257,7 @@ Radar Chart:
 ### Multiple Metrics, No Breakdown
 
 ```
-Cube.js Data:
+dataset API Data:
 [
   { query: "seo", clicks: 1500, impressions: 25000 },
   { query: "analytics", clicks: 1200, impressions: 20000 }
@@ -272,7 +272,7 @@ Radar Chart:
 ### Single Metric, With Breakdown
 
 ```
-Cube.js Data:
+dataset API Data:
 [
   { query: "seo", device: "DESKTOP", clicks: 1000 },
   { query: "seo", device: "MOBILE", clicks: 500 },
@@ -310,14 +310,14 @@ const dimensionValues = chartData.slice(0, 8);  // ✅ Max 8 axes
 const breakdownValues = [...].slice(0, 6);      // ✅ Max 6 series
 ```
 
-**Result**: Even with 1000 rows from Cube.js, only 8 dimensions × 6 series = 48 points rendered.
+**Result**: Even with 1000 rows from Supabase dataset, only 8 dimensions × 6 series = 48 points rendered.
 
 ### Pre-aggregations
 
-For best performance, define pre-aggregations in your Cube.js model:
+For best performance, define pre-aggregations in your dataset API model:
 
 ```javascript
-// In Cube.js model
+// In dataset API model
 cube('GSCPerformance', {
   // ... dimensions and measures ...
 
@@ -414,11 +414,11 @@ function App() {
 />
 ```
 
-### Error: "Invalid Cube.js query"
+### Error: "Invalid dataset API query"
 
-**Problem**: Measure/dimension names don't match Cube.js schema
+**Problem**: Measure/dimension names don't match dataset API schema
 
-**Solution**: Check your Cube.js model:
+**Solution**: Check your dataset API model:
 
 ```bash
 # List available cubes
@@ -444,7 +444,7 @@ curl "http://localhost:4000/cubejs-api/v1/meta"
 
 **Solutions**:
 
-1. **Add pre-aggregations** to Cube.js model
+1. **Add pre-aggregations** to dataset API model
 2. **Reduce date range** - Query smaller time windows
 3. **Add filters** - Limit data scope
 4. **Use limit** - Already set to 50, but can reduce further
@@ -521,14 +521,14 @@ interface DateRangeConfig {
 
 ## Support & Resources
 
-- **Cube.js Docs**: https://cube.dev/docs
+- **dataset API Docs**: https://cube.dev/docs
 - **ECharts Radar Docs**: https://echarts.apache.org/en/option.html#series-radar
 - **Project Docs**: `/docs/architecture/PROJECT-BACKBONE.md`
 - **Integration Guide**: `/docs/architecture/INTEGRATION-GUIDE.md`
 
 ## Version History
 
-- **v1.0** - Initial release with Cube.js integration
+- **v1.0** - Initial release with dataset API integration
 - **v1.1** - Added date range support
 - **v1.2** - Improved breakdown dimension handling
 - **v1.3** - Enhanced tooltip formatting

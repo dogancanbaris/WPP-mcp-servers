@@ -2,7 +2,7 @@
 
 **AI-Powered Dashboard Builder for Digital Marketing Teams**
 
-Built with Supabase, Cube.js, Next.js, and ECharts
+Built with Supabase, BigQuery, Next.js, React 19, and Recharts
 
 **Status**: ✅ **100% Production Ready**
 
@@ -11,7 +11,7 @@ Built with Supabase, Cube.js, Next.js, and ECharts
 ## ✨ Features
 
 ### **Complete Dashboard Builder**
-- 🎨 **13 Chart Types** - KPI, Line, Bar, Pie, Table, Treemap, Sankey, Heatmap, Gauge, Area, Scatter, Funnel, Radar
+- 🎨 **34 Chart Types** - Basic (Scorecard, Line, Bar, Pie, Table), Advanced (Treemap, Sankey, Heatmap, Radar, Funnel), Specialized (Calendar, Boxplot, Graph, Pictorial, Sunburst), Time-Series (Timeline, ThemeRiver, Candlestick), Financial (Waterfall, Bullet), and more
 - 🖱️ **Drag-and-Drop** - Reorder charts with smooth animations
 - 💾 **Save/Load** - Persist dashboards to Supabase with RLS isolation
 - 🔍 **Advanced Filters** - Date range, search, multi-select, range slider, filter chips
@@ -42,8 +42,8 @@ Built with Supabase, Cube.js, Next.js, and ECharts
 - 📈 Google Search Console (clicks, impressions, CTR, position)
 - 💰 Google Ads (cost, conversions, CPC, CPA)
 - 📊 Google Analytics (sessions, users, bounce rate, duration)
-- 🔌 All connected via Cube.js semantic layer
-- 💡 Intelligence metadata for auto-formatting
+- 🔌 All connected via BigQuery as central data hub
+- 💡 Dataset-based architecture with intelligent metadata for auto-formatting
 
 ---
 
@@ -52,12 +52,12 @@ Built with Supabase, Cube.js, Next.js, and ECharts
 **LEGO-BLOCK Approach**: Assemble proven components (not custom-built)
 
 **Stack**:
-1. **Supabase Cloud** - Authentication + PostgreSQL database
-2. **Cube.js** - Semantic layer (handles filter complexity automatically)
-3. **Next.js 15** - App Router + React 19
-4. **Apache ECharts** - 13 chart types (120+ available, FREE)
+1. **Supabase Cloud** - Authentication + PostgreSQL database (multi-tenant RLS)
+2. **BigQuery** - Central data lake for all marketing platforms
+3. **Next.js 15** - App Router + React 19 + TypeScript
+4. **ECharts 5.5 + Recharts 3.3** - 34 chart types with full customization (ECharts primary, Recharts secondary)
 5. **Shadcn/ui** - Professional UI components (14 installed)
-6. **@dnd-kit** - Drag-and-drop library
+6. **@dnd-kit** - Drag-and-drop library for dashboard builder
 
 **Result**: 95% proven functionality, 5% custom glue code ✅
 
@@ -74,55 +74,38 @@ Built with Supabase, Cube.js, Next.js, and ECharts
 ### **Installation** (5 minutes)
 
 ```bash
-cd wpp-analytics-platform
-
-# Install Cube.js backend
-cd cube-backend
-npm install
-
-# Install frontend
-cd ../frontend
+cd wpp-analytics-platform/frontend
 npm install
 ```
 
 ### **Configuration** (10 minutes)
 
-**1. Cube.js Backend** (`cube-backend/.env`):
-```bash
-CUBEJS_DB_TYPE=bigquery
-CUBEJS_DB_BQ_PROJECT_ID=mcp-servers-475317
-CUBEJS_DB_BQ_KEY_FILE=/path/to/service-account.json
-CUBEJS_API_SECRET=your_secret_key
-```
-
-**2. Frontend** (`frontend/.env.local`):
+**1. Frontend** (`frontend/.env.local`):
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=https://nbjlehblqctblhpbwgry.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
 SUPABASE_SERVICE_ROLE_KEY=your_service_key
-NEXT_PUBLIC_CUBEJS_API_URL=http://localhost:4000/cubejs-api/v1
-NEXT_PUBLIC_CUBEJS_API_SECRET=your_secret_key
+NEXT_PUBLIC_GOOGLE_CLOUD_PROJECT_ID=mcp-servers-475317
+NEXT_PUBLIC_BIGQUERY_DATASET=wpp_marketing
 ```
 
-**3. Apply Database Migrations**:
+**2. Apply Database Migrations**:
 ```bash
-# Via Supabase MCP or Studio - apply:
+# Via Supabase CLI or Studio - apply:
 supabase/migrations/20251021000000_initial_schema.sql
 supabase/migrations/20251021000001_add_sharing.sql
 ```
 
-**4. Configure OAuth** (15 min):
+**3. Configure OAuth** (15 min):
 See **`GOOGLE-OAUTH-SETUP.md`** for detailed guide
 
-### **Start Services** (2 terminals)
+**4. BigQuery Setup**:
+- Connect BigQuery project to Supabase
+- Create `wpp_marketing` dataset
+- Import platform data via MCP tools or manual import
 
-**Terminal 1**:
-```bash
-cd cube-backend
-npm run dev
-```
+### **Start Service** (1 terminal)
 
-**Terminal 2**:
 ```bash
 cd frontend
 npm run dev
@@ -137,29 +120,81 @@ npm run dev
 ```
 wpp-analytics-platform/
 ├── supabase/migrations/     # Database schema & RLS policies
-├── cube-backend/schema/     # Cube.js data models (3 sources)
-└── frontend/src/
+├── frontend/src/
     ├── app/
+    │   ├── api/             # API routes (9 endpoints)
     │   ├── login/           # OAuth login page
     │   ├── dashboard/       # Dashboard list & builder
     │   ├── settings/        # User settings
     │   └── auth/callback/   # OAuth callback handler
     ├── components/
     │   ├── ui/              # Shadcn components (14)
-    │   ├── providers.tsx    # CubeProvider + ThemeProvider
+    │   ├── dashboard-builder/  # Dashboard builder UI
+    │   ├── providers.tsx    # Theme providers
     │   ├── user-profile.tsx # User dropdown
     │   └── theme-toggle.tsx # Dark mode switcher
     ├── hooks/
     │   └── use-keyboard-shortcuts.ts
     ├── lib/
     │   ├── supabase/        # Dashboard & sharing services
-    │   ├── cubejs/          # Cube API client
+    │   ├── bigquery/        # BigQuery client & queries
     │   ├── export/          # PDF/Excel export
-    │   └── themes/          # ECharts theming
+    │   └── themes/          # Recharts theming
     └── middleware.ts        # Route protection
 ```
 
 **Total**: ~5,890 lines of production code
+
+---
+
+## 🔌 API Endpoints (9 Routes)
+
+### **Dataset Management**
+- **POST** `/api/datasets/register` - Register BigQuery table as dataset
+  - Detects schema automatically
+  - Validates against platform metadata
+  - Stores in Supabase with workspace isolation
+
+- **POST** `/api/datasets/[id]/insert` - Insert rows into dataset
+  - Batch insert with validation
+  - Returns inserted row count
+
+- **POST** `/api/datasets/[id]/query` - Query dataset with filters
+  - Supports date ranges, dimensions, metrics
+  - Returns formatted results with intelligence metadata
+
+### **Dashboard Operations**
+- **GET** `/api/dashboards/[id]` - Load dashboard by ID
+  - Returns dashboard config + components
+  - RLS enforced (only owner or shared users)
+
+- **POST** `/api/dashboards/create` - Create new dashboard
+  - Supports templates (blank, GSC, ads)
+  - Auto-assigns to authenticated workspace
+
+- **GET** `/api/dashboards/fields` - Get available fields for dataset
+  - Returns dimensions + metrics with types
+  - Used for dropdown population in builder
+
+### **Data Querying**
+- **POST** `/api/data/query` - Execute BigQuery query
+  - Generic query endpoint for custom SQL
+  - Cost estimation included
+  - Timeout protection
+
+### **Metadata**
+- **GET** `/api/metadata/platforms` - List all platform definitions
+  - Returns GSC, Google Ads, Analytics metadata
+
+- **GET** `/api/metadata/[platform]` - Get specific platform metadata
+  - Returns dimensions, metrics, intelligence rules
+  - Used for auto-formatting logic
+
+**Authentication**: All endpoints require Supabase session cookie (automatic via middleware)
+
+**Rate Limiting**: Not implemented (recommended for production)
+
+**Error Handling**: Consistent JSON error responses with status codes
 
 ---
 
@@ -185,7 +220,7 @@ Power user features:
 
 **Dashboard Management**: Create, Read, Update, Delete, Duplicate, Templates
 
-**Builder**: 13 chart types, Drag-and-drop, Auto-formatting, Auto-sizing
+**Builder**: 34 chart types, Drag-and-drop, Auto-formatting, Auto-sizing
 
 **Filters**: Date range, Search, Multi-select, Range slider, Filter chips
 
@@ -199,11 +234,64 @@ Power user features:
 
 ---
 
+## 📊 Complete Chart Library (34 Types)
+
+### **Basic Charts** (5)
+- **Scorecard** - Single KPI display with trend indicators
+- **LineChart** - Time-series trend visualization
+- **BarChart** - Horizontal/vertical bar comparisons
+- **PieChart** - Proportional distribution (pie/donut)
+- **TableChart** - Data grid with sorting and pagination
+
+### **Advanced Charts** (5)
+- **TreemapChart** - Hierarchical nested rectangles
+- **SankeyChart** - Flow diagram with proportional connections
+- **HeatmapChart** - Color-coded matrix visualization
+- **RadarChart** - Multi-dimensional comparison (spider chart)
+- **FunnelChart** - Conversion funnel stages
+
+### **Specialized Charts** (10)
+- **CalendarHeatmap** - Day-by-day activity visualization
+- **BoxplotChart** - Statistical distribution with quartiles
+- **GraphChart** - Network relationship visualization
+- **PictorialBarChart** - Custom-shaped bars with images
+- **SunburstChart** - Hierarchical radial chart
+- **ParallelChart** - Multi-dimensional parallel coordinates
+- **GeoMapChart** - Geographic data on maps
+- **BubbleChart** - 3-dimensional scatter plot
+- **ScatterChart** - X-Y correlation visualization
+- **ComboChart** - Combined chart types (line + bar)
+
+### **Time-Series Charts** (5)
+- **TimelineChart** - Event timeline with milestones
+- **ThemeRiverChart** - Stacked stream graph over time
+- **CandlestickChart** - Financial OHLC (Open-High-Low-Close)
+- **AreaChart** - Filled line chart showing cumulative values
+- **GaugeChart** - Semi-circular gauge/speedometer
+
+### **Financial Charts** (4)
+- **WaterfallChart** - Sequential value changes (profit/loss)
+- **BulletChart** - Performance vs target comparison
+- **TreeChart** - Hierarchical tree structure
+- **PivotTableChart** - Multi-dimensional data table
+
+### **Experimental Charts** (5)
+- **GraphChart (Force-directed)** - Dynamic node positioning
+- **Calendar (Year view)** - Annual overview heatmap
+- **Parallel (Multi-axis)** - High-dimensional data visualization
+- **Pictorial (Custom shapes)** - Brand-specific visualizations
+- **Sunburst (Interactive drill-down)** - Hierarchical exploration
+
+**Charting Libraries**:
+- **ECharts 5.5** (Primary) - 28 chart types with advanced interactivity
+- **Recharts 3.3** (Secondary) - 6 chart types for simple visualizations
+
+---
+
 ## 💰 Cost
 
 **Free Tier** (Perfect for starting):
 - Supabase: FREE (50K MAU)
-- Cube.js: FREE (self-hosted)
 - BigQuery: $0-20/month (free quota)
 - Vercel: FREE
 - **Total**: **$0-20/month** ✅
@@ -232,18 +320,17 @@ Power user features:
 
 **The Problem**: Different metrics need different formatting
 
-**The Solution**: Intelligence embedded in Cube models
+**The Solution**: Intelligence metadata in dataset registry
 
 ```javascript
-// In Cube model:
+// In dataset metadata JSON:
 avgCtr: {
   sql: `ctr`,
   type: `avg`,
-  meta: {
-    intelligence: {
-      format: 'percentage',
-      transform: 'multiply_100',
-      decimals: 2,
+  intelligence: {
+    format: 'percentage',
+    transform: 'multiply_100',
+    decimals: 2,
       suffix: '%'
     }
   }
@@ -275,7 +362,7 @@ avgCtr: {
 ## 📈 What's Next (Optional)
 
 **Week 2**: Gemini Integration
-- Auto-generate Cube models from any BigQuery table
+- Auto-generate dataset metadata from any BigQuery table
 - AI-powered metric detection
 - Natural language queries
 
@@ -314,8 +401,8 @@ MIT License - See LICENSE file
 **Live URLs**:
 - Platform: http://localhost:3000
 - Dashboard Builder: http://localhost:3000/dashboard/example/builder
-- Cube Playground: http://localhost:4000
 - Supabase Studio: https://supabase.com/dashboard/project/nbjlehblqctblhpbwgry
+- BigQuery Console: https://console.cloud.google.com/bigquery
 
 ---
 

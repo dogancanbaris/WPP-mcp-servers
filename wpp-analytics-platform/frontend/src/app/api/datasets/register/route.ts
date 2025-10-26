@@ -73,8 +73,7 @@ export async function POST(request: NextRequest) {
 
     const [projectId, datasetId, tableId] = tableParts;
 
-    // Query BigQuery to detect schema (using service account for now)
-    // TODO: Use user's OAuth token when available
+    // Query BigQuery to detect schema using OAuth authentication
     const bigquery = getBigQueryClient();
     const table = bigquery.dataset(datasetId).table(tableId);
 

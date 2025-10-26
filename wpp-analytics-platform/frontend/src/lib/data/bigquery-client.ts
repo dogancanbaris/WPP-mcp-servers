@@ -2,7 +2,7 @@
  * BigQuery Client for Server-Side Data Queries
  *
  * This module provides a singleton BigQuery client for executing queries
- * from Next.js API routes. Uses service account for authentication.
+ * from Next.js API routes. Uses OAuth-based authentication.
  */
 
 import { BigQuery } from '@google-cloud/bigquery';

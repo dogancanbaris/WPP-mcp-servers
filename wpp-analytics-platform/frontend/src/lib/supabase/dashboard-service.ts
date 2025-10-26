@@ -226,17 +226,53 @@ export async function listDashboards(): Promise<{
     }
 
     // Transform to DashboardConfig[]
-    const dashboards: DashboardConfig[] = (data || []).map(d => ({
-      id: d.id,
-      name: d.name,
-      description: d.description,
-      datasource: d.config.datasource,
-      charts: d.config.charts,
-      filters: d.config.filters || [],
-      layout: d.config.layout,
-      created_at: d.created_at,
-      updated_at: d.updated_at
-    }));
+    const dashboards: DashboardConfig[] = (data || []).map(d => {
+      const datasource = d.config?.datasource || d.bigquery_table || d.cube_model_name || '';
+      const filters = d.config?.filters || d.filters || [];
+
+      // Extract charts from layout array
+      // Layout structure: array of rows, each row has columns, each column has a component
+      let charts: ChartConfig[] = [];
+
+      if (Array.isArray(d.layout)) {
+        // Flatten row/column structure to extract individual chart components
+        d.layout.forEach((row: any) => {
+          if (row.columns && Array.isArray(row.columns)) {
+            row.columns.forEach((col: any) => {
+              if (col.component && col.component.type) {
+                // Convert component to ChartConfig format
+                // Map 'scorecard' type to 'kpi' for TypeScript compatibility
+                const componentType = col.component.type === 'scorecard' ? 'kpi' : col.component.type;
+
+                charts.push({
+                  id: col.id || crypto.randomUUID(),
+                  type: componentType,
+                  measure: col.component.measure || '',
+                  dimension: col.component.dimension,
+                  title: col.component.title || '',
+                  size: { w: 6, h: 4 } // Default size
+                });
+              }
+            });
+          }
+        });
+      } else if (d.config?.charts && Array.isArray(d.config.charts)) {
+        // Fallback to flat charts array
+        charts = d.config.charts;
+      }
+
+      return {
+        id: d.id,
+        name: d.name,
+        description: d.description,
+        datasource: datasource,
+        charts: charts,
+        filters: Array.isArray(filters) ? filters : [],
+        layout: d.config?.layout || d.layout,
+        created_at: d.created_at,
+        updated_at: d.updated_at
+      };
+    });
 
     return { success: true, data: dashboards };
   } catch (error) {

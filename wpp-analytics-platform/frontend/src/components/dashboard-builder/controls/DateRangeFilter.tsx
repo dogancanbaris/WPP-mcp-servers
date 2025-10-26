@@ -51,7 +51,7 @@ import { useFilterStore } from '@/store/filterStore';
  * - Custom range picker with dual-month calendar
  * - Comparison mode (compare to previous period)
  * - Global filter application via dashboard context
- * - Cube.js timeDimensions integration
+ * - Dataset time dimensions integration
  *
  * Usage:
  * ```tsx
@@ -82,7 +82,7 @@ export interface DateRangeFilterValue {
   comparison: DateRangeComparison;
 }
 
-export interface CubeTimeDimension {
+export interface DatasetTimeDimension {
   dimension: string;
   dateRange?: [string, string] | string;
   granularity?: 'hour' | 'day' | 'week' | 'month' | 'quarter' | 'year';
@@ -91,10 +91,10 @@ export interface CubeTimeDimension {
 interface DateRangeFilterProps {
   value: DateRangeFilterValue;
   onChange: (value: DateRangeFilterValue) => void;
-  onApply?: (timeDimension: CubeTimeDimension) => void;
+  onApply?: (timeDimension: DatasetTimeDimension) => void;
   showComparison?: boolean;
-  dimension?: string; // Cube.js dimension name (e.g., 'Orders.createdAt')
-  granularity?: CubeTimeDimension['granularity'];
+  dimension?: string; // Dataset dimension name (e.g., 'Orders.createdAt')
+  granularity?: DatasetTimeDimension['granularity'];
   className?: string;
   disabled?: boolean;
 }
@@ -426,7 +426,7 @@ export function DateRangeFilter({
 
     // Also call onApply if provided (for backward compatibility)
     if (onApply) {
-      const timeDimension: CubeTimeDimension = {
+      const timeDimension: DatasetTimeDimension = {
         dimension,
         dateRange,
         granularity,
@@ -644,13 +644,13 @@ export function DateRangeFilter({
 }
 
 /**
- * Helper function to convert DateRangeFilterValue to Cube.js query format
+ * Helper function to convert DateRangeFilterValue to Dataset query format
  */
-export function toCubeTimeDimension(
+export function toDatasetTimeDimension(
   value: DateRangeFilterValue,
   dimension: string,
-  granularity: CubeTimeDimension['granularity'] = 'day'
-): CubeTimeDimension | null {
+  granularity: DatasetTimeDimension['granularity'] = 'day'
+): DatasetTimeDimension | null {
   let startDate: Date | undefined;
   let endDate: Date | undefined;
 
@@ -679,14 +679,14 @@ export function toCubeTimeDimension(
 }
 
 /**
- * Helper function to get Cube.js query with comparison
+ * Helper function to get Dataset query with comparison
  */
-export function toCubeTimeDimensionWithComparison(
+export function toDatasetTimeDimensionWithComparison(
   value: DateRangeFilterValue,
   dimension: string,
-  granularity: CubeTimeDimension['granularity'] = 'day'
-): { primary: CubeTimeDimension; comparison?: CubeTimeDimension } | null {
-  const primary = toCubeTimeDimension(value, dimension, granularity);
+  granularity: DatasetTimeDimension['granularity'] = 'day'
+): { primary: DatasetTimeDimension; comparison?: DatasetTimeDimension } | null {
+  const primary = toDatasetTimeDimension(value, dimension, granularity);
   if (!primary) return null;
 
   if (!value.comparison.enabled) {

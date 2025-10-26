@@ -15,7 +15,7 @@ import {
 /**
  * CheckboxFilter Component
  *
- * Boolean toggle filter for Cube.js dimensions with true/false/all states.
+ * Boolean toggle filter for Dataset dimensions with true/false/all states.
  * Designed for WPP Analytics Platform dashboard controls.
  *
  * @example
@@ -34,7 +34,7 @@ export interface CheckboxFilterProps {
   /** Display label for the filter */
   label: string;
 
-  /** Cube.js dimension to filter (e.g., "GoogleAds.isActive") */
+  /** Dataset dimension to filter (e.g., "GoogleAds.isActive") */
   dimension: string;
 
   /** Current filter value: true, false, or null (all) */
@@ -305,18 +305,18 @@ export const CheckboxFilterGroup: React.FC<CheckboxFilterGroupProps> = ({
 };
 
 /**
- * Utility function to convert CheckboxFilter value to Cube.js filter
+ * Utility function to convert CheckboxFilter value to Dataset filter
  *
  * @example
  * ```tsx
- * const cubeFilter = checkboxToCubeFilter(
+ * const datasetFilter = checkboxToDatasetFilter(
  *   'GoogleAds.isActive',
  *   true
  * );
  * // Returns: { member: 'GoogleAds.isActive', operator: 'equals', values: ['true'] }
  * ```
  */
-export const checkboxToCubeFilter = (
+export const checkboxToDatasetFilter = (
   dimension: string,
   value: boolean | null
 ): object | null => {
@@ -336,14 +336,14 @@ export const checkboxToCubeFilter = (
  *
  * @example
  * ```tsx
- * const { filters, setFilter, getCubeFilters, reset } = useCheckboxFilters({
+ * const { filters, setFilter, getDatasetFilters, reset } = useCheckboxFilters({
  *   'GoogleAds.isActive': true,
  *   'GoogleAds.isPaused': null,
  * });
  *
- * const cubeQuery = {
+ * const datasetQuery = {
  *   measures: ['GoogleAds.clicks'],
- *   filters: getCubeFilters(),
+ *   filters: getDatasetFilters(),
  * };
  * ```
  */
@@ -361,9 +361,9 @@ export const useCheckboxFilters = (
     }));
   }, []);
 
-  const getCubeFilters = useCallback(() => {
+  const getDatasetFilters = useCallback(() => {
     return Object.entries(filters)
-      .map(([dimension, value]) => checkboxToCubeFilter(dimension, value))
+      .map(([dimension, value]) => checkboxToDatasetFilter(dimension, value))
       .filter((filter): filter is object => filter !== null);
   }, [filters]);
 
@@ -378,7 +378,7 @@ export const useCheckboxFilters = (
   return {
     filters,
     setFilter,
-    getCubeFilters,
+    getDatasetFilters,
     reset,
     hasActiveFilters,
   };

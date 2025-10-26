@@ -1,13 +1,19 @@
 /**
  * useGlobalFilters Hook
  *
- * Custom hook for integrating global filters with Cube.js queries.
+ * Custom hook for integrating global filters with dataset queries.
  * Automatically applies active filters to chart queries.
  */
 
 import { useMemo } from 'react';
 import { useFilterStore, GlobalFilter } from '@/store/filterStore';
-import type { Query, Filter as CubeFilter } from '@cubejs-client/core';
+
+// Dataset query types
+export interface DatasetFilter {
+  field: string;
+  operator: string;
+  values: (string | number)[];
+}
 
 interface UseGlobalFiltersOptions {
   /**
@@ -36,14 +42,14 @@ interface UseGlobalFiltersOptions {
   /**
    * Custom filter transformation function
    */
-  transformFilters?: (filters: CubeFilter[]) => CubeFilter[];
+  transformFilters?: (filters: DatasetFilter[]) => DatasetFilter[];
 }
 
 interface UseGlobalFiltersReturn {
   /**
-   * Active filters in Cube.js format
+   * Active filters in dataset format
    */
-  filters: CubeFilter[];
+  filters: DatasetFilter[];
 
   /**
    * Raw global filters
@@ -56,7 +62,7 @@ interface UseGlobalFiltersReturn {
   activeFilterCount: number;
 
   /**
-   * Apply filters to a Cube.js query
+   * Apply filters to a dataset query
    */
   applyToQuery: (query: Query) => Query;
 
@@ -72,7 +78,7 @@ interface UseGlobalFiltersReturn {
 }
 
 /**
- * Hook to get and apply global filters to Cube.js queries
+ * Hook to get and apply global filters to dataset queries
  */
 export const useGlobalFilters = (
   options: UseGlobalFiltersOptions = {}
@@ -85,7 +91,7 @@ export const useGlobalFilters = (
     transformFilters,
   } = options;
 
-  const { getActiveFilters, getCubeJSFilters, getFilterSummary } = useFilterStore();
+  const { getActiveFilters, getFilterSummary } = useFilterStore();
 
   const globalFilters = useMemo(() => {
     if (disabled) return [];
@@ -106,8 +112,8 @@ export const useGlobalFilters = (
       activeFilters = activeFilters.filter((f) => !excludeTypes.includes(f.type));
     }
 
-    // Convert to Cube.js format
-    let cubeFilters: CubeFilter[] = activeFilters.map((filter) => {
+    // Convert to dataset format
+    let datasetFilters: DatasetFilter[] = activeFilters.map((filter) => {
       if (filter.type === 'dateRange') {
         // Map generic 'date' dimension to chart-specific dimension
         return {
@@ -133,10 +139,10 @@ export const useGlobalFilters = (
 
     // Apply custom transformation
     if (transformFilters) {
-      cubeFilters = transformFilters(cubeFilters);
+      datasetFilters = transformFilters(datasetFilters);
     }
 
-    return cubeFilters;
+    return datasetFilters;
   }, [
     disabled,
     globalFilters,

@@ -4,8 +4,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ChartSetup } from './setup/ChartSetup';
 import { ChartStyle } from './style/ChartStyle';
+import { FiltersTab } from './filters/FiltersTab';
 import { ComponentConfig } from '@/types/dashboard-builder';
-import { FileQuestion, Filter, Palette, Keyboard } from 'lucide-react';
+import { FileQuestion, Filter, Palette, Keyboard, Settings } from 'lucide-react';
 import { GlobalFilters } from '../GlobalFilters';
 import { ThemeEditor } from '../ThemeEditor';
 import { KeyboardShortcutsDialog } from '../KeyboardShortcutsDialog';
@@ -87,13 +88,18 @@ const NoSelectionMessage: React.FC<{
  * SettingsSidebar Component
  *
  * Right-side settings panel that appears when a component is selected.
- * Provides Setup and Style tabs for configuring component properties.
+ * Provides complete component configuration with 4 tabs:
+ * - Setup: Data source, metrics, dimensions
+ * - Style: Visual styling, theming, custom CSS
+ * - Filters: Component-level filtering (date range, dimensions, metrics)
+ * - Tools: Dashboard-level settings, global filters, theme editor
  *
  * Features:
  * - Fixed 320px width sidebar
- * - Two-tab interface (Setup | Style)
+ * - Four-tab interface (Setup | Style | Filters | Tools)
  * - Dark mode compatible
  * - Shows component name and type
+ * - Dual agent capabilities (UI + MCP JSON)
  * - No selection state with helpful message
  *
  * @param selectedComponent - Currently selected component configuration
@@ -187,10 +193,11 @@ export const SettingsSidebar: React.FC<SettingsSidebarProps> = ({
       {/* Tabs Section - Professional transitions */}
       <div className="p-4">
         <Tabs defaultValue="setup" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 bg-muted/50 transition-colors">
-            <TabsTrigger value="setup" className="transition-all">Setup</TabsTrigger>
-            <TabsTrigger value="style" className="transition-all">Style</TabsTrigger>
-            <TabsTrigger value="dashboard" className="transition-all">Dashboard</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-4 bg-muted/50 transition-colors">
+            <TabsTrigger value="setup" className="transition-all text-xs">Setup</TabsTrigger>
+            <TabsTrigger value="style" className="transition-all text-xs">Style</TabsTrigger>
+            <TabsTrigger value="filters" className="transition-all text-xs">Filters</TabsTrigger>
+            <TabsTrigger value="dashboard" className="transition-all text-xs">Tools</TabsTrigger>
           </TabsList>
 
           {/* Setup Tab Content */}
@@ -209,7 +216,15 @@ export const SettingsSidebar: React.FC<SettingsSidebarProps> = ({
             />
           </TabsContent>
 
-          {/* Dashboard Tab Content - Professional styling */}
+          {/* Filters Tab Content - NEW */}
+          <TabsContent value="filters" className="mt-4 space-y-4">
+            <FiltersTab
+              config={selectedComponent}
+              onUpdate={(updates) => onUpdateComponent(selectedComponent.id, updates)}
+            />
+          </TabsContent>
+
+          {/* Dashboard Tools Tab Content - Professional styling */}
           <TabsContent value="dashboard" className="mt-4 space-y-4">
             <Card className="card-shadow transition-all hover:shadow-elevation-3">
               <CardHeader>

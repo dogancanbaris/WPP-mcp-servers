@@ -1,21 +1,30 @@
 /**
  * useSankeyData Hook
  *
- * Custom hook for managing Sankey chart data with Cube.js integration.
+ * Custom hook for managing Sankey chart data with dataset API integration.
  * Provides data transformation, filtering, and state management utilities.
  */
 
 import { useMemo, useState, useCallback } from 'react';
-import { useCubeQuery } from '@cubejs-client/react';
-import { Query, ResultSet } from '@cubejs-client/core';
-import { SankeyData, SankeyNode, SankeyLink } from './SankeyChart.types';
+import { useQuery } from '@tanstack/react-query';
+import { DatasetQuery, SankeyData, SankeyNode, SankeyLink } from './SankeyChart.types';
+
+/**
+ * Dataset result row type
+ */
+interface DatasetResultRow {
+  [key: string]: string | number | null;
+}
 
 /**
  * Hook options
  */
 interface UseSankeyDataOptions {
-  /** Cube.js query */
-  query: Query;
+  /** Dataset API query */
+  query: DatasetQuery;
+
+  /** Dataset ID */
+  datasetId: string;
 
   /** Flow level dimension names */
   flowLevels: string[];
@@ -52,8 +61,8 @@ interface UseSankeyDataReturn {
   /** Error object */
   error: Error | null;
 
-  /** Raw Cube.js result set */
-  resultSet: ResultSet | null;
+  /** Raw dataset result */
+  resultData: DatasetResultRow[] | null;
 
   /** Manually refresh data */
   refetch: () => void;
@@ -100,17 +109,17 @@ const DEFAULT_COLORS = [
 ];
 
 /**
- * Transform Cube.js result to Sankey data format
+ * Transform dataset result to Sankey data format
  */
 function transformToSankeyData(
-  resultSet: ResultSet | null,
+  resultData: DatasetResultRow[] | null,
   flowLevels: string[],
   valueMeasure: string,
   minLinkValue: number,
   levelColors?: Record<number, string>,
   colors: string[] = DEFAULT_COLORS
 ): SankeyData {
-  if (!resultSet) {
+  if (!resultData) {
     return { nodes: [], links: [] };
   }
 
@@ -119,7 +128,7 @@ function transformToSankeyData(
   const linkMap = new Map<string, number>();
 
   // Get raw data
-  const data = resultSet.tablePivot();
+  const data = resultData;
 
   // Process each row
   data.forEach((row) => {
@@ -231,6 +240,7 @@ function findPaths(
 export function useSankeyData(options: UseSankeyDataOptions): UseSankeyDataReturn {
   const {
     query,
+    datasetId,
     flowLevels,
     valueMeasure,
     minLinkValue = 0,
@@ -240,25 +250,34 @@ export function useSankeyData(options: UseSankeyDataOptions): UseSankeyDataRetur
     refreshInterval = 60000,
   } = options;
 
-  // Cube.js query
-  const { resultSet, isLoading, error, refetch } = useCubeQuery(query, {
-    ...(autoRefresh && {
-      refetchInterval: refreshInterval,
-    }),
+  // Dataset API query
+  const { data: resultData, isLoading, error, refetch } = useQuery({
+    queryKey: ['sankey-data', datasetId, query],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (query.metrics) params.append('metrics', query.metrics.join(','));
+      if (query.dimensions) params.append('dimensions', query.dimensions.join(','));
+      if (query.limit) params.append('limit', query.limit.toString());
+
+      const response = await fetch(`/api/datasets/${datasetId}/query?${params}`);
+      if (!response.ok) throw new Error('Failed to fetch dataset');
+      return response.json();
+    },
+    refetchInterval: autoRefresh ? refreshInterval : false,
   });
 
   // Transform data
   const data = useMemo(
     () =>
       transformToSankeyData(
-        resultSet,
+        resultData,
         flowLevels,
         valueMeasure,
         minLinkValue,
         levelColors,
         colors
       ),
-    [resultSet, flowLevels, valueMeasure, minLinkValue, levelColors, colors]
+    [resultData, flowLevels, valueMeasure, minLinkValue, levelColors, colors]
   );
 
   // Calculate statistics
@@ -333,7 +352,7 @@ export function useSankeyData(options: UseSankeyDataOptions): UseSankeyDataRetur
     data,
     isLoading,
     error: error as Error | null,
-    resultSet,
+    resultData: resultData || null,
     refetch,
     nodeCount,
     linkCount,

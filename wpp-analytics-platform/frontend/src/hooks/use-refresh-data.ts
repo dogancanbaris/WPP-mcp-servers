@@ -5,7 +5,7 @@
  * ```tsx
  * const refreshKey = useRefreshData();
  *
- * const { resultSet, isLoading, error } = useCubeQuery(queryConfig, {
+ * const { resultSet, isLoading, error } = useQuery(queryConfig, {
  *   skip: !shouldQuery,
  *   cubeApi,
  *   resetResultSetOnChange: true

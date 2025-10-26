@@ -1,6 +1,18 @@
 # WPP MCP Project - Comprehensive Agent Guide
 
-**Last Updated:** 2025-10-22
+> ⚠️ **OUTDATED DOCUMENT** - Last updated **2025-10-22** (before Cube.js removal on Oct 2025)
+>
+> **This guide contains many deprecated references:**
+> - ❌ Cube.js semantic layer (removed - see backend-api-specialist.md for current architecture)
+> - ❌ Metabase/Superset (never implemented)
+> - ❌ Old agent descriptions (see individual agent files in `.claude/agents/` for current specs)
+>
+> **For Current Agent Usage:**
+> - See individual agent markdown files: `backend-api-specialist.md`, `frontend-developer.md`, etc.
+> - See `claude.md` in root for current tech stack
+> - See `wpp-analytics-platform/DATA-LAYER-ARCHITECTURE.md` for dataset-based architecture
+
+**Last Updated:** 2025-10-22 (BEFORE major architecture changes)
 **Agent System Version:** 1.0
 **Total Agents:** 6 (5 specialists + 1 coordinator)
 

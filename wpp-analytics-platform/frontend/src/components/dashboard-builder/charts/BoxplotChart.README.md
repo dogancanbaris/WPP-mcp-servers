@@ -1,4 +1,4 @@
-# BoxplotChart Component - Cube.js Integration Guide
+# BoxplotChart Component - dataset API Integration Guide
 
 ## Overview
 
@@ -76,7 +76,7 @@ A boxplot (box-and-whisker plot) visualizes the five-number summary of a dataset
 ## Architecture
 
 ```
-Marketing Data (BigQuery) → Cube.js (Aggregation) → BoxplotChart → ECharts Visualization
+Marketing Data (BigQuery) → dataset API (Aggregation) → BoxplotChart → ECharts Visualization
                                       ↓
                             Statistical Calculations
                             (min, Q1, median, Q3, max)
@@ -106,7 +106,7 @@ function MyDashboard() {
 
 | Prop | Type | Required | Default | Description |
 |------|------|----------|---------|-------------|
-| `datasource` | `string` | ✅ | - | Cube.js cube name |
+| `datasource` | `string` | ✅ | - | dataset API cube name |
 | `dimension` | `string` | ✅ | - | Category dimension (e.g., campaignName) |
 | `metrics` | `string[]` | ✅ | - | Metric to analyze (only first metric used) |
 | `filters` | `FilterConfig[]` | ❌ | `[]` | Filter conditions |
@@ -156,11 +156,11 @@ function MyDashboard() {
 | `chartColors` | `string[]` | `['#5470c6', ...]` | Color palette |
 | `metricsConfig` | `MetricStyleConfig[]` | `[]` | Metric formatting |
 
-## Cube.js Integration
+## dataset API Integration
 
 ### Query Pattern
 
-The component automatically converts props to Cube.js query:
+The component automatically converts props to dataset API query:
 
 ```typescript
 // Component Usage
@@ -174,7 +174,7 @@ The component automatically converts props to Cube.js query:
   dateRange={{ start: '2025-01-01', end: '2025-01-31' }}
 />
 
-// Generated Cube.js Query
+// Generated dataset API Query
 {
   measures: ['GoogleAds.cpc'],
   dimensions: ['GoogleAds.campaignName'],
@@ -187,9 +187,9 @@ The component automatically converts props to Cube.js query:
 }
 ```
 
-### Recommended Cube.js Data Model
+### Recommended dataset API Data Model
 
-For optimal performance, define percentile measures in Cube.js:
+For optimal performance, define percentile measures in dataset API:
 
 ```javascript
 // model/GoogleAds.js
@@ -475,7 +475,7 @@ const query = {
   // Returns 50,000 rows → client-side calculation slow
 };
 
-// ✅ GOOD: Pre-aggregated in Cube.js (20 rows)
+// ✅ GOOD: Pre-aggregated in dataset API (20 rows)
 const query = {
   dimensions: ['GoogleAds.campaignName'],
   measures: [
@@ -548,9 +548,9 @@ cube('GoogleAds', {
 
 **Cause**: Low data variability or simulated data
 
-**Solution**: Use real percentile measures from Cube.js:
+**Solution**: Use real percentile measures from Supabase dataset:
 ```javascript
-// Define in Cube.js model
+// Define in dataset API model
 cpcQ1: {
   sql: 'APPROX_QUANTILES(cpc, 100)[OFFSET(25)]',
   type: 'number'
@@ -566,7 +566,7 @@ cpcQ1: {
 // 1. Hide outliers if distracting
 <BoxplotChart showOutliers={false} />
 
-// 2. Filter extreme values in Cube.js
+// 2. Filter extreme values in dataset API
 filters={[
   { field: 'GoogleAds.cpc', operator: 'lt', values: ['10'] } // Cap max
 ]}
@@ -592,5 +592,5 @@ Requires ECharts 5.0+ for boxplot series type.
 
 - [ECharts Boxplot Documentation](https://echarts.apache.org/en/option.html#series-boxplot)
 - [Statistical Boxplot Guide](https://en.wikipedia.org/wiki/Box_plot)
-- [Cube.js BigQuery Functions](https://cloud.google.com/bigquery/docs/reference/standard-sql/approximate_aggregate_functions)
+- [dataset API BigQuery Functions](https://cloud.google.com/bigquery/docs/reference/standard-sql/approximate_aggregate_functions)
 - [BoxplotChart Examples](./BoxplotChart.example.tsx)

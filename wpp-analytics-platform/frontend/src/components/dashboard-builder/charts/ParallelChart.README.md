@@ -2,11 +2,11 @@
 
 ## Overview
 
-The `ParallelChart` component provides multi-dimensional data visualization using ECharts parallel coordinates with full Cube.js semantic layer integration. Perfect for discovering correlations, patterns, and outliers across multiple metrics simultaneously.
+The `ParallelChart` component provides multi-dimensional data visualization using ECharts parallel coordinates with full dataset API semantic layer integration. Perfect for discovering correlations, patterns, and outliers across multiple metrics simultaneously.
 
 ## Features
 
-- ✅ **Cube.js Integration**: Semantic layer queries with automatic data transformation
+- ✅ **dataset API Integration**: Semantic layer queries with automatic data transformation
 - ✅ **Multi-Dimensional Analysis**: Visualize 3-15 dimensions simultaneously
 - ✅ **Interactive Brushing**: Filter and explore data across multiple axes
 - ✅ **Color Mapping**: Color lines by any dimension to highlight patterns
@@ -20,7 +20,7 @@ The `ParallelChart` component provides multi-dimensional data visualization usin
 ## Installation
 
 ```bash
-npm install echarts-for-react echarts @cubejs-client/react @cubejs-client/core
+npm install echarts-for-react echarts dataset query hook @cubejs-client/core
 ```
 
 ## Basic Usage
@@ -284,7 +284,7 @@ Correlate quality metrics with performance:
 
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
-| `query` | `Query` | **required** | Cube.js query configuration |
+| `query` | `Query` | **required** | dataset API query configuration |
 | `axes` | `ParallelAxis[]` | **required** | Parallel axes configuration |
 | `title` | `string` | - | Chart title |
 | `description` | `string` | - | Chart description |
@@ -307,7 +307,7 @@ Correlate quality metrics with performance:
 
 ```typescript
 interface ParallelAxis {
-  name: string;              // Dimension/measure name from Cube.js
+  name: string;              // Dimension/measure name from Supabase dataset
   label: string;             // Display label
   type?: 'value' | 'category'; // Axis type
   min?: number | 'dataMin';  // Min value (numeric axes)
@@ -425,7 +425,7 @@ Color lines based on performance:
 
 ### Token-Efficient Queries
 
-Always aggregate data in Cube.js, not in the browser:
+Always aggregate data in dataset API, not in the browser:
 
 ```tsx
 // ❌ BAD: Returns 50,000 rows
@@ -444,12 +444,12 @@ const query = {
 };
 ```
 
-### Cube.js Pre-Aggregations
+### dataset API Pre-Aggregations
 
 Configure pre-aggregations for faster queries:
 
 ```javascript
-// In Cube.js data model
+// In dataset API data model
 cube('GoogleAds', {
   // ...
   preAggregations: {

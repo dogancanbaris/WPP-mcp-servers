@@ -1,6 +1,6 @@
 # CalendarHeatmap Component
 
-GitHub-style calendar heatmap visualization component with Cube.js integration.
+GitHub-style calendar heatmap visualization component with dataset API integration.
 
 ## 🎯 Overview
 
@@ -10,12 +10,12 @@ The CalendarHeatmap component displays activity data as a year-long calendar gri
 
 - **Year-Long View**: Full calendar year with 52 weeks × 7 days grid
 - **Color Intensity Mapping**: 5-level color scale based on data values
-- **Cube.js Integration**: Real-time data queries with daily granularity
+- **dataset API Integration**: Real-time data queries with daily granularity
 - **Interactive Tooltips**: Hover to see date and formatted metric value
 - **Responsive Design**: Auto-sizing cells that adapt to container
 - **Customizable Colors**: GitHub-style or custom color schemes
 - **Date Range Support**: View any year or custom date range
-- **Filter Support**: Apply Cube.js filters to data
+- **Filter Support**: Apply dataset API filters to data
 
 ## 🚀 Quick Start
 
@@ -70,7 +70,7 @@ function MyDashboard() {
 
 | Prop | Type | Default | Required | Description |
 |------|------|---------|----------|-------------|
-| `datasource` | string | `'gsc_performance_365days'` | No | Cube.js data model |
+| `datasource` | string | `'gsc_performance_365days'` | No | dataset API data model |
 | `dimension` | string \| null | `null` | Yes | Date dimension field |
 | `metrics` | string[] | `[]` | Yes | Metric to display (only first used) |
 | `filters` | FilterConfig[] | `[]` | No | Array of filters |
@@ -194,7 +194,7 @@ Track daily active users, contributions, or engagement.
 ### 6. E-commerce Sales
 Monitor daily orders, revenue, or average order value.
 
-## 🔌 Cube.js Integration
+## 🔌 dataset API Integration
 
 ### Query Structure
 
@@ -214,7 +214,7 @@ The component generates daily granularity queries:
 
 ### Data Model Requirements
 
-Your Cube.js model must have a date dimension:
+Your dataset API model must have a date dimension:
 
 ```javascript
 cube('GSCPerformance', {
@@ -265,7 +265,7 @@ cube('GSCPerformance', {
 
 ### 4. Performance
 - Limit to single year (365 days)
-- Use Cube.js pre-aggregations
+- Use dataset API pre-aggregations
 - Enable query caching
 
 ## 🐛 Troubleshooting
@@ -330,7 +330,7 @@ The component manages 4 states:
 - [Example Page](./CalendarHeatmap.example.tsx)
 - [Test Documentation](./CalendarHeatmap.test.md)
 - [ECharts Calendar Docs](https://echarts.apache.org/en/option.html#calendar)
-- [Cube.js Time Dimensions](https://cube.dev/docs/schema/reference/types-and-formats#time-dimensions)
+- [dataset API Time Dimensions](https://cube.dev/docs/schema/reference/types-and-formats#time-dimensions)
 
 ## 🎓 Advanced Patterns
 
@@ -431,7 +431,7 @@ function YoYComparison() {
 
 ```json
 {
-  "@cubejs-client/react": "^1.3.82",
+  "dataset query hook": "^1.3.82",
   "echarts": "^5.6.0",
   "echarts-for-react": "^3.0.2",
   "react": "19.1.0",

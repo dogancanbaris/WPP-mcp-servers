@@ -68,18 +68,18 @@ Setup tab content for configuring chart data and query parameters.
 - Date range picker (last 7/30/90 days, this month, etc.)
 - Real-time updates
 
-**Available Dimensions** (from Cube.js):
+**Available Dimensions** (from Supabase dataset):
 - Date
 - Query
 - Page
 - Device
 - Country
 
-**Available Metrics** (from Cube.js):
+**Available Metrics** (from Supabase dataset):
 - Clicks
 - Impressions
-- CTR
-- Position
+- CTR (Click-through rate)
+- Position (Average ranking)
 
 **Usage**:
 

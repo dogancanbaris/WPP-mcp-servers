@@ -9,16 +9,20 @@ import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
-import { Plus, BarChart3, LineChart, PieChart, MoreVertical, Copy, Trash2, Calendar, Loader2, RefreshCw } from 'lucide-react';
+import { Plus, BarChart3, LineChart, PieChart, MoreVertical, Copy, Trash2, Calendar, Loader2, RefreshCw, Search, SortAsc } from 'lucide-react';
 import { listDashboards, saveDashboard, deleteDashboard, type DashboardConfig } from '@/lib/supabase/dashboard-service';
 import { formatDistanceToNow } from 'date-fns';
 import { UserProfile } from '@/components/user-profile';
+
+type SortOption = 'name-asc' | 'name-desc' | 'date-newest' | 'date-oldest';
 
 export default function DashboardListPage() {
   const router = useRouter();
   const [isCreating, setIsCreating] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [dashboards, setDashboards] = useState<DashboardConfig[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState<SortOption>('date-newest');
   const [newDashboard, setNewDashboard] = useState({
     name: '',
     dataSource: '',
@@ -150,6 +154,28 @@ export default function DashboardListPage() {
     }
   };
 
+  // Filter and sort dashboards
+  const filteredAndSortedDashboards = dashboards
+    .filter((dashboard) =>
+      dashboard.name.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+    .sort((a, b) => {
+      switch (sortBy) {
+        case 'name-asc':
+          return a.name.localeCompare(b.name);
+        case 'name-desc':
+          return b.name.localeCompare(a.name);
+        case 'date-newest':
+          return new Date(b.updated_at || b.created_at || 0).getTime() -
+                 new Date(a.updated_at || a.created_at || 0).getTime();
+        case 'date-oldest':
+          return new Date(a.updated_at || a.created_at || 0).getTime() -
+                 new Date(b.updated_at || b.created_at || 0).getTime();
+        default:
+          return 0;
+      }
+    });
+
   return (
     <div className="min-h-screen bg-background p-8">
       <div className="max-w-7xl mx-auto">
@@ -158,7 +184,7 @@ export default function DashboardListPage() {
           <div>
             <h1 className="text-3xl font-bold">Dashboards</h1>
             <p className="text-muted-foreground mt-1">
-              {dashboards.length} dashboard{dashboards.length !== 1 ? 's' : ''}
+              {dashboards.length} dashboard{dashboards.length !== 1 ? 's' : ''} {searchQuery && `(${filteredAndSortedDashboards.length} found)`}
             </p>
           </div>
 
@@ -238,11 +264,57 @@ export default function DashboardListPage() {
           </div>
         </div>
 
+        {/* Search and Sort Controls */}
+        {!isLoading && dashboards.length > 0 && (
+          <div className="flex gap-4 mb-6">
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search dashboards..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+
+            <Select value={sortBy} onValueChange={(value) => setSortBy(value as SortOption)}>
+              <SelectTrigger className="w-[180px]">
+                <SortAsc className="h-4 w-4 mr-2" />
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="date-newest">Newest First</SelectItem>
+                <SelectItem value="date-oldest">Oldest First</SelectItem>
+                <SelectItem value="name-asc">Name (A-Z)</SelectItem>
+                <SelectItem value="name-desc">Name (Z-A)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
         {/* Loading State */}
         {isLoading && (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
+        )}
+
+        {/* No Results State */}
+        {!isLoading && dashboards.length > 0 && filteredAndSortedDashboards.length === 0 && (
+          <Card className="p-12">
+            <div className="text-center space-y-4">
+              <Search className="h-12 w-12 mx-auto text-muted-foreground" />
+              <div>
+                <h3 className="text-lg font-semibold">No dashboards found</h3>
+                <p className="text-muted-foreground mt-1">
+                  No dashboards match "{searchQuery}". Try adjusting your search.
+                </p>
+              </div>
+              <Button variant="outline" onClick={() => setSearchQuery('')}>
+                Clear Search
+              </Button>
+            </div>
+          </Card>
         )}
 
         {/* Empty State */}
@@ -265,9 +337,9 @@ export default function DashboardListPage() {
         )}
 
         {/* Dashboard Grid */}
-        {!isLoading && dashboards.length > 0 && (
+        {!isLoading && filteredAndSortedDashboards.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {dashboards.map((dashboard) => (
+            {filteredAndSortedDashboards.map((dashboard) => (
               <Card
                 key={dashboard.id}
                 className="p-6 hover:shadow-lg transition-shadow cursor-pointer group relative"
@@ -292,14 +364,14 @@ export default function DashboardListPage() {
                     </div>
                     <div className="flex gap-2 flex-wrap">
                       <span className="px-2 py-1 bg-primary/10 text-primary rounded text-xs">
-                        {dashboard.charts.filter(c => c.type === 'kpi').length} KPIs
+                        {(dashboard.charts || []).filter(c => c.type === 'kpi').length} KPIs
                       </span>
                       <span className="px-2 py-1 bg-primary/10 text-primary rounded text-xs">
-                        {dashboard.charts.length - dashboard.charts.filter(c => c.type === 'kpi').length} Charts
+                        {(dashboard.charts || []).length - (dashboard.charts || []).filter(c => c.type === 'kpi').length} Charts
                       </span>
-                      {dashboard.filters.length > 0 && (
+                      {(dashboard.filters || []).length > 0 && (
                         <span className="px-2 py-1 bg-primary/10 text-primary rounded text-xs">
-                          {dashboard.filters.length} Filters
+                          {(dashboard.filters || []).length} Filters
                         </span>
                       )}
                     </div>

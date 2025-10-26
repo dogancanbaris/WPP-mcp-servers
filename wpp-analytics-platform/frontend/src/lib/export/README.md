@@ -441,7 +441,7 @@ interface ExportResult {
 { field: 'status', operator: 'in', value: ['active', 'paused'] }
 ```
 
-## Integration with Cube.js
+## Integration with Dataset API
 
 ```tsx
 import { useCubeQuery } from '@cubejs-client/react';
@@ -462,7 +462,7 @@ function CubeDashboard() {
   const handleExport = async () => {
     if (!resultSet) return;
 
-    // Convert Cube.js format to flat array
+    // Convert Dataset API format to flat array
     const data = resultSet.tablePivot().map((row) => {
       const flatRow: Record<string, unknown> = {};
       Object.keys(row).forEach((key) => {
@@ -772,7 +772,7 @@ See `/home/dogancanbaris/projects/MCP Servers/wpp-analytics-platform/frontend/sr
 - Full export management page
 - Programmatic export with custom options
 - Scheduled export setup
-- Cube.js integration
+- Dataset API integration
 - Template usage
 - Complete dashboard integration
 

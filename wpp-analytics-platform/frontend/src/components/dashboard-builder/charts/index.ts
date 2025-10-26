@@ -2,7 +2,7 @@
  * Chart Components Export Index
  *
  * Central export point for all dashboard chart components.
- * These components integrate with Cube.js for real-time data visualization.
+ * These components integrate with dataset API for real-time data visualization.
  */
 
 // Basic Charts

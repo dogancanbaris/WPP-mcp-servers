@@ -13,6 +13,8 @@ import {
   BackgroundBorderAccordion,
   HeaderFooterAccordion,
 } from '.';
+import { ThemePresetsAccordion } from './ThemePresetsAccordion';
+import { CustomCSSAccordion } from './CustomCSSAccordion';
 
 interface ChartStyleProps {
   config: ComponentConfig;
@@ -136,6 +138,16 @@ export const ChartStyle: React.FC<ChartStyleProps> = ({ config, onUpdate }) => {
     footerAlignment: 'left' as const,
   });
 
+  const [customCSS, setCustomCSS] = useState(config.customCSS || '');
+
+  const [currentTheme, setCurrentTheme] = useState<any>({
+    name: 'Light Professional',
+    backgroundColor: config.style?.backgroundColor || '#ffffff',
+    textColor: '#1f2937',
+    accentColor: '#3b82f6',
+    borderColor: config.style?.borderColor || '#e5e7eb',
+  });
+
   /**
    * Sync local config changes back to parent component
    */
@@ -150,6 +162,7 @@ export const ChartStyle: React.FC<ChartStyleProps> = ({ config, onUpdate }) => {
         borderRadius: backgroundBorderConfig.borderRadius,
         padding: backgroundBorderConfig.padding,
       },
+      customCSS,
       // Store all style configs in a custom property
       styleConfigs: {
         title: titleConfig,
@@ -161,6 +174,7 @@ export const ChartStyle: React.FC<ChartStyleProps> = ({ config, onUpdate }) => {
         metrics: metricStyleConfig,
         backgroundBorder: backgroundBorderConfig,
         headerFooter: headerFooterConfig,
+        theme: currentTheme,
       },
     });
   };
@@ -178,6 +192,8 @@ export const ChartStyle: React.FC<ChartStyleProps> = ({ config, onUpdate }) => {
     metricStyleConfig,
     backgroundBorderConfig,
     headerFooterConfig,
+    customCSS,
+    currentTheme,
   ]);
 
   /**
@@ -250,6 +266,15 @@ export const ChartStyle: React.FC<ChartStyleProps> = ({ config, onUpdate }) => {
       footerColor: '#9ca3af',
       footerAlignment: 'left',
     });
+
+    setCustomCSS('');
+    setCurrentTheme({
+      name: 'Light Professional',
+      backgroundColor: '#ffffff',
+      textColor: '#1f2937',
+      accentColor: '#3b82f6',
+      borderColor: '#e5e7eb',
+    });
   };
 
   return (
@@ -257,6 +282,19 @@ export const ChartStyle: React.FC<ChartStyleProps> = ({ config, onUpdate }) => {
       {/* Scrollable accordion area */}
       <div className="flex-1 overflow-y-auto">
         <Accordion type="multiple" className="w-full">
+          {/* 0. Theme Presets */}
+          <ThemePresetsAccordion
+            onThemeSelected={(theme) => {
+              setCurrentTheme(theme);
+              setBackgroundBorderConfig(prev => ({
+                ...prev,
+                backgroundColor: theme.backgroundColor,
+                borderColor: theme.borderColor,
+              }));
+            }}
+            currentTheme={currentTheme}
+          />
+
           {/* 1. Chart Title */}
           <TitleStyleAccordion config={titleConfig} onChange={setTitleConfig} />
 
@@ -290,6 +328,9 @@ export const ChartStyle: React.FC<ChartStyleProps> = ({ config, onUpdate }) => {
 
           {/* 9. Header & Footer */}
           <HeaderFooterAccordion config={headerFooterConfig} onChange={setHeaderFooterConfig} />
+
+          {/* 10. Custom CSS */}
+          <CustomCSSAccordion customCSS={customCSS} onUpdate={setCustomCSS} />
         </Accordion>
       </div>
 

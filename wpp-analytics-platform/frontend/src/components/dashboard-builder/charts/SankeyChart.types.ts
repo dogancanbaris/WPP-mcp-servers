@@ -3,7 +3,17 @@
  * Provides comprehensive type safety for Sankey diagram configurations
  */
 
-import { Query } from '@cubejs-client/core';
+// Dataset query interface (replaces Cube.js Query)
+export interface DatasetQuery {
+  metrics?: string[];
+  dimensions?: string[];
+  filters?: Array<{
+    field: string;
+    operator: string;
+    values: (string | number)[];
+  }>;
+  limit?: number;
+}
 
 /**
  * Sankey node configuration
@@ -136,8 +146,8 @@ export interface SankeyChartProps {
   // Required Props
   // ============================================================================
 
-  /** Cube.js query configuration */
-  query: Query;
+  /** Dataset query configuration */
+  query: DatasetQuery;
 
   /** Array of dimension names representing flow levels (in order) */
   flowLevels: string[];
@@ -250,23 +260,23 @@ export interface SankeyChartProps {
 }
 
 /**
- * Common Cube.js query patterns for Sankey charts
+ * Common dataset query patterns for Sankey charts
  */
 export interface SankeyQueryPatterns {
   /** Traffic source flow query */
-  trafficSourceFlow: Query;
+  trafficSourceFlow: DatasetQuery;
 
   /** Campaign hierarchy flow query */
-  campaignFlow: Query;
+  campaignFlow: DatasetQuery;
 
   /** Device journey flow query */
-  deviceJourneyFlow: Query;
+  deviceJourneyFlow: DatasetQuery;
 
   /** Geographic sales flow query */
-  geographicFlow: Query;
+  geographicFlow: DatasetQuery;
 
   /** Multi-platform search flow query */
-  multiPlatformFlow: Query;
+  multiPlatformFlow: DatasetQuery;
 }
 
 /**
@@ -420,16 +430,16 @@ export const SANKEY_PRESETS: Record<string, SankeyPreset> = {
 };
 
 /**
- * Helper type for extracting dimension values from Cube.js results
+ * Helper type for extracting dimension values from dataset results
  */
-export interface CubeDimensionValue {
+export interface DatasetDimensionValue {
   [key: string]: string | number | null;
 }
 
 /**
- * Helper type for Cube.js result row
+ * Helper type for dataset result row
  */
-export interface CubeResultRow {
+export interface DatasetResultRow {
   [key: string]: string | number | null;
 }
 
@@ -457,7 +467,7 @@ export interface SankeyChartState {
  * Export all types
  */
 export type {
-  Query,
+  DatasetQuery,
   SankeyNode,
   SankeyLink,
   SankeyData,
@@ -472,7 +482,7 @@ export type {
   SankeyChartProps,
   SankeyQueryPatterns,
   SankeyPreset,
-  CubeDimensionValue,
-  CubeResultRow,
+  DatasetDimensionValue,
+  DatasetResultRow,
   SankeyChartState,
 };

@@ -41,19 +41,42 @@ export function UserProfile() {
   }
 
   const displayName = user.user_metadata?.full_name || user.email?.split('@')[0] || 'User';
-  const avatar = user.user_metadata?.avatar_url;
+  const avatar = user.user_metadata?.avatar_url || user.user_metadata?.picture;
+
+  // Helper function to get initials from name
+  const getInitials = (name: string): string => {
+    const parts = name.trim().split(' ');
+    if (parts.length >= 2) {
+      return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+    }
+    return name.substring(0, 2).toUpperCase();
+  };
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="sm" className="gap-2">
           {avatar ? (
-            <img src={avatar} alt={displayName} className="h-6 w-6 rounded-full" />
-          ) : (
-            <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center">
-              <User className="h-4 w-4" />
-            </div>
-          )}
+            <img
+              src={avatar}
+              alt={displayName}
+              className="h-6 w-6 rounded-full"
+              onError={(e) => {
+                // Hide broken image and show initials fallback
+                e.currentTarget.style.display = 'none';
+                const initialsDiv = e.currentTarget.nextElementSibling;
+                if (initialsDiv) {
+                  (initialsDiv as HTMLElement).style.display = 'flex';
+                }
+              }}
+            />
+          ) : null}
+          <div
+            className="h-6 w-6 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center text-white text-xs font-semibold"
+            style={{ display: avatar ? 'none' : 'flex' }}
+          >
+            {getInitials(displayName)}
+          </div>
           <span className="hidden md:inline">{displayName}</span>
         </Button>
       </DropdownMenuTrigger>

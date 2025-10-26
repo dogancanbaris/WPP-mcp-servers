@@ -1,5 +1,5 @@
 /**
- * Utility functions for formatting date ranges for Cube.js queries
+ * Utility functions for formatting date ranges for dataset queries
  */
 
 /**
@@ -13,9 +13,9 @@ export interface DateRange {
 }
 
 /**
- * Format a Date object or string to YYYY-MM-DD format for Cube.js
+ * Format a Date object or string to YYYY-MM-DD format for dataset queries
  */
-function formatDateToCubeJs(date: Date | string): string {
+function formatDateForDataset(date: Date | string): string {
   if (date instanceof Date) {
     return date.toISOString().split('T')[0];
   }
@@ -32,7 +32,7 @@ function formatDateToCubeJs(date: Date | string): string {
 }
 
 /**
- * Convert DateRange object to Cube.js format
+ * Convert DateRange object to dataset format
  *
  * Handles both:
  * - Custom date ranges with startDate/endDate
@@ -40,9 +40,9 @@ function formatDateToCubeJs(date: Date | string): string {
  *
  * @param dateRange DateRange object from component props
  * @param fallback Fallback value if dateRange is invalid (default: 'last 30 days')
- * @returns Cube.js compatible date range format
+ * @returns Dataset-compatible date range format
  */
-export function formatDateRangeForCubeJs(
+export function formatDateRangeForDataset(
   dateRange: DateRange | null | undefined,
   fallback: string | string[] = 'last 30 days'
 ): string | string[] {
@@ -53,8 +53,8 @@ export function formatDateRangeForCubeJs(
   // Handle custom date ranges
   if (dateRange.type === 'custom' && dateRange.startDate && dateRange.endDate) {
     return [
-      formatDateToCubeJs(dateRange.startDate),
-      formatDateToCubeJs(dateRange.endDate)
+      formatDateForDataset(dateRange.startDate),
+      formatDateForDataset(dateRange.endDate)
     ];
   }
 
@@ -68,11 +68,11 @@ export function formatDateRangeForCubeJs(
 }
 
 /**
- * Create a Cube.js filter for date range
+ * Create a dataset filter for date range
  *
  * @param dateRange DateRange object
- * @param memberName The Cube.js member name (e.g., 'GSC.date')
- * @returns Cube.js filter object or null if no valid date range
+ * @param memberName The dataset field name (e.g., 'date')
+ * @returns Dataset filter object or null if no valid date range
  */
 export function createDateRangeFilter(
   dateRange: DateRange | null | undefined,
@@ -88,8 +88,8 @@ export function createDateRangeFilter(
       member: memberName,
       operator: 'inDateRange',
       values: [
-        formatDateToCubeJs(dateRange.startDate),
-        formatDateToCubeJs(dateRange.endDate)
+        formatDateForDataset(dateRange.startDate),
+        formatDateForDataset(dateRange.endDate)
       ]
     };
   }

@@ -1,6 +1,6 @@
 # TimelineChart Component
 
-A comprehensive timeline/Gantt chart component built with ECharts and integrated with Cube.js for visualizing events with start and end dates.
+A comprehensive timeline/Gantt chart component built with ECharts and integrated with dataset API for visualizing events with start and end dates.
 
 ## Overview
 
@@ -30,7 +30,7 @@ The TimelineChart component displays events over time with:
 ### 2. Date Range Management
 - Supports any date format (ISO 8601, timestamps, date strings)
 - Automatically calculates optimal date range with padding
-- Custom date range filtering via Cube.js
+- Custom date range filtering via dataset API
 
 ### 3. Category & Status Coloring
 - Color events by category or status
@@ -174,11 +174,11 @@ All standard props from the dashboard builder:
 />
 ```
 
-## Cube.js Integration
+## dataset API Integration
 
 ### Required Data Model Structure
 
-Your Cube.js data model needs:
+Your dataset API data model needs:
 
 ```javascript
 cube('MarketingCampaigns', {
@@ -220,7 +220,7 @@ cube('MarketingCampaigns', {
 });
 ```
 
-### Example Cube.js Query
+### Example dataset API Query
 
 The component generates queries like:
 
@@ -326,8 +326,8 @@ currentDateLine = true  // Show "Today" marker
 ## Performance Considerations
 
 ### Token Efficiency
-- Default limit: 200 events (adjustable via Cube.js query)
-- Events aggregated/filtered in Cube.js before reaching frontend
+- Default limit: 200 events (adjustable via dataset API query)
+- Events aggregated/filtered in dataset API before reaching frontend
 - Use `filters` prop to reduce data volume
 
 ### Rendering Performance
@@ -377,7 +377,7 @@ Displays useful metadata:
 
 ### States Handled
 1. **Empty** - No configuration
-2. **Loading** - Fetching data from Cube.js
+2. **Loading** - Fetching data from Supabase dataset
 3. **Error** - Failed to load data
 4. **Empty Data** - Query returned no results
 5. **Success** - Data rendered as timeline
@@ -496,7 +496,7 @@ events.forEach(event => {
 ## Dependencies
 
 - `react` - Component framework
-- `@cubejs-client/react` - Cube.js integration
+- `dataset query hook` - dataset API integration
 - `echarts` - Charting library
 - `echarts-for-react` - React wrapper for ECharts
 - `date-fns` - Date manipulation
@@ -530,7 +530,7 @@ Potential improvements:
 - Duration formatting
 
 ### Integration Tests
-- Cube.js query generation
+- dataset API query generation
 - Empty state handling
 - Error state handling
 - Loading state timing
@@ -566,7 +566,7 @@ Potential improvements:
 
 For issues or questions:
 - Check example file: `TimelineChart.example.tsx`
-- Review Cube.js data model requirements
+- Review dataset API data model requirements
 - Verify date format in source data
 
 ## License

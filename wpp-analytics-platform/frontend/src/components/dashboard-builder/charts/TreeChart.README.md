@@ -13,7 +13,7 @@ The TreeChart component visualizes hierarchical data structures using ECharts' t
 - ✅ **Interactive Navigation**: Zoom, pan, and focus on descendants
 - ✅ **Rich Tooltips**: Multi-metric display with formatted values
 - ✅ **Smooth Animations**: Expand/collapse with fluid transitions
-- ✅ **Full Cube.js Integration**: Real-time data queries
+- ✅ **Full dataset API Integration**: Real-time data queries
 - ✅ **Token-Efficient**: Auto-limits to 100 nodes for performance
 
 ### Layout Options
@@ -44,7 +44,7 @@ treeLayout="radial"
 
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
-| `datasource` | `string` | `'gsc_performance_7days'` | Cube.js data source identifier |
+| `datasource` | `string` | `'gsc_performance_7days'` | dataset API data source identifier |
 | `dimension` | `string \| null` | `null` | Primary dimension (should be hierarchical) |
 | `breakdownDimension` | `string \| null` | `null` | Secondary dimension (optional) |
 | `metrics` | `string[]` | `[]` | Array of metric IDs to query |
@@ -188,10 +188,10 @@ Sample values:
 - "Generic|Display|UK|Desktop"
 
 Note: Component uses "/" delimiter by default.
-Pre-process in Cube.js to use "/" instead.
+Pre-process in dataset API to use "/" instead.
 ```
 
-### Cube.js Data Model Example
+### dataset API Data Model Example
 
 ```javascript
 // model/GoogleAds.js
@@ -271,7 +271,7 @@ FROM (
 ### Query Optimization
 
 ```javascript
-// In Cube.js data model
+// In dataset API data model
 cube('GSC', {
   preAggregations: {
     urlHierarchy: {
@@ -456,7 +456,7 @@ roam={true} // Allow zoom/pan navigation
 
 **Cause**: Dimension values don't contain "/" delimiter
 
-**Solution**: Pre-process in Cube.js:
+**Solution**: Pre-process in dataset API:
 ```javascript
 dimensions: {
   hierarchicalPath: {
@@ -484,7 +484,7 @@ dimensions: {
 
 **Cause**: Node sizing based on metric with large variance
 
-**Solution**: Use different nodeMetric or normalize in Cube.js:
+**Solution**: Use different nodeMetric or normalize in dataset API:
 ```javascript
 measures: {
   normalizedClicks: {
@@ -528,5 +528,5 @@ measures: {
 ## Resources
 
 - [ECharts Tree Documentation](https://echarts.apache.org/en/option.html#series-tree)
-- [Cube.js Hierarchical Data](https://cube.dev/docs/schema/fundamentals/dimensions#hierarchy)
+- [dataset API Hierarchical Data](https://cube.dev/docs/schema/fundamentals/dimensions#hierarchy)
 - [Component Examples](./TreeChart.example.tsx)

@@ -1,5 +1,15 @@
 # Complete Component Specifications - Every Detail for Agents
 
+> ⚠️ **PARTIALLY OUTDATED** - This document contains some references to Cube.js (removed Oct 2025).
+>
+> **When Building Components:**
+> - ❌ Ignore any Cube.js references - use dataset API instead
+> - ✅ Use `/api/datasets/{id}/query` for data fetching
+> - ✅ Use `@tanstack/react-query` for data loading (NOT `@cubejs-client/react`)
+> - ✅ See individual chart README files in `/components/dashboard-builder/charts/` for accurate examples
+>
+> **Still Valid:** Component structure, UI patterns, layout specifications, interaction behaviors
+
 **Purpose**: Comprehensive specifications for building EVERY component
 **For**: WPP custom agents (frontend-developer, backend-api-specialist, database-analytics-architect)
 **Reference Screenshots**:

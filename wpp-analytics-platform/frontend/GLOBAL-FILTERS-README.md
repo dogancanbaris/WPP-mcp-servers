@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Global Filter System provides dashboard-wide filtering capabilities that automatically apply to all charts in the WPP Analytics Platform. It's built with Zustand for state management and integrates seamlessly with Cube.js queries.
+The Global Filter System provides dashboard-wide filtering capabilities that automatically apply to all charts in the WPP Analytics Platform. It's built with Zustand for state management and integrates seamlessly with Dataset API queries.
 
 ## Architecture
 
@@ -75,7 +75,7 @@ Filters are saved to localStorage and restored on page reload.
 1. **`/frontend/src/store/filterStore.ts`**
    - Zustand store with persist middleware
    - Filter CRUD operations
-   - Cube.js query generation
+   - Dataset API query generation
    - 450+ lines
 
 2. **`/frontend/src/components/dashboard-builder/GlobalFilters.tsx`**
@@ -390,7 +390,7 @@ getFilterSummary(): string;
 
 ```typescript
 const {
-  filters,              // CubeFilter[] - Cube.js format
+  filters,              // CubeFilter[] - Dataset API format
   globalFilters,        // GlobalFilter[] - Raw filters
   activeFilterCount,    // number
   applyToQuery,         // (query: Query) => Query
@@ -512,7 +512,7 @@ Available presets:
 ### Token Efficiency
 
 Global filters REDUCE token consumption by:
-1. Pre-filtering data at the query level (in BigQuery via Cube.js)
+1. Pre-filtering data at the query level (in BigQuery via Dataset API)
 2. Returning only filtered rows (not full dataset)
 3. Avoiding multiple roundtrips to filter in frontend
 
@@ -530,7 +530,7 @@ const query = {
 
 ### Query Caching
 
-Cube.js caches filtered queries:
+Dataset API caches filtered queries:
 - Same filters = cached response (< 100ms)
 - Pre-aggregations speed up common filter combinations
 - Filter changes trigger new query but don't reload full dataset
@@ -572,7 +572,7 @@ export const TenantAwareChart: React.FC = () => {
 };
 ```
 
-## Integration with Cube.js Semantic Layer
+## Integration with Dataset API Semantic Layer
 
 ### Data Model Example
 
@@ -607,7 +607,7 @@ cube('GoogleAds', {
 
 ### Query Transformation
 
-Global filters automatically transform to Cube.js format:
+Global filters automatically transform to Dataset API format:
 
 ```typescript
 // Global filter in store
@@ -619,7 +619,7 @@ Global filters automatically transform to Cube.js format:
   enabled: true
 }
 
-// Transforms to Cube.js query
+// Transforms to Dataset API query
 {
   filters: [
     {
@@ -663,7 +663,7 @@ const { applyToQuery } = useGlobalFilters({
 **Problem**: Queries slow after adding filters
 
 **Solution**:
-1. Add Cube.js pre-aggregations for filtered dimensions
+1. Add Dataset API pre-aggregations for filtered dimensions
 2. Ensure BigQuery tables are partitioned by date
 3. Limit filter values to top 100-400 items
 4. Use measure filters sparingly (expensive in BigQuery)

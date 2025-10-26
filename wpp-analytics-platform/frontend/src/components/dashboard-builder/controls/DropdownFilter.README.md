@@ -1,6 +1,6 @@
 # DropdownFilter - Quick Start Guide
 
-**A production-ready dropdown filter component with Cube.js integration for the WPP Analytics Platform.**
+**A production-ready dropdown filter component with dataset API integration for the WPP Analytics Platform.**
 
 ## 🚀 Quick Start (30 seconds)
 
@@ -23,7 +23,7 @@ function MyDashboard() {
 ```
 
 **That's it!** The component will:
-- ✅ Fetch campaign names from Cube.js automatically
+- ✅ Fetch campaign names from Supabase dataset automatically
 - ✅ Display them in a searchable dropdown
 - ✅ Handle loading and error states
 - ✅ Be fully accessible (WCAG 2.1 AA)
@@ -113,7 +113,7 @@ const { filters, addFilter } = useDashboardFilters()
 |------|------|----------|-------------|
 | `id` | `string` | ✅ | Unique identifier |
 | `label` | `string` | ✅ | Display label |
-| `dimension` | `string` | ✅ | Cube.js dimension (e.g., "Orders.status") |
+| `dimension` | `string` | ✅ | dataset API dimension (e.g., "Orders.status") |
 | `mode` | `"single" \| "multi"` | ❌ | Selection mode (default: "single") |
 | `value` | `string \| string[]` | ❌ | Selected value(s) |
 | `onChange` | `(value) => void` | ❌ | Selection change handler |
@@ -394,7 +394,7 @@ const { filters } = useDashboardFilters()
 <DropdownFilter dimension="status" /> // Missing cube name
 ```
 
-### ✅ Do: Use correct Cube.js format
+### ✅ Do: Use correct dataset API format
 
 ```tsx
 <DropdownFilter dimension="Orders.status" />
@@ -443,25 +443,25 @@ const { filters } = useDashboardFilters()
 
 ---
 
-## 📊 Supported Cube.js Dimensions
+## 📊 Supported dataset API Dimensions
 
-The component works with any Cube.js dimension:
+The component works with any dataset API dimension:
 
 - **Google Ads**: `GoogleAds.campaignName`, `GoogleAds.device`, `GoogleAds.network`
 - **Search Console**: `SearchConsole.country`, `SearchConsole.device`, `SearchConsole.query`
 - **Analytics**: `Analytics.pagePath`, `Analytics.source`, `Analytics.medium`
 - **Orders**: `Orders.status`, `Orders.country`, `Orders.product`
-- **Custom**: Any dimension in your Cube.js schema
+- **Custom**: Any dimension in your dataset API schema
 
 ---
 
 ## 🔐 Security & Privacy
 
 - ✅ No data stored in component state beyond selection
-- ✅ Values fetched fresh from Cube.js (respects data permissions)
+- ✅ Values fetched fresh from Supabase dataset (respects data permissions)
 - ✅ Sanitizes special characters in display
 - ✅ XSS protection via React
-- ✅ Multi-tenant safe (respects Cube.js security context)
+- ✅ Multi-tenant safe (respects dataset API security context)
 
 ---
 
@@ -505,5 +505,5 @@ The component works with any Cube.js dimension:
 
 ---
 
-**Built with React 19, Cube.js, Radix UI, and Tailwind CSS**
+**Built with React 19, dataset API, Radix UI, and Tailwind CSS**
 **Part of the WPP Analytics Platform**

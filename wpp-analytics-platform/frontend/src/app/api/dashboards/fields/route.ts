@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
 
     // TODO: In production, this would query:
     // 1. BigQuery INFORMATION_SCHEMA to discover tables/columns
-    // 2. Cube.js semantic layer for pre-defined dimensions/metrics
+    // 2. Dataset metadata registry for pre-defined dimensions/metrics
     // 3. Cached metadata from database
     //
     // For now, we return mock data that matches the schema database-analytics-architect created

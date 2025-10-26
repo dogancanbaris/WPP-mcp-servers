@@ -1,6 +1,15 @@
 # 📁 WPP Analytics Platform - Complete Project Structure
 
-## Modular, Scalable Architecture
+> ⚠️ **OUTDATED DOCUMENT** - This file documents the project structure from **before Cube.js removal (Oct 2025)**.
+>
+> **Key Changes Since This Was Written:**
+> - ❌ `cube-backend/` directory no longer exists (Cube.js removed)
+> - ✅ Dataset-based architecture now used (Supabase + BigQuery + Redis)
+> - ✅ See `DATA-LAYER-ARCHITECTURE.md` for current architecture
+>
+> This file is kept for historical reference. For current structure, see the actual codebase directories.
+
+## Modular, Scalable Architecture (Historical)
 
 ```
 wpp-analytics-platform/
