@@ -13,7 +13,7 @@ import {
   createEditMenuItems,
   getViewMenuItems,
   getInsertMenuItems,
-  PAGE_MENU_ITEMS,
+  getPageMenuItems,
   getArrangeMenuItems,
   RESOURCE_MENU_ITEMS,
   createHelpMenuItems,
@@ -62,7 +62,10 @@ interface EditorTopbarProps {
  * Based on COMPREHENSIVE-COMPONENT-SPECIFICATIONS.md Part 1
  */
 export const EditorTopbar: React.FC<EditorTopbarProps> = ({ dashboardId }) => {
-  const { config, setTitle, addRow, addComponent, zoom, setZoom, save, viewMode, setViewMode } = useDashboardStore();
+  const { config, setTitle, addRow, addComponent, addPage, zoom, setZoom, save, viewMode, setViewMode } = useDashboardStore();
+  const canUndo = useDashboardStore((s) => s.canUndo);
+  const canRedo = useDashboardStore((s) => s.canRedo);
+  const currentPageId = useDashboardStore((s) => s.currentPageId);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [titleValue, setTitleValue] = useState(config.title);
 
@@ -95,6 +98,15 @@ export const EditorTopbar: React.FC<EditorTopbarProps> = ({ dashboardId }) => {
     onSave: () => handleSave(),
     onUndo: editActions.onUndo,
     onRedo: editActions.onRedo,
+    onCut: editActions.onCut,
+    onCopy: editActions.onCopy,
+    onPaste: editActions.onPaste,
+    onDuplicate: editActions.onDuplicate,
+    onDelete: editActions.onDelete,
+    onSelectAll: editActions.onSelectAll,
+    onDeselectAll: editActions.onDeselectAll,
+    onAddChart: () => setIsComponentPickerOpen(true),
+    onToggleFilters: () => toggleFilterBar(),
   });
 
   const handleTitleBlur = () => {
@@ -187,6 +199,18 @@ export const EditorTopbar: React.FC<EditorTopbarProps> = ({ dashboardId }) => {
     onKeyboardShortcuts: () => setIsKeyboardShortcutsOpen(true),
   });
 
+  // Enhance insert actions so Chart menu uses the top-level ComponentPicker
+  const enhancedInsertActions = {
+    ...insertActions,
+    onInsertChart: (type?: string) => {
+      if (!type) {
+        setIsComponentPickerOpen(true);
+        return;
+      }
+      handleAddComponent(type as ComponentType);
+    },
+  };
+
   // Connect toolbar buttons
   const connectedToolbarLeft = TOOLBAR_LEFT.map((item) => {
     if ('id' in item) {
@@ -195,18 +219,18 @@ export const EditorTopbar: React.FC<EditorTopbarProps> = ({ dashboardId }) => {
           return {
             ...item,
             action: editActions.onUndo,
-            disabled: !useDashboardStore.getState().canUndo,
+            disabled: !canUndo,
           };
         case 'redo':
           return {
             ...item,
             action: editActions.onRedo,
-            disabled: !useDashboardStore.getState().canRedo,
+            disabled: !canRedo,
           };
         case 'add-page':
           return {
             ...item,
-            action: () => console.log('Add page - multi-page dashboards coming soon'),
+            action: () => addPage(),
           };
         case 'add-data':
           return {
@@ -262,6 +286,34 @@ export const EditorTopbar: React.FC<EditorTopbarProps> = ({ dashboardId }) => {
             };
           }
           return item;
+        case 'add-control':
+          if ('type' in item && item.type === 'dropdown') {
+            return {
+              ...item,
+              items: item.items.map((dropdownItem) => {
+                if ('label' in dropdownItem) {
+                  const mapping: Record<string, string> = {
+                    'Date range': 'date_filter',
+                    'Drop-down list': 'dropdown',
+                    'Fixed-size list': 'list',
+                    'Input box': 'input_box',
+                    'Checkbox': 'checkbox',
+                    'Slider': 'slider',
+                    'All controls...': 'picker',
+                  };
+                  const controlType = mapping[dropdownItem.label];
+                  if (controlType) {
+                    return {
+                      ...dropdownItem,
+                      action: () => insertActions.onInsertControl(controlType),
+                    };
+                  }
+                }
+                return dropdownItem;
+              }),
+            };
+          }
+          return item;
         case 'filters':
           return {
             ...item,
@@ -273,6 +325,32 @@ export const EditorTopbar: React.FC<EditorTopbarProps> = ({ dashboardId }) => {
             ...item,
             action: () => setIsThemeEditorOpen(true),
           };
+        case 'align':
+          if ('type' in item && item.type === 'dropdown') {
+            return {
+              ...item,
+              items: item.items.map((dropdownItem) => {
+                if ('label' in dropdownItem) {
+                  const map: Record<string, () => void> = {
+                    'Align left': arrangeActions.onAlignLeft,
+                    'Align center': arrangeActions.onAlignCenter,
+                    'Align right': arrangeActions.onAlignRight,
+                    'Align top': arrangeActions.onAlignTop,
+                    'Align middle': arrangeActions.onAlignMiddle,
+                    'Align bottom': arrangeActions.onAlignBottom,
+                    'Distribute horizontally': arrangeActions.onDistributeHorizontally,
+                    'Distribute vertically': arrangeActions.onDistributeVertically,
+                  };
+                  const fn = map[dropdownItem.label];
+                  if (fn) {
+                    return { ...dropdownItem, action: fn };
+                  }
+                }
+                return dropdownItem;
+              }),
+            };
+          }
+          return item;
       }
     }
     return item;
@@ -350,7 +428,7 @@ export const EditorTopbar: React.FC<EditorTopbarProps> = ({ dashboardId }) => {
                 if ('label' in menuItem && menuItem.label === 'Keyboard shortcuts') {
                   return {
                     ...menuItem,
-                    action: () => console.log('Keyboard shortcuts - dialog temporarily disabled'),
+                    action: () => setIsKeyboardShortcutsOpen(true),
                   };
                 }
                 return menuItem;
@@ -410,14 +488,25 @@ export const EditorTopbar: React.FC<EditorTopbarProps> = ({ dashboardId }) => {
         <div className="flex items-center gap-1 menu-group">
           <MenuButton label="File" items={fileMenuItems} />
           <MenuButton label="Edit" items={editMenuItems} />
-          <MenuButton label="View" items={getViewMenuItems(viewActions)} />
+          <MenuButton label="View" items={getViewMenuItems({ ...viewActions, onViewMode: handleToggleViewMode })} />
         </div>
 
         <Separator orientation="vertical" className="mx-2 h-4" />
 
         <div className="flex items-center gap-1 menu-group">
-          <MenuButton label="Insert" items={getInsertMenuItems(insertActions)} />
-          <MenuButton label="Page" items={PAGE_MENU_ITEMS} />
+          <MenuButton label="Insert" items={getInsertMenuItems(enhancedInsertActions)} />
+          <MenuButton
+            label="Page"
+            items={getPageMenuItems({
+              currentPageId,
+              hasMultiplePages: (config.pages?.length || 0) > 1,
+              addPage,
+              duplicatePage: useDashboardStore.getState().duplicatePage,
+              removePage: useDashboardStore.getState().removePage,
+              updatePage: useDashboardStore.getState().updatePage,
+              reorderPages: useDashboardStore.getState().reorderPages,
+            })}
+          />
           <MenuButton label="Arrange" items={getArrangeMenuItems(arrangeActions)} />
         </div>
 

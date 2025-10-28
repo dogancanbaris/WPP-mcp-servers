@@ -7,10 +7,9 @@
  * - Queries registered dataset via /api/datasets/[id]/query
  * - Backend handles caching, BigQuery connection
  * - Recharts-based bubble chart for 3D data visualization
- * - Global filter support via filterStore
+ * - Multi-page architecture with cascaded filters
  */
 
-import { useQuery } from '@tanstack/react-query';
 import { Loader2 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -26,7 +25,9 @@ import {
 } from 'recharts';
 import { ComponentConfig } from '@/types/dashboard-builder';
 import { DASHBOARD_THEME } from '@/lib/themes/dashboard-theme';
-import { useFilterStore } from '@/store/filterStore';
+import { useCascadedFilters } from '@/hooks/useCascadedFilters';
+import { usePageData } from '@/hooks/usePageData';
+import { useCurrentPageId } from '@/store/dashboardStore';
 
 export interface BubbleChartProps extends Partial<ComponentConfig> {
   xAxisField?: string;
@@ -39,11 +40,11 @@ export const BubbleChart: React.FC<BubbleChartProps> = (props) => {
   const theme = DASHBOARD_THEME.charts;
 
   const {
+    id: componentId,
     dataset_id,
     metrics = [],
     dimensions = [],
     dateRange,
-    filters = [],
     title = 'Bubble Chart',
     showTitle = true,
     xAxisField = metrics[0],
@@ -53,36 +54,25 @@ export const BubbleChart: React.FC<BubbleChartProps> = (props) => {
     ...rest
   } = props;
 
-  // Subscribe to global date range filter
-  const globalDateRange = useFilterStore(state => state.activeDateRange);
-  const effectiveDateRange = globalDateRange || dateRange;
+  const currentPageId = useCurrentPageId();
 
-  // Fetch from dataset API
-  const { data, isLoading, error } = useQuery({
-    queryKey: ['bubble', dataset_id, metrics, dimensions, filters, effectiveDateRange],
-    queryFn: async () => {
-      const payload = {
-        metrics,
-        dimensions,
-        filters,
-        ...(effectiveDateRange && { dateRange: effectiveDateRange })
-      };
+  // Use cascaded filters (Global → Page → Component)
+  const { filters: cascadedFilters } = useCascadedFilters({
+    pageId: currentPageId || undefined,
+    componentId,
+    componentConfig: props,
+    dateDimension: 'date',
+  });
 
-      const response = await fetch(`/api/datasets/${dataset_id}/query`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-
-      if (!response.ok) {
-        throw new Error(`API error: ${response.statusText}`);
-      }
-
-      const result = await response.json();
-      console.log('[BubbleChart] Data loaded:', result?.data?.length || 0, 'rows');
-      return result;
-    },
-    enabled: !!dataset_id && metrics.length >= 2
+  // Use page-aware data fetching (only loads when page is active)
+  const { data, isLoading, error } = usePageData({
+    pageId: currentPageId || 'default',
+    componentId: componentId || 'bubble-chart',
+    datasetId: dataset_id || '',
+    metrics,
+    dimensions,
+    filters: cascadedFilters,
+    enabled: !!dataset_id && metrics.length >= 2 && !!currentPageId,
   });
 
   // Container styling

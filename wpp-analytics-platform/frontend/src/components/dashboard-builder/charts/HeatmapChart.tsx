@@ -5,14 +5,15 @@
  *
  * Shows data density/intensity in a matrix using registered datasets.
  * Queries: GET /api/datasets/[id]/query with caching
- * Supports global filters via useGlobalFilters hook
+ * Supports cascaded filters (Global → Page → Component)
  */
 
-import { useQuery } from '@tanstack/react-query';
 import ReactECharts from 'echarts-for-react';
 import { Loader2 } from 'lucide-react';
 import { ComponentConfig } from '@/types/dashboard-builder';
-import { useFilterStore } from '@/store/filterStore';
+import { useCascadedFilters } from '@/hooks/useCascadedFilters';
+import { usePageData } from '@/hooks/usePageData';
+import { useCurrentPageId } from '@/store/dashboardStore';
 
 export interface HeatmapChartProps extends Partial<ComponentConfig> {
   xAxisDimension?: string;
@@ -20,62 +21,59 @@ export interface HeatmapChartProps extends Partial<ComponentConfig> {
   colorRange?: string[];
 }
 
-export const HeatmapChart: React.FC<HeatmapChartProps> = ({
-  // Data props
-  dataset_id,
-  dimension = null,
-  metrics = [],
-  dateRange,
+export const HeatmapChart: React.FC<HeatmapChartProps> = (props) => {
+  const {
+    id: componentId,
+    dataset_id,
+    dimension = null,
+    metrics = [],
+    dateRange,
 
-  // Display props
-  title = 'Heatmap Chart',
-  showTitle = true,
-  titleFontFamily = 'roboto',
-  titleFontSize = '16',
-  titleFontWeight = '600',
-  titleColor = '#111827',
-  titleBackgroundColor = 'transparent',
-  titleAlignment = 'left',
+    // Display props
+    title = 'Heatmap Chart',
+    showTitle = true,
+    titleFontFamily = 'roboto',
+    titleFontSize = '16',
+    titleFontWeight = '600',
+    titleColor = '#111827',
+    titleBackgroundColor = 'transparent',
+    titleAlignment = 'left',
 
-  // Background & Border
-  backgroundColor = '#ffffff',
-  showBorder = true,
-  borderColor = '#e0e0e0',
-  borderWidth = 1,
-  borderRadius = 8,
-  padding = 16,
+    // Background & Border
+    backgroundColor = '#ffffff',
+    showBorder = true,
+    borderColor = '#e0e0e0',
+    borderWidth = 1,
+    borderRadius = 8,
+    padding = 16,
 
-  // Heatmap specific
-  xAxisDimension = 'date',
-  yAxisDimension = 'category',
-  colorRange = ['#50a3ba', '#eac736', '#d94e5d'],
+    // Heatmap specific
+    xAxisDimension = 'date',
+    yAxisDimension = 'category',
+    colorRange = ['#50a3ba', '#eac736', '#d94e5d'],
 
-  ...rest
-}) => {
-  // Subscribe to global date range filter
-  const globalDateRange = useFilterStore(state => state.activeDateRange);
-  const effectiveDateRange = globalDateRange || dateRange;
+    ...rest
+  } = props;
 
-  // Fetch from dataset API (with caching)
-  const { data, isLoading, error } = useQuery({
-    queryKey: ['heatmapchart', dataset_id, xAxisDimension, yAxisDimension, metrics, effectiveDateRange],
-    queryFn: async () => {
-      const dimensions = [xAxisDimension, yAxisDimension].filter(Boolean).join(',');
-      const params = new URLSearchParams({
-        dimensions,
-        metrics: metrics.join(','),
-        ...(effectiveDateRange && { dateRange: JSON.stringify(effectiveDateRange) })
-      });
+  const currentPageId = useCurrentPageId();
 
-      const response = await fetch(`/api/datasets/${dataset_id}/query?${params}`);
+  // Use cascaded filters (Global → Page → Component)
+  const { filters: cascadedFilters } = useCascadedFilters({
+    pageId: currentPageId || undefined,
+    componentId,
+    componentConfig: props,
+    dateDimension: 'date',
+  });
 
-      if (!response.ok) {
-        throw new Error(`API error: ${response.statusText}`);
-      }
-
-      return response.json();
-    },
-    enabled: !!dataset_id && metrics.length > 0 && !!xAxisDimension && !!yAxisDimension
+  // Use page-aware data fetching (only loads when page is active)
+  const { data, isLoading, error } = usePageData({
+    pageId: currentPageId || 'default',
+    componentId: componentId || 'heatmapchart',
+    datasetId: dataset_id || '',
+    metrics,
+    dimensions: [xAxisDimension, yAxisDimension].filter(Boolean),
+    filters: cascadedFilters,
+    enabled: !!dataset_id && metrics.length > 0 && !!xAxisDimension && !!yAxisDimension && !!currentPageId,
   });
 
   const containerStyle: React.CSSProperties = {

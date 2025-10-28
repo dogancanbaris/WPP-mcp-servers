@@ -13,7 +13,9 @@ import { Loader2 } from 'lucide-react';
 import { ComponentConfig } from '@/types/dashboard-builder';
 import { formatMetricValue } from '@/lib/utils/metric-formatter';
 import { standardizeDimensionValue } from '@/lib/utils/data-formatter';
-import { useFilterStore } from '@/store/filterStore';
+import { useCascadedFilters } from '@/hooks/useCascadedFilters';
+import { usePageData } from '@/hooks/usePageData';
+import { useCurrentPageId } from '@/store/dashboardStore';
 import {
   Area,
   AreaChart as RechartsAreaChart,
@@ -33,6 +35,7 @@ export interface AreaChartProps extends Partial<ComponentConfig> {
 
 export const AreaChart: React.FC<AreaChartProps> = ({
   // Data props
+  id: componentId,
   dataset_id,
   dimension = null,
   metrics = [],
@@ -67,29 +70,25 @@ export const AreaChart: React.FC<AreaChartProps> = ({
 
   ...rest
 }) => {
-  // Subscribe to global date range filter
-  const globalDateRange = useFilterStore(state => state.activeDateRange);
-  const effectiveDateRange = globalDateRange || dateRange;
+  const currentPageId = useCurrentPageId();
 
-  // Fetch from dataset API (with caching)
-  const { data, isLoading, error } = useQuery({
-    queryKey: ['areachart', dataset_id, dimension, metrics, effectiveDateRange],
-    queryFn: async () => {
-      const params = new URLSearchParams({
-        ...(dimension && { dimensions: dimension }),
-        metrics: metrics.join(','),
-        ...(effectiveDateRange && { dateRange: JSON.stringify(effectiveDateRange) })
-      });
+  // Use cascaded filters (Global → Page → Component)
+  const { filters: cascadedFilters } = useCascadedFilters({
+    pageId: currentPageId || undefined,
+    componentId,
+    componentConfig: { id: componentId, dataset_id, dimension, metrics, dateRange, ...rest },
+    dateDimension: dimension || 'date',
+  });
 
-      const response = await fetch(`/api/datasets/${dataset_id}/query?${params}`);
-
-      if (!response.ok) {
-        throw new Error(`API error: ${response.statusText}`);
-      }
-
-      return response.json();
-    },
-    enabled: !!dataset_id && metrics.length > 0 && !!dimension
+  // Use page-aware data fetching (only loads when page is active)
+  const { data, isLoading, error } = usePageData({
+    pageId: currentPageId || 'default',
+    componentId: componentId || 'areachart',
+    datasetId: dataset_id || '',
+    metrics,
+    dimensions: dimension ? [dimension] : [],
+    filters: cascadedFilters,
+    enabled: !!dataset_id && metrics.length > 0 && !!dimension && !!currentPageId,
   });
 
   const containerStyle: React.CSSProperties = {

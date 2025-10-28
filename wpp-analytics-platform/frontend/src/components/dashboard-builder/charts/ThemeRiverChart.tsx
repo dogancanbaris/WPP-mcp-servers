@@ -9,15 +9,16 @@
  * NEW ARCHITECTURE:
  * - Queries registered dataset via /api/datasets/[id]/query
  * - Backend handles caching, BigQuery connection
- * - Global filter support via filterStore
+ * - Multi-page support with cascaded filters
  */
 
-import { useQuery } from '@tanstack/react-query';
 import ReactECharts from 'echarts-for-react';
 import { Loader2 } from 'lucide-react';
 import { ComponentConfig } from '@/types/dashboard-builder';
 import { DASHBOARD_THEME } from '@/lib/themes/dashboard-theme';
-import { useFilterStore } from '@/store/filterStore';
+import { useCascadedFilters } from '@/hooks/useCascadedFilters';
+import { usePageData } from '@/hooks/usePageData';
+import { useCurrentPageId } from '@/store/dashboardStore';
 
 export interface ThemeRiverChartProps extends Partial<ComponentConfig> {
   /** Category dimension */
@@ -30,12 +31,12 @@ export const ThemeRiverChart: React.FC<ThemeRiverChartProps> = (props) => {
   const theme = DASHBOARD_THEME.charts;
 
   const {
+    id: componentId,
     dataset_id,
     metrics = [],
-    dimension = 'date',
-    categoryDimension = 'category',
-    dateRange,
-    filters = [],
+    dimensions = [],
+    dimension = dimensions[0] || 'date',
+    categoryDimension = dimensions[1] || 'category',
     title = 'Theme River Chart',
     showTitle = true,
     showLegend = true,
@@ -44,35 +45,29 @@ export const ThemeRiverChart: React.FC<ThemeRiverChartProps> = (props) => {
     ...rest
   } = props;
 
-  // Subscribe to global filters
-  const globalDateRange = useFilterStore(state => state.activeDateRange);
-  const globalFilters = useFilterStore(state => state.activeFilters);
-
-  const effectiveDateRange = globalDateRange || dateRange;
-  const effectiveFilters = [...filters, ...globalFilters];
-
+  const currentPageId = useCurrentPageId();
   const firstMetric = metrics[0];
 
-  // Fetch from dataset API
-  const { data, isLoading, error } = useQuery({
-    queryKey: ['theme-river', dataset_id, firstMetric, dimension, categoryDimension, effectiveDateRange, effectiveFilters],
-    queryFn: async () => {
-      const params = new URLSearchParams({
-        dimensions: `${dimension},${categoryDimension}`,
-        metrics: firstMetric,
-        ...(effectiveDateRange && { dateRange: JSON.stringify(effectiveDateRange) }),
-        ...(effectiveFilters.length > 0 && { filters: JSON.stringify(effectiveFilters) })
-      });
+  // Use cascaded filters (Global → Page → Component)
+  const { filters: cascadedFilters } = useCascadedFilters({
+    pageId: currentPageId || undefined,
+    componentId,
+    componentConfig: props,
+    dateDimension: 'date',
+  });
 
-      const response = await fetch(`/api/datasets/${dataset_id}/query?${params}`);
+  // Build dimensions array for query
+  const queryDimensions = [dimension, categoryDimension].filter(Boolean);
 
-      if (!response.ok) {
-        throw new Error(`API error: ${response.statusText}`);
-      }
-
-      return response.json();
-    },
-    enabled: !!dataset_id && metrics.length > 0
+  // Use page-aware data fetching (only loads when page is active)
+  const { data, isLoading, error } = usePageData({
+    pageId: currentPageId || 'default',
+    componentId: componentId || 'theme-river',
+    datasetId: dataset_id || '',
+    metrics,
+    dimensions: queryDimensions,
+    filters: cascadedFilters,
+    enabled: !!dataset_id && metrics.length > 0 && !!currentPageId,
   });
 
   // Styling

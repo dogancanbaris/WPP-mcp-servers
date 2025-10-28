@@ -43,6 +43,7 @@ export const useEditActions = () => {
     canRedo,
     config,
     selectComponent,
+    currentPageId,
   } = useDashboardStore();
 
   /**
@@ -72,8 +73,16 @@ export const useEditActions = () => {
   /**
    * Find component by ID across all rows and columns
    */
+  const getActiveRows = () => {
+    if (config.pages && currentPageId) {
+      return config.pages.find(p => p.id === currentPageId)?.rows || [];
+    }
+    return config.rows;
+  };
+
   const findComponent = (componentId: string): DashboardComponent | undefined => {
-    for (const row of config.rows) {
+    const rows = getActiveRows();
+    for (const row of rows) {
       for (const column of row.columns) {
         if (column.component?.id === componentId) {
           return column.component;
@@ -87,8 +96,9 @@ export const useEditActions = () => {
    * Find the row and column indices for a component
    */
   const findComponentLocation = (componentId: string): { rowIndex: number; colIndex: number } | null => {
-    for (let rowIndex = 0; rowIndex < config.rows.length; rowIndex++) {
-      const row = config.rows[rowIndex];
+    const rows = getActiveRows();
+    for (let rowIndex = 0; rowIndex < rows.length; rowIndex++) {
+      const row = rows[rowIndex];
       for (let colIndex = 0; colIndex < row.columns.length; colIndex++) {
         if (row.columns[colIndex].component?.id === componentId) {
           return { rowIndex, colIndex };
@@ -161,7 +171,8 @@ export const useEditActions = () => {
     };
 
     // Determine where to paste
-    let targetRowIndex = config.rows.length - 1; // Default: last row
+    const rows = getActiveRows();
+    let targetRowIndex = rows.length - 1; // Default: last row
     let targetColIndex = 0;
 
     // If there's a selected component, paste in the same row, next column
@@ -174,13 +185,13 @@ export const useEditActions = () => {
     }
 
     // Add component to the target location
-    if (targetRowIndex >= 0 && targetRowIndex < config.rows.length) {
-      const targetRow = config.rows[targetRowIndex];
+    if (targetRowIndex >= 0 && targetRowIndex < rows.length) {
+      const targetRow = rows[targetRowIndex];
 
       // If target column is beyond current columns, create new column
       if (targetColIndex >= targetRow.columns.length) {
         // Add new column to existing row
-        const newRows = [...config.rows];
+        const newRows = [...rows];
         newRows[targetRowIndex] = {
           ...targetRow,
           columns: [
@@ -191,13 +202,20 @@ export const useEditActions = () => {
             },
           ],
         };
-        useDashboardStore.getState().setConfig({
-          ...config,
-          rows: newRows,
+        useDashboardStore.getState().setConfig((prev) => {
+          if (prev.pages && currentPageId) {
+            return {
+              ...prev,
+              pages: prev.pages.map(p =>
+                p.id === currentPageId ? { ...p, rows: newRows } : p
+              ),
+            };
+          }
+          return { ...prev, rows: newRows };
         });
       } else {
         // Replace component in existing column
-        const newRows = [...config.rows];
+        const newRows = [...rows];
         newRows[targetRowIndex] = {
           ...targetRow,
           columns: targetRow.columns.map((col, idx) =>
@@ -206,9 +224,16 @@ export const useEditActions = () => {
               : col
           ),
         };
-        useDashboardStore.getState().setConfig({
-          ...config,
-          rows: newRows,
+        useDashboardStore.getState().setConfig((prev) => {
+          if (prev.pages && currentPageId) {
+            return {
+              ...prev,
+              pages: prev.pages.map(p =>
+                p.id === currentPageId ? { ...p, rows: newRows } : p
+              ),
+            };
+          }
+          return { ...prev, rows: newRows };
         });
       }
 
@@ -252,7 +277,8 @@ export const useEditActions = () => {
    */
   const onSelectAll = () => {
     // Get all component IDs
-    const allComponentIds = config.rows
+    const rows = getActiveRows();
+    const allComponentIds = rows
       .flatMap(row => row.columns)
       .map(col => col.component?.id)
       .filter((id): id is string => id !== undefined);

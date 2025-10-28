@@ -9,15 +9,16 @@
  * NEW ARCHITECTURE:
  * - Queries registered dataset via /api/datasets/[id]/query
  * - Backend handles caching, BigQuery connection
- * - Global filter support via filterStore
+ * - Multi-page architecture with cascaded filters
  */
 
-import { useQuery } from '@tanstack/react-query';
 import ReactECharts from 'echarts-for-react';
 import { Loader2 } from 'lucide-react';
 import { ComponentConfig } from '@/types/dashboard-builder';
 import { DASHBOARD_THEME } from '@/lib/themes/dashboard-theme';
-import { useFilterStore } from '@/store/filterStore';
+import { useCascadedFilters } from '@/hooks/useCascadedFilters';
+import { usePageData } from '@/hooks/usePageData';
+import { useCurrentPageId } from '@/store/dashboardStore';
 
 export interface BoxplotChartProps extends Partial<ComponentConfig> {
   /** Dimension to group data by (e.g., 'category', 'region') */
@@ -32,12 +33,13 @@ export const BoxplotChart: React.FC<BoxplotChartProps> = (props) => {
   const theme = DASHBOARD_THEME.charts;
 
   const {
+    id: componentId,
     dataset_id,
     metrics = [],
     dimension = 'category',
-    groupDimension = 'category',
+    dimensions = [dimension],
+    groupDimension = dimension,
     dateRange,
-    filters = [],
     title = 'Box Plot Chart',
     showTitle = true,
     showLegend = true,
@@ -47,35 +49,26 @@ export const BoxplotChart: React.FC<BoxplotChartProps> = (props) => {
     ...rest
   } = props;
 
-  // Subscribe to global filters
-  const globalDateRange = useFilterStore(state => state.activeDateRange);
-  const globalFilters = useFilterStore(state => state.activeFilters);
-
-  const effectiveDateRange = globalDateRange || dateRange;
-  const effectiveFilters = [...filters, ...globalFilters];
-
+  const currentPageId = useCurrentPageId();
   const firstMetric = metrics[0];
 
-  // Fetch from dataset API
-  const { data, isLoading, error } = useQuery({
-    queryKey: ['boxplot', dataset_id, firstMetric, groupDimension, effectiveDateRange, effectiveFilters],
-    queryFn: async () => {
-      const params = new URLSearchParams({
-        dimensions: groupDimension,
-        metrics: firstMetric,
-        ...(effectiveDateRange && { dateRange: JSON.stringify(effectiveDateRange) }),
-        ...(effectiveFilters.length > 0 && { filters: JSON.stringify(effectiveFilters) })
-      });
+  // Use cascaded filters (Global → Page → Component)
+  const { filters: cascadedFilters } = useCascadedFilters({
+    pageId: currentPageId || undefined,
+    componentId,
+    componentConfig: props,
+    dateDimension: 'date',
+  });
 
-      const response = await fetch(`/api/datasets/${dataset_id}/query?${params}`);
-
-      if (!response.ok) {
-        throw new Error(`API error: ${response.statusText}`);
-      }
-
-      return response.json();
-    },
-    enabled: !!dataset_id && metrics.length > 0
+  // Use page-aware data fetching (only loads when page is active)
+  const { data, isLoading, error } = usePageData({
+    pageId: currentPageId || 'default',
+    componentId: componentId || 'boxplot-chart',
+    datasetId: dataset_id || '',
+    metrics,
+    dimensions: [groupDimension],
+    filters: cascadedFilters,
+    enabled: !!dataset_id && metrics.length > 0 && !!currentPageId,
   });
 
   // Styling

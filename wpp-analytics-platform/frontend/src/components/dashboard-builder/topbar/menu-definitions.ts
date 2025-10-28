@@ -66,6 +66,7 @@ import {
   Check,
   LucideIcon,
 } from 'lucide-react';
+import type { PageConfig } from '@/types/page-config';
 
 export type MenuItemSeparator = {
   type: 'separator';
@@ -277,6 +278,7 @@ export const getViewMenuItems = (viewActions: {
   showGrid: boolean;
   showRulers: boolean;
   showGuides: boolean;
+  onViewMode: () => void;
 }): MenuItem[] => [
   {
     label: 'Zoom in',
@@ -323,7 +325,7 @@ export const getViewMenuItems = (viewActions: {
     label: 'View mode',
     icon: Eye,
     shortcut: 'Ctrl+Shift+P',
-    action: () => console.log('View mode'),
+    action: viewActions.onViewMode,
   },
   {
     label: 'Full screen',
@@ -417,39 +419,62 @@ export const getInsertMenuItems = (insertActions: {
 // ============================================================================
 // PAGE MENU
 // ============================================================================
-export const PAGE_MENU_ITEMS: MenuItem[] = [
+export const getPageMenuItems = (params: {
+  currentPageId: string | null;
+  hasMultiplePages: boolean;
+  addPage: () => void;
+  duplicatePage: (pageId: string) => void;
+  removePage: (pageId: string) => void;
+  updatePage: (pageId: string, updates: Partial<PageConfig>) => void;
+  reorderPages?: (oldIndex: number, newIndex: number) => void;
+}): MenuItem[] => [
   {
     label: 'New page',
     icon: FilePlus,
-    action: () => console.log('New page'),
+    action: () => params.addPage(),
   },
   {
     label: 'Duplicate page',
     icon: Copy,
-    action: () => console.log('Duplicate page'),
+    disabled: !params.currentPageId,
+    action: () => params.currentPageId && params.duplicatePage(params.currentPageId),
   },
   {
     label: 'Delete page',
     icon: Trash2,
-    action: () => console.log('Delete page'),
     variant: 'destructive',
+    disabled: !params.currentPageId || !params.hasMultiplePages,
+    action: () => {
+      if (!params.currentPageId) return;
+      if (!params.hasMultiplePages) return;
+      if (confirm('Delete current page? Components on this page will be removed.')) {
+        params.removePage(params.currentPageId);
+      }
+    },
   },
   { type: 'separator' },
   {
     label: 'Rename page',
     icon: Edit3,
-    action: () => console.log('Rename page'),
+    disabled: !params.currentPageId,
+    action: () => {
+      if (!params.currentPageId) return;
+      const name = prompt('Enter new page name:');
+      if (name && name.trim()) {
+        params.updatePage(params.currentPageId, { name: name.trim() });
+      }
+    },
   },
   {
     label: 'Reorder pages',
     icon: LayoutGrid,
-    action: () => console.log('Reorder pages'),
+    action: () => console.log('Open reorder pages dialog (coming soon)'),
   },
   { type: 'separator' },
   {
     label: 'Page settings',
     icon: Settings,
-    action: () => console.log('Page settings'),
+    action: () => console.log('Page settings (coming soon)'),
   },
 ];
 

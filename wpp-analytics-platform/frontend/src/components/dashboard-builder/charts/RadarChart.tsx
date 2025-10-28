@@ -5,78 +5,76 @@
  *
  * Shows multivariate data on a radial axis using registered datasets.
  * Queries: GET /api/datasets/[id]/query with caching
- * Supports global filters via useGlobalFilters hook
+ * Supports cascaded filters (Global → Page → Component)
  */
 
-import { useQuery } from '@tanstack/react-query';
 import ReactECharts from 'echarts-for-react';
 import { Loader2 } from 'lucide-react';
 import { ComponentConfig } from '@/types/dashboard-builder';
 import { standardizeDimensionValue } from '@/lib/utils/data-formatter';
-import { useFilterStore } from '@/store/filterStore';
+import { useCascadedFilters } from '@/hooks/useCascadedFilters';
+import { usePageData } from '@/hooks/usePageData';
+import { useCurrentPageId } from '@/store/dashboardStore';
 
 export interface RadarChartProps extends Partial<ComponentConfig> {
   shape?: 'polygon' | 'circle';
 }
 
-export const RadarChart: React.FC<RadarChartProps> = ({
-  // Data props
-  dataset_id,
-  dimension = null,
-  metrics = [],
-  dateRange,
+export const RadarChart: React.FC<RadarChartProps> = (props) => {
+  const {
+    id: componentId,
+    dataset_id,
+    dimension = null,
+    metrics = [],
+    dateRange,
 
-  // Display props
-  title = 'Radar Chart',
-  showTitle = true,
-  titleFontFamily = 'roboto',
-  titleFontSize = '16',
-  titleFontWeight = '600',
-  titleColor = '#111827',
-  titleBackgroundColor = 'transparent',
-  titleAlignment = 'left',
+    // Display props
+    title = 'Radar Chart',
+    showTitle = true,
+    titleFontFamily = 'roboto',
+    titleFontSize = '16',
+    titleFontWeight = '600',
+    titleColor = '#111827',
+    titleBackgroundColor = 'transparent',
+    titleAlignment = 'left',
 
-  // Background & Border
-  backgroundColor = '#ffffff',
-  showBorder = true,
-  borderColor = '#e0e0e0',
-  borderWidth = 1,
-  borderRadius = 8,
-  padding = 16,
+    // Background & Border
+    backgroundColor = '#ffffff',
+    showBorder = true,
+    borderColor = '#e0e0e0',
+    borderWidth = 1,
+    borderRadius = 8,
+    padding = 16,
 
-  // Chart appearance
-  showLegend = true,
-  chartColors = ['#191D63', '#1E8E3E', '#fac858', '#ee6666', '#73c0de', '#3ba272'],
+    // Chart appearance
+    showLegend = true,
+    chartColors = ['#191D63', '#1E8E3E', '#fac858', '#ee6666', '#73c0de', '#3ba272'],
 
-  // Radar specific
-  shape = 'polygon',
+    // Radar specific
+    shape = 'polygon',
 
-  ...rest
-}) => {
-  // Subscribe to global date range filter
-  const globalDateRange = useFilterStore(state => state.activeDateRange);
-  const effectiveDateRange = globalDateRange || dateRange;
+    ...rest
+  } = props;
 
-  // Fetch from dataset API (with caching)
-  const { data, isLoading, error } = useQuery({
-    queryKey: ['radarchart', dataset_id, dimension, metrics, effectiveDateRange],
-    queryFn: async () => {
-      const params = new URLSearchParams({
-        ...(dimension && { dimensions: dimension }),
-        metrics: metrics.join(','),
-        ...(effectiveDateRange && { dateRange: JSON.stringify(effectiveDateRange) }),
-        limit: '10'
-      });
+  const currentPageId = useCurrentPageId();
 
-      const response = await fetch(`/api/datasets/${dataset_id}/query?${params}`);
+  // Use cascaded filters (Global → Page → Component)
+  const { filters: cascadedFilters } = useCascadedFilters({
+    pageId: currentPageId || undefined,
+    componentId,
+    componentConfig: props,
+    dateDimension: 'date',
+  });
 
-      if (!response.ok) {
-        throw new Error(`API error: ${response.statusText}`);
-      }
-
-      return response.json();
-    },
-    enabled: !!dataset_id && metrics.length > 0
+  // Use page-aware data fetching (only loads when page is active)
+  const { data, isLoading, error } = usePageData({
+    pageId: currentPageId || 'default',
+    componentId: componentId || 'radarchart',
+    datasetId: dataset_id || '',
+    metrics,
+    dimensions: dimension ? [dimension] : [],
+    filters: cascadedFilters,
+    enabled: !!dataset_id && metrics.length > 0 && !!currentPageId,
   });
 
   const containerStyle: React.CSSProperties = {

@@ -60,6 +60,8 @@ interface DashboardStore {
   setTitle: (title: string) => void;
   setZoom: (zoom: number) => void;
   setViewMode: (mode: 'edit' | 'view') => void;
+  // Low-level config setter (use targeted actions when possible)
+  setConfig: (next: DashboardConfig | ((prev: DashboardConfig) => DashboardConfig)) => void;
   resetError: () => void;
   resetSaveStatus: () => void;
 
@@ -382,6 +384,23 @@ export const useDashboardStore = create<DashboardStore>()(
 
       setViewMode: (mode: 'edit' | 'view') => {
         set({ viewMode: mode });
+      },
+
+      // Set entire dashboard config safely with history tracking
+      setConfig: (next: DashboardConfig | ((prev: DashboardConfig) => DashboardConfig)) => {
+        const state = get();
+        // Record history before mutation
+        state.addToHistory();
+
+        const nextConfig = typeof next === 'function' ? (next as (prev: DashboardConfig) => DashboardConfig)(state.config) : next;
+
+        set({
+          config: deepClone(nextConfig),
+          isDirty: true
+        });
+
+        // trigger auto-save debounce
+        get().autoSave();
       },
 
       resetError: () => {

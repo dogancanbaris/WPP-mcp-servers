@@ -5,14 +5,15 @@
  *
  * Shows single metric progress/percentage using registered datasets.
  * Queries: GET /api/datasets/[id]/query with caching
- * Supports global filters via useGlobalFilters hook
+ * Supports multi-page architecture with cascaded filters
  */
 
-import { useQuery } from '@tanstack/react-query';
 import ReactECharts from 'echarts-for-react';
 import { Loader2 } from 'lucide-react';
 import { ComponentConfig } from '@/types/dashboard-builder';
-import { useFilterStore } from '@/store/filterStore';
+import { useCascadedFilters } from '@/hooks/useCascadedFilters';
+import { usePageData } from '@/hooks/usePageData';
+import { useCurrentPageId } from '@/store/dashboardStore';
 
 export interface GaugeChartProps extends Partial<ComponentConfig> {
   min?: number;
@@ -22,8 +23,10 @@ export interface GaugeChartProps extends Partial<ComponentConfig> {
 
 export const GaugeChart: React.FC<GaugeChartProps> = ({
   // Data props
+  id: componentId,
   dataset_id,
   metrics = [],
+  dimensions = [],
   dateRange,
 
   // Display props
@@ -55,28 +58,25 @@ export const GaugeChart: React.FC<GaugeChartProps> = ({
 
   ...rest
 }) => {
-  // Subscribe to global date range filter
-  const globalDateRange = useFilterStore(state => state.activeDateRange);
-  const effectiveDateRange = globalDateRange || dateRange;
+  const currentPageId = useCurrentPageId();
 
-  // Fetch from dataset API (with caching)
-  const { data, isLoading, error } = useQuery({
-    queryKey: ['gaugechart', dataset_id, metrics, effectiveDateRange],
-    queryFn: async () => {
-      const params = new URLSearchParams({
-        metrics: metrics.join(','),
-        ...(effectiveDateRange && { dateRange: JSON.stringify(effectiveDateRange) })
-      });
+  // Use cascaded filters (Global → Page → Component)
+  const { filters: cascadedFilters } = useCascadedFilters({
+    pageId: currentPageId || undefined,
+    componentId,
+    componentConfig: { id: componentId, dataset_id, metrics, dimensions, dateRange, ...rest },
+    dateDimension: 'date',
+  });
 
-      const response = await fetch(`/api/datasets/${dataset_id}/query?${params}`);
-
-      if (!response.ok) {
-        throw new Error(`API error: ${response.statusText}`);
-      }
-
-      return response.json();
-    },
-    enabled: !!dataset_id && metrics.length > 0
+  // Use page-aware data fetching (only loads when page is active)
+  const { data, isLoading, error } = usePageData({
+    pageId: currentPageId || 'default',
+    componentId: componentId || 'gaugechart',
+    datasetId: dataset_id || '',
+    metrics,
+    dimensions,
+    filters: cascadedFilters,
+    enabled: !!dataset_id && metrics.length > 0 && !!currentPageId,
   });
 
   const containerStyle: React.CSSProperties = {

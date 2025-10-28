@@ -9,15 +9,16 @@
  * NEW ARCHITECTURE:
  * - Queries registered dataset via /api/datasets/[id]/query
  * - Backend handles caching, BigQuery connection
- * - Global filter support via filterStore
+ * - Multi-page support with cascaded filters (Global → Page → Component)
  */
 
-import { useQuery } from '@tanstack/react-query';
 import ReactECharts from 'echarts-for-react';
 import { Loader2 } from 'lucide-react';
 import { ComponentConfig } from '@/types/dashboard-builder';
 import { DASHBOARD_THEME } from '@/lib/themes/dashboard-theme';
-import { useFilterStore } from '@/store/filterStore';
+import { useCascadedFilters } from '@/hooks/useCascadedFilters';
+import { usePageData } from '@/hooks/usePageData';
+import { useCurrentPageId } from '@/store/dashboardStore';
 
 export interface CandlestickChartProps extends Partial<ComponentConfig> {
   /** Metrics representing [open, high, low, close] */
@@ -34,10 +35,9 @@ export const CandlestickChart: React.FC<CandlestickChartProps> = (props) => {
   const theme = DASHBOARD_THEME.charts;
 
   const {
+    id: componentId,
     dataset_id,
     dimension = 'date',
-    dateRange,
-    filters = [],
     title = 'Candlestick Chart',
     showTitle = true,
     showLegend = true,
@@ -49,37 +49,29 @@ export const CandlestickChart: React.FC<CandlestickChartProps> = (props) => {
     ...rest
   } = props;
 
-  // Subscribe to global filters
-  const globalDateRange = useFilterStore(state => state.activeDateRange);
-  const globalFilters = useFilterStore(state => state.activeFilters);
-
-  const effectiveDateRange = globalDateRange || dateRange;
-  const effectiveFilters = [...filters, ...globalFilters];
+  const currentPageId = useCurrentPageId();
 
   const allMetrics = showVolume
     ? [...ohlcMetrics, volumeMetric]
     : [...ohlcMetrics];
 
-  // Fetch from dataset API
-  const { data, isLoading, error } = useQuery({
-    queryKey: ['candlestick', dataset_id, dimension, allMetrics, effectiveDateRange, effectiveFilters],
-    queryFn: async () => {
-      const params = new URLSearchParams({
-        dimensions: dimension,
-        metrics: allMetrics.join(','),
-        ...(effectiveDateRange && { dateRange: JSON.stringify(effectiveDateRange) }),
-        ...(effectiveFilters.length > 0 && { filters: JSON.stringify(effectiveFilters) })
-      });
+  // Use cascaded filters (Global → Page → Component)
+  const { filters: cascadedFilters } = useCascadedFilters({
+    pageId: currentPageId || undefined,
+    componentId,
+    componentConfig: props,
+    dateDimension: dimension,
+  });
 
-      const response = await fetch(`/api/datasets/${dataset_id}/query?${params}`);
-
-      if (!response.ok) {
-        throw new Error(`API error: ${response.statusText}`);
-      }
-
-      return response.json();
-    },
-    enabled: !!dataset_id && dimension !== undefined
+  // Use page-aware data fetching (only loads when page is active)
+  const { data, isLoading, error } = usePageData({
+    pageId: currentPageId || 'default',
+    componentId: componentId || 'candlestick',
+    datasetId: dataset_id || '',
+    metrics: allMetrics,
+    dimensions: [dimension],
+    filters: cascadedFilters,
+    enabled: !!dataset_id && !!currentPageId,
   });
 
   // Styling

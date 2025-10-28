@@ -7,7 +7,7 @@ import jsPDF from 'jspdf';
 
 export const useFileActions = (onOpenNewDashboard?: () => void) => {
   const router = useRouter();
-  const { config, setConfig } = useDashboardStore();
+  const { config, setTitle, save } = useDashboardStore();
 
   const onNew = () => {
     if (confirm('Create new dashboard? Unsaved changes will be lost.')) {
@@ -56,20 +56,9 @@ export const useFileActions = (onOpenNewDashboard?: () => void) => {
       const newTitle = prompt('Enter new dashboard title:', config.title);
       if (newTitle && newTitle.trim()) {
         try {
-          const updatedConfig = {
-            ...config,
-            title: newTitle.trim(),
-            updatedAt: new Date().toISOString(),
-          };
-
-          const result = await saveDashboard(config.id, updatedConfig);
-
-          if (!result.success) {
-            throw new Error(result.error || 'Failed to rename');
-          }
-
-          // Update local state
-          setConfig(updatedConfig);
+          // Update local title and persist
+          setTitle(newTitle.trim());
+          await save(config.id, true);
           toast.success('Dashboard renamed');
         } catch (error) {
           toast.error('Failed to rename dashboard');
