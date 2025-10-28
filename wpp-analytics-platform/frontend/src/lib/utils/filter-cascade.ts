@@ -100,29 +100,30 @@ export function getMergedFilters(
   pageFilters: FilterConfig[] | undefined,
   componentConfig?: ComponentConfigWithFilters
 ): FilterConfig[] {
-  // Start with global filters as the baseline
-  let filters = globalFilters;
+  const useGlobal = componentConfig?.useGlobalFilters !== false; // default true
+  const usePage = componentConfig?.usePageFilters !== false; // default true
 
-  // Level 2: Apply page filters (if page has its own filters, REPLACE global)
-  // Page filters completely override global filters for all components on that page
-  if (pageFilters && pageFilters.length > 0) {
-    filters = pageFilters; // REPLACE strategy, not merge
+  let filters: FilterConfig[] = [];
+
+  // Apply page vs global with REPLACE strategy, honoring toggles
+  if (usePage && pageFilters && pageFilters.length > 0) {
+    filters = pageFilters;
+  } else if (useGlobal) {
+    filters = globalFilters;
+  } else {
+    filters = [];
   }
 
-  // Level 3: Check component-level configuration
+  // Component-level overrides
   if (componentConfig) {
-    // Component explicitly opts out of all filters
-    // This gives the component complete autonomy (shows all data)
-    if (componentConfig.useGlobalFilters === false &&
-        componentConfig.usePageFilters === false) {
-      filters = [];
+    // If both toggles are off and no component filters, result is empty
+    if (!useGlobal && !usePage && (!componentConfig.componentFilters || componentConfig.componentFilters.length === 0)) {
+      return [];
     }
 
-    // Component has its own filters (highest priority)
-    // These REPLACE all parent filters (global and page)
-    if (componentConfig.componentFilters &&
-        componentConfig.componentFilters.length > 0) {
-      filters = componentConfig.componentFilters;
+    // Component filters replace all
+    if (componentConfig.componentFilters && componentConfig.componentFilters.length > 0) {
+      return componentConfig.componentFilters;
     }
   }
 
@@ -179,29 +180,26 @@ export function getFilterSource(
   pageFilters: FilterConfig[] | undefined,
   componentConfig?: ComponentConfigWithFilters
 ): 'global' | 'page' | 'component' | 'none' | 'mixed' {
-  // Check component level first (highest priority)
-  if (componentConfig?.componentFilters &&
-      componentConfig.componentFilters.length > 0) {
+  const useGlobal = componentConfig?.useGlobalFilters !== false; // default true
+  const usePage = componentConfig?.usePageFilters !== false; // default true
+
+  // Component overrides
+  if (componentConfig?.componentFilters && componentConfig.componentFilters.length > 0) {
     return 'component';
   }
 
-  // Component explicitly opts out of all filters
-  if (componentConfig?.useGlobalFilters === false &&
-      componentConfig?.usePageFilters === false) {
+  if (!useGlobal && !usePage) {
     return 'none';
   }
 
-  // Check page level (second priority)
-  if (pageFilters && pageFilters.length > 0) {
+  if (usePage && pageFilters && pageFilters.length > 0) {
     return 'page';
   }
 
-  // Check global level (baseline)
-  if (globalFilters.length > 0) {
+  if (useGlobal && globalFilters.length > 0) {
     return 'global';
   }
 
-  // No filters active at any level
   return 'none';
 }
 

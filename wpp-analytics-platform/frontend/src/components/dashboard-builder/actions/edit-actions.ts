@@ -5,6 +5,9 @@ import type { DashboardComponent } from '@/types/dashboard';
 // Clipboard state - using localStorage for persistence across reloads
 const CLIPBOARD_KEY = 'dashboard-builder-clipboard';
 
+// Max columns per row (12-column grid system)
+const MAX_COLUMNS_PER_ROW = 12;
+
 interface ClipboardData {
   component: DashboardComponent;
   timestamp: number;
@@ -74,8 +77,18 @@ export const useEditActions = () => {
    * Find component by ID across all rows and columns
    */
   const getActiveRows = () => {
-    if (config.pages && currentPageId) {
-      return config.pages.find(p => p.id === currentPageId)?.rows || [];
+    // Consistency guard: if pages exist, currentPageId should be set
+    if (config.pages && config.pages.length > 0) {
+      if (!currentPageId) {
+        console.warn('[EditActions] Pages exist but currentPageId is not set. Falling back to first page.');
+        return config.pages[0]?.rows || [];
+      }
+      const page = config.pages.find(p => p.id === currentPageId);
+      if (!page) {
+        console.warn(`[EditActions] Current page ID '${currentPageId}' not found. Falling back to first page.`);
+        return config.pages[0]?.rows || [];
+      }
+      return page.rows;
     }
     return config.rows;
   };
@@ -190,6 +203,12 @@ export const useEditActions = () => {
 
       // If target column is beyond current columns, create new column
       if (targetColIndex >= targetRow.columns.length) {
+        // Check if adding a new column would exceed the max limit
+        if (targetRow.columns.length >= MAX_COLUMNS_PER_ROW) {
+          toast.error(`Cannot paste: Row already has maximum ${MAX_COLUMNS_PER_ROW} columns`);
+          return;
+        }
+
         // Add new column to existing row
         const newRows = [...rows];
         newRows[targetRowIndex] = {

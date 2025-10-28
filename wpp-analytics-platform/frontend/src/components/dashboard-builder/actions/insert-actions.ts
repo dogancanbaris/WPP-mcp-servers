@@ -150,12 +150,12 @@ export const useInsertActions = () => {
     }
 
     if (targetColumnId) {
-      addComponent(targetColumnId, component.type, component);
+      addComponent(targetColumnId, component.type);
       toast.success(`${component.title || component.type} added successfully`);
     } else if (config.rows.length > 0) {
       // Use first column of first row if no empty columns
       const firstColumnId = config.rows[0].columns[0].id;
-      addComponent(firstColumnId, component.type, component);
+      addComponent(firstColumnId, component.type);
       toast.success(`${component.title || component.type} added successfully`);
     } else {
       toast.error('Please add a row to the dashboard first');

@@ -1,11 +1,12 @@
 import React, { useState, useMemo } from 'react';
-import { ComponentConfig, Filter } from '@/types/dashboard-builder';
+import { ComponentConfig, FilterConfig } from '@/types/dashboard-builder';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { X, Plus, Calendar, Filter as FilterIcon } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion';
 
 interface FiltersTabProps {
@@ -61,12 +62,14 @@ export const FiltersTab: React.FC<FiltersTabProps> = ({
   availableDimensions = ['date', 'device', 'country', 'campaign', 'keyword'],
   availableMetrics = ['clicks', 'impressions', 'ctr', 'conversions', 'cost'],
 }) => {
+  const [useGlobal, setUseGlobal] = useState<boolean>(config.useGlobalFilters ?? true);
+  const [usePage, setUsePage] = useState<boolean>(config.usePageFilters ?? true);
   // Initialize from config or defaults
   const [dimensionFilters, setDimensionFilters] = useState<DimensionFilter[]>(
-    (config.filters || []).filter(f => !f.metric).map((f, idx) => ({
+    (config.componentFilters || config.filters || []).map((f, idx) => ({
       id: `dim-${idx}`,
       dimension: f.field,
-      operator: f.operator || 'equals',
+      operator: (f.operator as string) || 'equals',
       value: f.values || [],
     }))
   );
@@ -140,34 +143,57 @@ export const FiltersTab: React.FC<FiltersTabProps> = ({
    * Apply all filters to component
    * Converts UI state to component config format
    */
+  const mapOperator = (op: string): string => {
+    switch (op) {
+      case 'not_equals': return 'notEquals';
+      case 'greater_than': return 'gt';
+      case 'less_than': return 'lt';
+      case 'greater_or_equal': return 'gte';
+      case 'less_or_equal': return 'lte';
+      case 'starts_with': return 'startsWith';
+      case 'ends_with': return 'endsWith';
+      default: return op; // equals, contains, between passthrough
+    }
+  };
+
   const applyFilters = () => {
     // Convert dimension filters to component filter format
-    const filters: Filter[] = dimensionFilters.map(f => ({
+    const filters: FilterConfig[] = dimensionFilters.map(f => ({
       field: f.dimension,
-      operator: f.operator,
-      values: Array.isArray(f.value) ? f.value : [f.value],
+      operator: mapOperator(f.operator),
+      values: Array.isArray(f.value) ? (f.value as string[]) : [String(f.value)],
+      enabled: true,
     }));
 
     // Add metric filters
     metricFilters.forEach(mf => {
       filters.push({
         field: mf.metric,
-        operator: mf.operator,
-        values: Array.isArray(mf.value) ? mf.value.map(String) : [String(mf.value)],
-        metric: true,
+        operator: mapOperator(mf.operator),
+        values: Array.isArray(mf.value) ? (mf.value as number[]).map(String) : [String(mf.value)],
+        enabled: true,
       });
     });
 
-    // Update component config
-    onUpdate({
-      filters,
-      dateRange: dateRange.type === 'preset'
-        ? dateRange.preset
-        : {
-            start: dateRange.startDate || '',
-            end: dateRange.endDate || '',
-          },
-    });
+    // Cascade toggles
+    const useGlobal = config.useGlobalFilters ?? true;
+    const usePage = config.usePageFilters ?? true;
+
+    // Update component config: prefer componentFilters for clarity
+    const updates: Partial<ComponentConfig> = {
+      componentFilters: filters,
+      useGlobalFilters: useGlobal,
+      usePageFilters: usePage,
+    };
+
+    // Optional: custom date override only if custom selected
+    if (dateRange.type === 'custom' && dateRange.startDate && dateRange.endDate) {
+      (updates as any).dateRange = { start: dateRange.startDate, end: dateRange.endDate };
+    } else {
+      (updates as any).dateRange = undefined;
+    }
+
+    onUpdate(updates);
   };
 
   /**
@@ -177,10 +203,7 @@ export const FiltersTab: React.FC<FiltersTabProps> = ({
     setDimensionFilters([]);
     setMetricFilters([]);
     setDateRange({ type: 'preset', preset: 'all_time' });
-    onUpdate({
-      filters: [],
-      dateRange: 'all_time',
-    });
+    onUpdate({ componentFilters: [], dateRange: undefined });
   };
 
   // Memoize filter count for UI feedback
@@ -191,6 +214,19 @@ export const FiltersTab: React.FC<FiltersTabProps> = ({
 
   return (
     <div className="flex flex-col h-full space-y-4">
+      {/* Cascade Toggles */}
+      <Card>
+        <CardContent className="pt-4">
+          <div className="flex items-center justify-between py-2">
+            <div className="text-sm">Use global filters</div>
+            <Switch checked={useGlobal} onCheckedChange={(v) => setUseGlobal(!!v)} />
+          </div>
+          <div className="flex items-center justify-between py-2 border-t">
+            <div className="text-sm">Use page filters</div>
+            <Switch checked={usePage} onCheckedChange={(v) => setUsePage(!!v)} />
+          </div>
+        </CardContent>
+      </Card>
       {/* Filter Summary Card */}
       {totalFilterCount > 0 && (
         <Card className="bg-blue-50 border-blue-200">
@@ -491,7 +527,11 @@ export const FiltersTab: React.FC<FiltersTabProps> = ({
       {/* Fixed Action Buttons at Bottom */}
       <div className="border-t pt-4 space-y-2 bg-background">
         <Button
-          onClick={applyFilters}
+          onClick={() => {
+            // Ensure toggles stored when applying
+            onUpdate({ useGlobalFilters: useGlobal, usePageFilters: usePage });
+            applyFilters();
+          }}
           className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
         >
           Apply Filters

@@ -156,7 +156,8 @@ export const ChartSetup: React.FC<ChartSetupProps> = ({ config, onUpdate }) => {
    * Handle chart type change
    */
   const handleChartTypeChange = (type: string) => {
-    onUpdate({ chartType: type });
+    // Write to ComponentConfig.type
+    onUpdate({ type });
   };
 
   /**
@@ -200,14 +201,26 @@ export const ChartSetup: React.FC<ChartSetupProps> = ({ config, onUpdate }) => {
    * Handle filters change
    */
   const handleFiltersChange = (updatedFilters: ChartFilter[]) => {
-    onUpdate({ filters: updatedFilters });
+    // Map to FilterConfig[] and store as componentFilters (align with cascade)
+    const mapped = updatedFilters.map((f) => ({
+      field: f.fieldId || f.fieldName,
+      operator: f.operator,
+      values: Array.isArray(f.value) ? (f.value as string[]) : [String(f.value)],
+      enabled: true,
+    }));
+    onUpdate({ componentFilters: mapped as any });
   };
 
   /**
    * Handle date range change
    */
   const handleDateRangeChange = (range: DateRange) => {
-    onUpdate({ dateRange: range });
+    // Only persist custom ranges; presets should inherit from cascade/global
+    if (range.type === 'custom' && range.startDate && range.endDate) {
+      onUpdate({ dateRange: { start: range.startDate.toISOString().slice(0,10), end: range.endDate.toISOString().slice(0,10) } as any });
+    } else {
+      onUpdate({ dateRange: undefined });
+    }
   };
 
   // Loading state
