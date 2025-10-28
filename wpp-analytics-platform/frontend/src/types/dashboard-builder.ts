@@ -116,9 +116,11 @@ export interface DateRangeConfig {
 
 // Filter configuration
 export interface FilterConfig {
+  id?: string; // Optional unique identifier for filter (used at runtime)
   field: string;
   operator: string;
   values: string[];
+  enabled?: boolean; // Optional flag to enable/disable filter without removing it
 }
 
 // Table style configuration

@@ -49,6 +49,7 @@ export async function GET(
     const metrics = searchParams.get('metrics')?.split(',') || [];
     const dimensions = searchParams.get('dimensions')?.split(',').filter(Boolean) || [];
     const dateRangeStr = searchParams.get('dateRange');
+    const filtersStr = searchParams.get('filters');
     const limit = parseInt(searchParams.get('limit') || '1000');
 
     // Parse dateRange
@@ -64,12 +65,26 @@ export async function GET(
       }
     }
 
+    // Parse filters
+    let filters: Array<{ field: string; operator: string; values: string[] }> = [];
+    if (filtersStr) {
+      try {
+        const parsed = JSON.parse(filtersStr);
+        if (Array.isArray(parsed)) {
+          filters = parsed;
+        }
+      } catch (e) {
+        // Invalid filters, ignore
+      }
+    }
+
     // Build query config
     const queryConfig = {
       platform: dataset.platform_metadata.platform,
       metrics,
       dimensions,
       dateRange,
+      filters,
       limit
     };
 
@@ -159,6 +174,115 @@ export async function GET(
         whereConditions.push(`date BETWEEN '${queryConfig.dateRange[0]}' AND '${queryConfig.dateRange[1]}'`);
       }
     }
+
+    // Apply cascaded filters from component/page/global levels
+    queryConfig.filters.forEach(filter => {
+      const field = filter.field;
+      const operator = filter.operator;
+      const values = filter.values;
+
+      // Helper function to escape single quotes in SQL values
+      const escapeValue = (val: string) => val.replace(/'/g, "''");
+
+      switch (operator) {
+        case 'equals':
+          if (values.length > 0) {
+            whereConditions.push(`${field} = '${escapeValue(values[0])}'`);
+          }
+          break;
+
+        case 'notEquals':
+          if (values.length > 0) {
+            whereConditions.push(`${field} != '${escapeValue(values[0])}'`);
+          }
+          break;
+
+        case 'inList':
+          if (values.length > 0) {
+            const valueList = values.map(v => `'${escapeValue(v)}'`).join(', ');
+            whereConditions.push(`${field} IN (${valueList})`);
+          }
+          break;
+
+        case 'notInList':
+          if (values.length > 0) {
+            const valueList = values.map(v => `'${escapeValue(v)}'`).join(', ');
+            whereConditions.push(`${field} NOT IN (${valueList})`);
+          }
+          break;
+
+        case 'contains':
+          if (values.length > 0) {
+            whereConditions.push(`${field} LIKE '%${escapeValue(values[0])}%'`);
+          }
+          break;
+
+        case 'notContains':
+          if (values.length > 0) {
+            whereConditions.push(`${field} NOT LIKE '%${escapeValue(values[0])}%'`);
+          }
+          break;
+
+        case 'startsWith':
+          if (values.length > 0) {
+            whereConditions.push(`${field} LIKE '${escapeValue(values[0])}%'`);
+          }
+          break;
+
+        case 'endsWith':
+          if (values.length > 0) {
+            whereConditions.push(`${field} LIKE '%${escapeValue(values[0])}'`);
+          }
+          break;
+
+        case 'greaterThan':
+          if (values.length > 0) {
+            whereConditions.push(`${field} > ${parseFloat(values[0]) || 0}`);
+          }
+          break;
+
+        case 'greaterThanOrEqual':
+          if (values.length > 0) {
+            whereConditions.push(`${field} >= ${parseFloat(values[0]) || 0}`);
+          }
+          break;
+
+        case 'lessThan':
+          if (values.length > 0) {
+            whereConditions.push(`${field} < ${parseFloat(values[0]) || 0}`);
+          }
+          break;
+
+        case 'lessThanOrEqual':
+          if (values.length > 0) {
+            whereConditions.push(`${field} <= ${parseFloat(values[0]) || 0}`);
+          }
+          break;
+
+        case 'between':
+          if (values.length >= 2) {
+            whereConditions.push(`${field} BETWEEN ${parseFloat(values[0]) || 0} AND ${parseFloat(values[1]) || 0}`);
+          }
+          break;
+
+        case 'inDateRange':
+          if (values.length >= 2) {
+            whereConditions.push(`${field} BETWEEN '${escapeValue(values[0])}' AND '${escapeValue(values[1])}'`);
+          }
+          break;
+
+        case 'isNull':
+          whereConditions.push(`${field} IS NULL`);
+          break;
+
+        case 'isNotNull':
+          whereConditions.push(`${field} IS NOT NULL`);
+          break;
+
+        default:
+          console.warn(`[Dataset Query] Unknown filter operator: ${operator}`);
+      }
+    });
 
     // Build metrics with correct aggregation from metadata
     selectFields.push(...queryConfig.metrics.map(m => {

@@ -854,33 +854,43 @@ export const useDashboardStore = create<DashboardStore>()(
       },
 
       duplicateComponent: (componentId: string) => {
-        set((state) => {
-          let componentToDuplicate: ComponentConfig | undefined;
-          let targetColumnIndex = -1;
-          let targetRowIndex = -1;
+        const state = get();
+        const currentPageId = state.currentPageId;
 
-          // Find the component to duplicate
-          state.config.rows.forEach((row, rowIndex) => {
-            row.columns.forEach((col, colIndex) => {
-              if (col.component?.id === componentId) {
-                componentToDuplicate = col.component;
-                targetRowIndex = rowIndex;
-                targetColumnIndex = colIndex;
-              }
-            });
+        let componentToDuplicate: ComponentConfig | undefined;
+        let targetColumnIndex = -1;
+        let targetRowIndex = -1;
+
+        // Determine which rows to search
+        const rowsToSearch = (state.config.pages && currentPageId)
+          ? state.config.pages.find(p => p.id === currentPageId)?.rows || []
+          : state.config.rows;
+
+        // Find the component to duplicate
+        rowsToSearch.forEach((row, rowIndex) => {
+          row.columns.forEach((col, colIndex) => {
+            if (col.component?.id === componentId) {
+              componentToDuplicate = col.component;
+              targetRowIndex = rowIndex;
+              targetColumnIndex = colIndex;
+            }
           });
+        });
 
-          if (!componentToDuplicate) return state;
+        if (!componentToDuplicate) return;
 
-          // Create duplicate with new ID
-          const duplicatedComponent: ComponentConfig = {
-            ...deepClone(componentToDuplicate),
-            id: generateId('component'),
-            title: `${componentToDuplicate.title} (Copy)`
-          };
+        // Create duplicate with new ID
+        const duplicatedComponent: ComponentConfig = {
+          ...deepClone(componentToDuplicate),
+          id: generateId('component'),
+          title: `${componentToDuplicate.title} (Copy)`
+        };
 
-          // Try to place in next column in same row
-          const newRows = [...state.config.rows];
+        get().addToHistory();
+
+        // Helper function to duplicate in rows
+        const duplicateInRows = (rows: RowConfig[]) => {
+          const newRows = [...rows];
           const targetRow = newRows[targetRowIndex];
 
           if (targetColumnIndex + 1 < targetRow.columns.length) {
@@ -900,24 +910,50 @@ export const useDashboardStore = create<DashboardStore>()(
             newRows.splice(targetRowIndex + 1, 0, newRow);
           }
 
-          get().addToHistory();
+          return newRows;
+        };
 
-          return {
+        // If we have pages, duplicate component in current page
+        if (state.config.pages && currentPageId) {
+          set({
             config: {
               ...state.config,
-              rows: newRows
+              pages: state.config.pages.map(page => {
+                if (page.id === currentPageId) {
+                  return {
+                    ...page,
+                    rows: duplicateInRows(page.rows)
+                  };
+                }
+                return page;
+              }),
             },
             selectedComponentId: duplicatedComponent.id
-          };
-        });
+          });
+        } else {
+          // Legacy: duplicate in config.rows
+          set({
+            config: {
+              ...state.config,
+              rows: duplicateInRows(state.config.rows)
+            },
+            selectedComponentId: duplicatedComponent.id
+          });
+        }
       },
 
       moveComponent: (componentId: string, targetColumnId: string) => {
-        set((state) => {
-          let componentToMove: ComponentConfig | undefined;
+        const state = get();
+        const currentPageId = state.currentPageId;
 
+        let componentToMove: ComponentConfig | undefined;
+
+        get().addToHistory();
+
+        // Helper function to move component within rows
+        const moveInRows = (rows: RowConfig[]) => {
           // Remove component from source
-          const rowsAfterRemoval = state.config.rows.map(row => ({
+          const rowsAfterRemoval = rows.map(row => ({
             ...row,
             columns: row.columns.map(col => {
               if (col.component?.id === componentId) {
@@ -931,10 +967,10 @@ export const useDashboardStore = create<DashboardStore>()(
             })
           }));
 
-          if (!componentToMove) return state;
+          if (!componentToMove) return rows;
 
           // Add component to target
-          const finalRows = rowsAfterRemoval.map(row => ({
+          return rowsAfterRemoval.map(row => ({
             ...row,
             columns: row.columns.map(col => {
               if (col.id === targetColumnId) {
@@ -946,16 +982,33 @@ export const useDashboardStore = create<DashboardStore>()(
               return col;
             })
           }));
+        };
 
-          get().addToHistory();
-
-          return {
+        // If we have pages, move component in current page
+        if (state.config.pages && currentPageId) {
+          set({
             config: {
               ...state.config,
-              rows: finalRows
+              pages: state.config.pages.map(page => {
+                if (page.id === currentPageId) {
+                  return {
+                    ...page,
+                    rows: moveInRows(page.rows)
+                  };
+                }
+                return page;
+              }),
             }
-          };
-        });
+          });
+        } else {
+          // Legacy: move in config.rows
+          set({
+            config: {
+              ...state.config,
+              rows: moveInRows(state.config.rows)
+            }
+          });
+        }
       },
 
       selectComponent: (componentId?: string) => {
