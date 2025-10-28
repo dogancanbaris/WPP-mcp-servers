@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useDashboardStore, usePages, useCurrentPageId } from '@/store/dashboardStore';
 import type { FilterConfig, PageStyles } from '@/types/dashboard-builder';
+import { getAvailableFields, type Field, type FieldsResponse } from '@/lib/api/dashboards';
 
 type DimFilter = { id: string; field: string; operator: string; value: string };
 
@@ -33,6 +34,24 @@ export const PagePanel: React.FC = () => {
     (page?.filters || []).map((f, i) => ({ id: `pf-${i}`, field: f.field, operator: f.operator as string, value: (f.values?.[0] as string) || '' }))
   );
 
+  const [availableFields, setAvailableFields] = useState<Field[]>([]);
+  const dimensionFields = useMemo(() => availableFields.filter(f => f.type === 'dimension'), [availableFields]);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const data: FieldsResponse = await getAvailableFields();
+        if (!mounted) return;
+        const fields = data.sources.flatMap(s => s.fields);
+        setAvailableFields(fields);
+      } catch (e) {
+        setAvailableFields([]);
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
+
   const [styles, setStyles] = useState<PageStyles>({
     backgroundColor: page?.pageStyles?.backgroundColor || undefined,
     padding: page?.pageStyles?.padding || undefined,
@@ -46,17 +65,28 @@ export const PagePanel: React.FC = () => {
   }
 
   const applyFilters = () => {
-    const mapped: FilterConfig[] = filters.map(f => ({
-      field: f.field,
-      operator: mapOperator(f.operator),
-      values: [f.value],
-      enabled: true,
-    }));
+    const mapped: FilterConfig[] = filters
+      .filter(f => f.field && String(f.value).trim().length > 0)
+      .map(f => ({
+        field: f.field,
+        operator: mapOperator(f.operator),
+        values: [f.value],
+        enabled: true,
+      }));
     setPageFilters(currentPageId, mapped);
   };
 
   const applyStyles = () => {
-    setPageStyles(currentPageId, styles);
+    const clamp = (n: number | undefined, min: number, max: number) =>
+      typeof n === 'number' ? Math.min(max, Math.max(min, Math.round(n))) : undefined;
+    const isHex = (c?: string) => (c ? /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(c) : true);
+
+    const next: PageStyles = {
+      backgroundColor: isHex(styles.backgroundColor) ? styles.backgroundColor : undefined,
+      padding: clamp(styles.padding, 0, 64),
+      gap: clamp(styles.gap, 0, 64),
+    };
+    setPageStyles(currentPageId, next);
   };
 
   return (
@@ -81,7 +111,14 @@ export const PagePanel: React.FC = () => {
                 <div key={f.id} className="grid grid-cols-3 gap-2 items-end">
                   <div>
                     <Label className="text-xs">Field</Label>
-                    <Input value={f.field} onChange={(e) => setFilters(prev => prev.map(x => x.id===f.id?{...x, field: e.target.value}:x))} className="h-8 text-xs" />
+                    <Select value={f.field} onValueChange={(v)=> setFilters(prev => prev.map(x => x.id===f.id?{...x, field: v}:x))}>
+                      <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Select field" /></SelectTrigger>
+                      <SelectContent>
+                        {dimensionFields.map(d => (
+                          <SelectItem key={d.id} value={d.name}>{d.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div>
                     <Label className="text-xs">Operator</Label>
