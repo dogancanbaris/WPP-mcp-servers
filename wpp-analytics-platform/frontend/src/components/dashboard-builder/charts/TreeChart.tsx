@@ -9,15 +9,16 @@
  * NEW ARCHITECTURE:
  * - Queries registered dataset via /api/datasets/[id]/query
  * - Backend handles caching, BigQuery connection
- * - Global filter support via filterStore
+ * - Multi-page support with cascaded filters
  */
 
-import { useQuery } from '@tanstack/react-query';
 import ReactECharts from 'echarts-for-react';
 import { Loader2 } from 'lucide-react';
 import { ComponentConfig } from '@/types/dashboard-builder';
 import { DASHBOARD_THEME } from '@/lib/themes/dashboard-theme';
-import { useFilterStore } from '@/store/filterStore';
+import { useCascadedFilters } from '@/hooks/useCascadedFilters';
+import { usePageData } from '@/hooks/usePageData';
+import { useCurrentPageId } from '@/store/dashboardStore';
 
 export interface TreeChartProps extends Partial<ComponentConfig> {
   /** Hierarchy dimensions (parent -> child) */
@@ -34,8 +35,10 @@ export const TreeChart: React.FC<TreeChartProps> = (props) => {
   const theme = DASHBOARD_THEME.charts;
 
   const {
+    id: componentId,
     dataset_id,
     metrics = [],
+    dimensions = [],
     dateRange,
     filters = [],
     title = 'Tree Chart',
@@ -48,35 +51,29 @@ export const TreeChart: React.FC<TreeChartProps> = (props) => {
     ...rest
   } = props;
 
-  // Subscribe to global filters
-  const globalDateRange = useFilterStore(state => state.activeDateRange);
-  const globalFilters = useFilterStore(state => state.activeFilters);
-
-  const effectiveDateRange = globalDateRange || dateRange;
-  const effectiveFilters = [...filters, ...globalFilters];
-
+  const currentPageId = useCurrentPageId();
   const firstMetric = metrics[0];
 
-  // Fetch from dataset API
-  const { data, isLoading, error } = useQuery({
-    queryKey: ['tree', dataset_id, firstMetric, hierarchyDimensions, effectiveDateRange, effectiveFilters],
-    queryFn: async () => {
-      const params = new URLSearchParams({
-        dimensions: hierarchyDimensions.join(','),
-        ...(metrics.length > 0 && { metrics: firstMetric }),
-        ...(effectiveDateRange && { dateRange: JSON.stringify(effectiveDateRange) }),
-        ...(effectiveFilters.length > 0 && { filters: JSON.stringify(effectiveFilters) })
-      });
+  // Use hierarchyDimensions if provided, otherwise fall back to dimensions
+  const effectiveDimensions = hierarchyDimensions.length > 0 ? hierarchyDimensions : dimensions;
 
-      const response = await fetch(`/api/datasets/${dataset_id}/query?${params}`);
+  // Use cascaded filters (Global → Page → Component)
+  const { filters: cascadedFilters } = useCascadedFilters({
+    pageId: currentPageId || undefined,
+    componentId,
+    componentConfig: props,
+    dateDimension: 'date',
+  });
 
-      if (!response.ok) {
-        throw new Error(`API error: ${response.statusText}`);
-      }
-
-      return response.json();
-    },
-    enabled: !!dataset_id && hierarchyDimensions.length > 0
+  // Use page-aware data fetching (only loads when page is active)
+  const { data, isLoading, error } = usePageData({
+    pageId: currentPageId || 'default',
+    componentId: componentId || 'tree',
+    datasetId: dataset_id || '',
+    metrics,
+    dimensions: effectiveDimensions,
+    filters: cascadedFilters,
+    enabled: !!dataset_id && !!currentPageId && effectiveDimensions.length > 0,
   });
 
   // Styling
@@ -150,7 +147,7 @@ export const TreeChart: React.FC<TreeChartProps> = (props) => {
     return tree;
   };
 
-  const treeData = buildTree(chartData, hierarchyDimensions, firstMetric);
+  const treeData = buildTree(chartData, effectiveDimensions, firstMetric);
 
   // ECharts option
   const option = {

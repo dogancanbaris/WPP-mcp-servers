@@ -1,8 +1,12 @@
-import React, { useEffect, useRef, useState } from 'react';
-import * as echarts from 'echarts';
+'use client';
 
 /**
- * Geographic Map Chart Component
+ * Geographic Map Chart Component - Dataset-Based
+ *
+ * NEW ARCHITECTURE:
+ * - Queries registered dataset via /api/datasets/[id]/query
+ * - Backend handles caching, BigQuery connection
+ * - Multi-page support with cascaded filters
  *
  * Supports two visualization types:
  * 1. Choropleth Map: Color-coded regions based on data values
@@ -14,33 +18,16 @@ import * as echarts from 'echarts';
  * - Interactive tooltips and zoom
  * - Responsive design
  * - Data-driven color scales
- *
- * @example
- * // Choropleth map showing revenue by country
- * <GeoMapChart
- *   type="choropleth"
- *   mapType="world"
- *   data={[
- *     { name: 'United States', value: 125000 },
- *     { name: 'China', value: 98000 },
- *     { name: 'Germany', value: 67000 }
- *   ]}
- *   title="Revenue by Country"
- * />
- *
- * @example
- * // Bubble map showing user activity by city
- * <GeoMapChart
- *   type="bubble"
- *   mapType="USA"
- *   data={[
- *     { name: 'New York', value: 50000, coords: [-74.006, 40.7128] },
- *     { name: 'Los Angeles', value: 38000, coords: [-118.2437, 34.0522] },
- *     { name: 'Chicago', value: 27000, coords: [-87.6298, 41.8781] }
- *   ]}
- *   title="User Activity by City"
- * />
  */
+
+import React, { useEffect, useRef, useState } from 'react';
+import * as echarts from 'echarts';
+import { Loader2 } from 'lucide-react';
+import { ComponentConfig } from '@/types/dashboard-builder';
+import { DASHBOARD_THEME } from '@/lib/themes/dashboard-theme';
+import { usePageData } from '@/hooks/usePageData';
+import { useCurrentPageId } from '@/store/dashboardStore';
+import { useCascadedFilters } from '@/hooks/useCascadedFilters';
 
 export interface GeoMapDataPoint {
   /** Region/city name (must match GeoJSON feature name) */
@@ -53,25 +40,16 @@ export interface GeoMapDataPoint {
   metadata?: Record<string, any>;
 }
 
-export interface GeoMapChartProps {
+export interface GeoMapChartProps extends Partial<ComponentConfig> {
   /** Chart type: choropleth (color regions) or bubble (scatter points) */
-  type: 'choropleth' | 'bubble';
+  type?: 'choropleth' | 'bubble';
 
   /**
    * Map type or custom GeoJSON
    * Built-in: 'world', 'USA', 'China', etc.
    * Custom: GeoJSON object or URL
    */
-  mapType: string | object;
-
-  /** Geographic data points */
-  data: GeoMapDataPoint[];
-
-  /** Chart title */
-  title?: string;
-
-  /** Chart subtitle */
-  subtitle?: string;
+  mapType?: string | object;
 
   /** Color scheme for choropleth maps */
   colorScheme?: string[];
@@ -98,19 +76,7 @@ export interface GeoMapChartProps {
   tooltipFormatter?: (params: any) => string;
 
   /** Height of the chart container */
-  height?: string | number;
-
-  /** Width of the chart container */
-  width?: string | number;
-
-  /** Loading state */
-  loading?: boolean;
-
-  /** Empty state message */
-  emptyMessage?: string;
-
-  /** Error state */
-  error?: string;
+  chartHeight?: string | number;
 
   /** Additional ECharts options */
   additionalOptions?: echarts.EChartsOption;
@@ -122,33 +88,83 @@ export interface GeoMapChartProps {
   geoJsonName?: string;
 }
 
-const GeoMapChart: React.FC<GeoMapChartProps> = ({
-  type,
-  mapType,
-  data,
-  title,
-  subtitle,
-  colorScheme = ['#e0f3db', '#a8ddb5', '#43a2ca', '#0868ac'],
-  minBubbleSize = 4,
-  maxBubbleSize = 40,
-  valueFormatter = (value: number) => value.toLocaleString(),
-  enableZoom = true,
-  showVisualMap = true,
-  visualMapPosition = 'left',
-  tooltipFormatter,
-  height = 600,
-  width = '100%',
-  loading = false,
-  emptyMessage = 'No geographic data available',
-  error,
-  additionalOptions = {},
-  onRegionClick,
-  geoJsonName = 'customMap',
-}) => {
+export const GeoMapChart: React.FC<GeoMapChartProps> = (props) => {
+  const theme = DASHBOARD_THEME.charts;
+
+  const {
+    id: componentId,
+    dataset_id,
+    metrics = [],
+    dimensions = [],
+    title = 'Geographic Map',
+    showTitle = true,
+    type = 'choropleth',
+    mapType = 'world',
+    colorScheme = ['#e0f3db', '#a8ddb5', '#43a2ca', '#0868ac'],
+    minBubbleSize = 4,
+    maxBubbleSize = 40,
+    valueFormatter = (value: number) => value.toLocaleString(),
+    enableZoom = true,
+    showVisualMap = true,
+    visualMapPosition = 'left',
+    tooltipFormatter,
+    chartHeight = '600px',
+    additionalOptions = {},
+    onRegionClick,
+    geoJsonName = 'customMap',
+    style,
+    ...rest
+  } = props;
+
   const chartRef = useRef<HTMLDivElement>(null);
   const chartInstanceRef = useRef<echarts.ECharts | null>(null);
   const [mapRegistered, setMapRegistered] = useState(false);
   const [mapLoadError, setMapLoadError] = useState<string | null>(null);
+  const currentPageId = useCurrentPageId();
+
+  // Use cascaded filters (Global → Page → Component)
+  const { filters: cascadedFilters } = useCascadedFilters({
+    pageId: currentPageId || undefined,
+    componentId,
+    componentConfig: props,
+    dateDimension: dimensions[0] || 'date',
+  });
+
+  // Use page-aware data fetching
+  const { data: apiData, isLoading, error: apiError } = usePageData({
+    pageId: currentPageId || 'default',
+    componentId: componentId || 'geomap',
+    datasetId: dataset_id || '',
+    metrics,
+    dimensions,
+    filters: cascadedFilters,
+    enabled: !!dataset_id && dimensions.length > 0 && !!currentPageId,
+  });
+
+  // Transform API data to GeoMapDataPoint format
+  const data: GeoMapDataPoint[] = React.useMemo(() => {
+    if (!apiData?.data) return [];
+
+    const locationDimension = dimensions[0] || 'country';
+    const metricName = metrics[0];
+
+    return apiData.data.map((row: any) => ({
+      name: row[locationDimension],
+      value: row[metricName] || 0,
+      metadata: row
+    }));
+  }, [apiData, dimensions, metrics]);
+
+  // Styling from global theme
+  const containerStyle: React.CSSProperties = {
+    backgroundColor: style?.backgroundColor || theme.backgroundColor,
+    border: `${theme.borderWidth} solid ${theme.borderColor}`,
+    borderRadius: style?.borderRadius || theme.borderRadius,
+    padding: theme.padding,
+    boxShadow: theme.boxShadow,
+    opacity: DASHBOARD_THEME.global.opacity,
+    color: style?.textColor
+  };
 
   /**
    * Register GeoJSON map data with ECharts
@@ -213,23 +229,8 @@ const GeoMapChart: React.FC<GeoMapChartProps> = ({
     const minValue = Math.min(...values);
     const maxValue = Math.max(...values);
 
-    // Build base options
+    // Build base options (title rendered separately via showTitle)
     const baseOptions: echarts.EChartsOption = {
-      title: {
-        text: title,
-        subtext: subtitle,
-        left: 'center',
-        top: 20,
-        textStyle: {
-          fontSize: 18,
-          fontWeight: 600,
-          color: '#1f2937',
-        },
-        subtextStyle: {
-          fontSize: 14,
-          color: '#6b7280',
-        },
-      },
       tooltip: {
         trigger: 'item',
         backgroundColor: 'rgba(255, 255, 255, 0.95)',
@@ -435,8 +436,6 @@ const GeoMapChart: React.FC<GeoMapChartProps> = ({
     type,
     mapType,
     mapRegistered,
-    title,
-    subtitle,
     colorScheme,
     minBubbleSize,
     maxBubbleSize,
@@ -455,7 +454,7 @@ const GeoMapChart: React.FC<GeoMapChartProps> = ({
    */
   useEffect(() => {
     if (chartInstanceRef.current) {
-      if (loading) {
+      if (isLoading) {
         chartInstanceRef.current.showLoading('default', {
           text: 'Loading map data...',
           color: '#3b82f6',
@@ -466,118 +465,42 @@ const GeoMapChart: React.FC<GeoMapChartProps> = ({
         chartInstanceRef.current.hideLoading();
       }
     }
-  }, [loading]);
+  }, [isLoading]);
 
-  /**
-   * Render error state
-   */
-  if (error || mapLoadError) {
+  // Loading state
+  if (isLoading) {
     return (
-      <div
-        style={{
-          height: typeof height === 'number' ? `${height}px` : height,
-          width: typeof width === 'number' ? `${width}px` : width,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: '#fef2f2',
-          border: '1px solid #fecaca',
-          borderRadius: '8px',
-          padding: '24px',
-        }}
-      >
-        <div style={{ textAlign: 'center' }}>
-          <svg
-            style={{ width: '48px', height: '48px', margin: '0 auto 16px', color: '#ef4444' }}
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-            />
-          </svg>
-          <p style={{ color: '#991b1b', fontWeight: 500 }}>
-            {error || mapLoadError}
-          </p>
-        </div>
+      <div style={containerStyle} className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
-  /**
-   * Render empty state
-   */
-  if (!loading && data.length === 0) {
+  // Error state
+  if (apiError || mapLoadError) {
     return (
-      <div
-        style={{
-          height: typeof height === 'number' ? `${height}px` : height,
-          width: typeof width === 'number' ? `${width}px` : width,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: '#f9fafb',
-          border: '1px solid #e5e7eb',
-          borderRadius: '8px',
-          padding: '24px',
-        }}
-      >
-        <div style={{ textAlign: 'center' }}>
-          <svg
-            style={{ width: '48px', height: '48px', margin: '0 auto 16px', color: '#9ca3af' }}
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"
-            />
-          </svg>
-          <p style={{ color: '#6b7280', fontWeight: 500 }}>{emptyMessage}</p>
-        </div>
+      <div style={containerStyle} className="flex flex-col items-center justify-center min-h-[400px] gap-2">
+        <p className="text-sm text-red-600">Failed to load map data</p>
+        <p className="text-xs text-muted-foreground">{apiError?.message || mapLoadError}</p>
       </div>
     );
   }
 
-  /**
-   * Render map loading state (before GeoJSON is registered)
-   */
+  // Empty state
+  if (!isLoading && data.length === 0) {
+    return (
+      <div style={containerStyle} className="flex items-center justify-center min-h-[400px]">
+        <p className="text-sm text-muted-foreground">No geographic data available</p>
+      </div>
+    );
+  }
+
+  // Map loading state (before GeoJSON is registered)
   if (!mapRegistered) {
     return (
-      <div
-        style={{
-          height: typeof height === 'number' ? `${height}px` : height,
-          width: typeof width === 'number' ? `${width}px` : width,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: '#f9fafb',
-          border: '1px solid #e5e7eb',
-          borderRadius: '8px',
-          padding: '24px',
-        }}
-      >
-        <div style={{ textAlign: 'center' }}>
-          <div
-            style={{
-              width: '48px',
-              height: '48px',
-              margin: '0 auto 16px',
-              border: '4px solid #e5e7eb',
-              borderTopColor: '#3b82f6',
-              borderRadius: '50%',
-              animation: 'spin 1s linear infinite',
-            }}
-          />
-          <p style={{ color: '#6b7280', fontWeight: 500 }}>Loading map data...</p>
-        </div>
+      <div style={containerStyle} className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+        <p className="text-sm text-muted-foreground ml-2">Loading map data...</p>
       </div>
     );
   }
@@ -586,18 +509,29 @@ const GeoMapChart: React.FC<GeoMapChartProps> = ({
    * Render chart
    */
   return (
-    <div
-      ref={chartRef}
-      style={{
-        height: typeof height === 'number' ? `${height}px` : height,
-        width: typeof width === 'number' ? `${width}px` : width,
-        minHeight: '400px',
-      }}
-    />
+    <div style={containerStyle}>
+      {showTitle && (
+        <div style={{
+          fontSize: '16px',
+          fontWeight: 600,
+          color: '#111827',
+          marginBottom: '16px',
+          textAlign: 'center'
+        }}>
+          {title}
+        </div>
+      )}
+      <div
+        ref={chartRef}
+        style={{
+          height: typeof chartHeight === 'number' ? `${chartHeight}px` : chartHeight,
+          width: '100%',
+          minHeight: '400px',
+        }}
+      />
+    </div>
   );
 };
-
-export default GeoMapChart;
 
 /**
  * Utility function to load GeoJSON from URL

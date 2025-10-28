@@ -9,14 +9,16 @@
  * NEW ARCHITECTURE:
  * - Queries registered dataset via /api/datasets/[id]/query
  * - Backend handles caching, BigQuery connection
- * - Global filter support via filterStore
+ * - Multi-page aware with cascaded filters (Global → Page → Component)
  */
 
 import { useQuery } from '@tanstack/react-query';
 import { Loader2 } from 'lucide-react';
 import { ComponentConfig } from '@/types/dashboard-builder';
 import { DASHBOARD_THEME } from '@/lib/themes/dashboard-theme';
-import { useFilterStore } from '@/store/filterStore';
+import { useCascadedFilters } from '@/hooks/useCascadedFilters';
+import { usePageData } from '@/hooks/usePageData';
+import { useCurrentPageId } from '@/store/dashboardStore';
 
 export interface PivotTableChartProps extends Partial<ComponentConfig> {
   /** Row dimensions */
@@ -31,6 +33,7 @@ export const PivotTableChart: React.FC<PivotTableChartProps> = (props) => {
   const theme = DASHBOARD_THEME.charts;
 
   const {
+    id: componentId,
     dataset_id,
     metrics = [],
     dateRange,
@@ -44,36 +47,27 @@ export const PivotTableChart: React.FC<PivotTableChartProps> = (props) => {
     ...rest
   } = props;
 
-  // Subscribe to global filters
-  const globalDateRange = useFilterStore(state => state.activeDateRange);
-  const globalFilters = useFilterStore(state => state.activeFilters);
-
-  const effectiveDateRange = globalDateRange || dateRange;
-  const effectiveFilters = [...filters, ...globalFilters];
-
   const firstMetric = metrics[0];
   const allDimensions = [...rowDimensions, ...columnDimensions];
+  const currentPageId = useCurrentPageId();
 
-  // Fetch from dataset API
-  const { data, isLoading, error } = useQuery({
-    queryKey: ['pivot-table', dataset_id, firstMetric, allDimensions, effectiveDateRange, effectiveFilters],
-    queryFn: async () => {
-      const params = new URLSearchParams({
-        dimensions: allDimensions.join(','),
-        metrics: firstMetric,
-        ...(effectiveDateRange && { dateRange: JSON.stringify(effectiveDateRange) }),
-        ...(effectiveFilters.length > 0 && { filters: JSON.stringify(effectiveFilters) })
-      });
+  // Use cascaded filters (Global → Page → Component)
+  const { filters: cascadedFilters } = useCascadedFilters({
+    pageId: currentPageId || undefined,
+    componentId,
+    componentConfig: props,
+    dateDimension: 'date',
+  });
 
-      const response = await fetch(`/api/datasets/${dataset_id}/query?${params}`);
-
-      if (!response.ok) {
-        throw new Error(`API error: ${response.statusText}`);
-      }
-
-      return response.json();
-    },
-    enabled: !!dataset_id && metrics.length > 0 && allDimensions.length > 0
+  // Use page-aware data fetching (only loads when page is active)
+  const { data, isLoading, error } = usePageData({
+    pageId: currentPageId || 'default',
+    componentId: componentId || 'pivot-table',
+    datasetId: dataset_id || '',
+    metrics,
+    dimensions: allDimensions,
+    filters: cascadedFilters,
+    enabled: !!dataset_id && metrics.length > 0 && allDimensions.length > 0 && !!currentPageId,
   });
 
   // Styling

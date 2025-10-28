@@ -8,15 +8,16 @@
  * NEW ARCHITECTURE:
  * - Queries registered dataset via /api/datasets/[id]/query
  * - Backend handles caching, BigQuery connection
- * - Global filter support via filterStore
+ * - Multi-page support with cascaded filters
  */
 
-import { useQuery } from '@tanstack/react-query';
 import ReactECharts from 'echarts-for-react';
 import { Loader2 } from 'lucide-react';
 import { ComponentConfig } from '@/types/dashboard-builder';
 import { DASHBOARD_THEME } from '@/lib/themes/dashboard-theme';
-import { useFilterStore } from '@/store/filterStore';
+import { useCascadedFilters } from '@/hooks/useCascadedFilters';
+import { usePageData } from '@/hooks/usePageData';
+import { useCurrentPageId } from '@/store/dashboardStore';
 import type { EChartsOption } from 'echarts';
 
 export interface StackedBarChartProps extends Partial<ComponentConfig> {
@@ -36,9 +37,11 @@ export const StackedBarChart: React.FC<StackedBarChartProps> = (props) => {
   const theme = DASHBOARD_THEME.charts;
 
   const {
+    id: componentId,
     dataset_id,
     metrics = [],
-    dimension = 'category',
+    dimensions = ['category'],
+    dimension = dimensions[0] || 'category',
     dateRange,
     filters = [],
     title = 'Stacked Bar Chart',
@@ -53,33 +56,25 @@ export const StackedBarChart: React.FC<StackedBarChartProps> = (props) => {
     ...rest
   } = props;
 
-  // Subscribe to global filters
-  const globalDateRange = useFilterStore(state => state.activeDateRange);
-  const globalFilters = useFilterStore(state => state.activeFilters);
+  const currentPageId = useCurrentPageId();
 
-  const effectiveDateRange = globalDateRange || dateRange;
-  const effectiveFilters = [...filters, ...globalFilters];
+  // Use cascaded filters (Global → Page → Component)
+  const { filters: cascadedFilters } = useCascadedFilters({
+    pageId: currentPageId || undefined,
+    componentId,
+    componentConfig: props,
+    dateDimension: 'date',
+  });
 
-  // Fetch from dataset API
-  const { data, isLoading, error } = useQuery({
-    queryKey: ['stacked-bar', dataset_id, metrics, dimension, effectiveDateRange, effectiveFilters],
-    queryFn: async () => {
-      const params = new URLSearchParams({
-        dimensions: dimension,
-        metrics: metrics.join(','),
-        ...(effectiveDateRange && { dateRange: JSON.stringify(effectiveDateRange) }),
-        ...(effectiveFilters.length > 0 && { filters: JSON.stringify(effectiveFilters) })
-      });
-
-      const response = await fetch(`/api/datasets/${dataset_id}/query?${params}`);
-
-      if (!response.ok) {
-        throw new Error(`API error: ${response.statusText}`);
-      }
-
-      return response.json();
-    },
-    enabled: !!dataset_id && metrics.length > 0
+  // Use page-aware data fetching (only loads when page is active)
+  const { data, isLoading, error } = usePageData({
+    pageId: currentPageId || 'default',
+    componentId: componentId || 'stacked-bar',
+    datasetId: dataset_id || '',
+    metrics,
+    dimensions,
+    filters: cascadedFilters,
+    enabled: !!dataset_id && metrics.length > 0 && !!currentPageId,
   });
 
   // Styling

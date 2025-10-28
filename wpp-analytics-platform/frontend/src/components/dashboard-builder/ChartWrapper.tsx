@@ -25,7 +25,7 @@ import { ParallelChart } from './charts/ParallelChart';
 import { BoxplotChart } from './charts/BoxplotChart';
 import { BulletChart } from './charts/BulletChart';
 import { CandlestickChart } from './charts/CandlestickChart';
-import GeoMapChart from './charts/GeoMapChart';
+import { GeoMapChart } from './charts/GeoMapChart';
 import { PictorialBarChart } from './charts/PictorialBarChart';
 import { StackedBarChart } from './charts/StackedBarChart';
 import { StackedColumnChart } from './charts/StackedColumnChart';
