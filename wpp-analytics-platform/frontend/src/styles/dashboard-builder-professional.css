@@ -5,6 +5,8 @@
  * Focus: Smooth transitions, professional shadows, consistent styling
  */
 
+@layer theme {
+
 /* ================================================================
    SMOOTH TRANSITIONS - Applied globally to interactive elements
    ================================================================ */
@@ -608,4 +610,64 @@ a:hover::after {
     box-shadow: none !important;
     border: 1px solid #e0e0e0 !important;
   }
+}
+
+/* ==========================================
+   PAGE SYSTEM STYLES
+   ========================================== */
+
+/* Page wrapper with CSS variables for cascade */
+.page-wrapper {
+  --page-bg: inherit;
+  --page-padding: 24px;
+  --page-gap: 16px;
+
+  background-color: var(--page-bg);
+  padding: var(--page-padding);
+  display: flex;
+  flex-direction: column;
+  gap: var(--page-gap);
+  min-height: 100%;
+}
+
+/* Page canvas (contains rows) */
+.page-canvas {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--page-gap);
+}
+
+/* Inherit page styles in components */
+.dashboard-component {
+  background-color: var(--component-bg, var(--page-bg, #FFFFFF));
+  padding: var(--component-padding, var(--page-padding, 16px));
+}
+
+/* Page style inheritance indicator */
+.style-source-indicator {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.05);
+  color: rgba(0, 0, 0, 0.5);
+}
+
+.style-source-indicator.source-global {
+  background: rgba(25, 29, 99, 0.1);
+  color: #191D63;
+}
+
+.style-source-indicator.source-page {
+  background: rgba(76, 175, 80, 0.1);
+  color: #4CAF50;
+}
+
+.style-source-indicator.source-component {
+  background: rgba(255, 152, 0, 0.1);
+  color: #FF9800;
+}
 }

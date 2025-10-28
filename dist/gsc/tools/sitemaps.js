@@ -29,7 +29,7 @@ export const listSitemapsTool = {
         try {
             const { property } = input;
             // Extract OAuth token from request
-            const oauthToken = extractOAuthToken(input);
+            const oauthToken = await extractOAuthToken(input);
             if (!oauthToken) {
                 throw new Error('OAuth token required for Google Search Console API access');
             }
@@ -96,7 +96,7 @@ export const getSitemapTool = {
         try {
             const { property, sitemapUrl } = input;
             // Extract OAuth token from request
-            const oauthToken = extractOAuthToken(input);
+            const oauthToken = await extractOAuthToken(input);
             if (!oauthToken) {
                 throw new Error('OAuth token required for Google Search Console API access');
             }
@@ -160,7 +160,7 @@ export const submitSitemapTool = {
         try {
             const { property, sitemapUrl, confirmationToken } = input;
             // Extract OAuth token from request
-            const oauthToken = extractOAuthToken(input);
+            const oauthToken = await extractOAuthToken(input);
             if (!oauthToken) {
                 throw new Error('OAuth token required for Google Search Console API access');
             }
@@ -259,7 +259,7 @@ export const deleteSitemapTool = {
         try {
             const { property, sitemapUrl, confirmationToken } = input;
             // Extract OAuth token from request
-            const oauthToken = extractOAuthToken(input);
+            const oauthToken = await extractOAuthToken(input);
             if (!oauthToken) {
                 throw new Error('OAuth token required for Google Search Console API access');
             }

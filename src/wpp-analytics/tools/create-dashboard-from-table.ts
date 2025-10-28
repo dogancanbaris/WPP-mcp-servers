@@ -7,6 +7,7 @@
 
 import { getLogger } from '../../shared/logger.js';
 import { randomBytes } from 'crypto';
+import { createClient } from '@supabase/supabase-js';
 
 const logger = getLogger('wpp-analytics.create-dashboard-from-table');
 
@@ -84,34 +85,114 @@ export const createDashboardFromTableTool = {
 
 **Purpose:**
 Second step in dashboard creation - creates dashboard from data already in BigQuery.
+Supports both single-page and multi-page dashboards.
 
-**Workflow:**
-1. Call this tool with BigQuery table name
-2. Tool returns SQL statements to create dataset + dashboard
-3. Agent executes SQL using mcp__supabase__execute_sql
-4. Dashboard is ready!
+**WHEN TO USE MULTIPLE PAGES:**
+
+Use multi-page dashboards when:
+- Dashboard has 10+ components (split into logical pages)
+- Different audiences need different views (Overview for executives, Details for analysts)
+- Distinct data domains (Traffic, Conversions, Technical in separate pages)
+
+**SINGLE-PAGE EXAMPLE:**
+\`\`\`json
+{
+  "bigqueryTable": "project.dataset.table",
+  "title": "SEO Dashboard",
+  "template": "seo_overview",
+  "dateRange": ["2024-01-01", "2024-12-31"],
+  "platform": "gsc"
+}
+\`\`\`
+
+**MULTI-PAGE EXAMPLE:**
+\`\`\`json
+{
+  "bigqueryTable": "project.dataset.table",
+  "title": "SEO Performance Dashboard",
+  "dateRange": ["2024-01-01", "2024-12-31"],
+  "platform": "gsc",
+  "pages": [
+    {
+      "name": "Overview",
+      "template": "seo_overview_summary"
+    },
+    {
+      "name": "Query Analysis",
+      "template": "seo_queries_detail",
+      "filters": [{ "field": "impressions", "operator": "gt", "values": ["100"] }]
+    },
+    {
+      "name": "Page Performance",
+      "template": "seo_pages_detail"
+    }
+  ]
+}
+\`\`\`
+
+**FILTER HIERARCHY:**
+Filters apply at 3 levels (Component > Page > Global):
+- Global filters: Applied at dashboard level (entire dashboard)
+- Page filters: Override global for specific page
+- Component filters: Override page for specific component
+
+**BEST PRACTICES:**
+1. Start with broad filters (global date range)
+2. Add page filters for page-specific context (e.g., filter to high-traffic pages on one page)
+3. Use component filters sparingly (only when truly different from page)
+4. Keep pages focused (4-8 components per page ideal)
+5. Name pages clearly (Overview, Details, Analysis, Technical, etc.)
 
 **Parameters:**
 - bigqueryTable: Full table reference (e.g., "project.dataset.table")
-- template: Template ID ("seo_overview" recommended)
+- template: Template ID (for single-page dashboards)
+- pages: Array of page configurations (for multi-page dashboards)
 - title: Dashboard title
 - dateRange: [startDate, endDate]
 - platform: Platform type ("gsc", "google_ads", "analytics")
 
 **Returns:**
-SQL statements for agent to execute via mcp__supabase__execute_sql`,
+Dashboard ID, dataset ID, and URLs for viewing/editing`,
 
   inputSchema: {
     type: 'object' as const,
     properties: {
       bigqueryTable: { type: 'string', description: 'Full BigQuery table reference' },
-      template: { type: 'string', description: 'Template ID (seo_overview, etc.)' },
-      rows: { type: 'array', description: 'Custom rows (if not using template)' },
       title: { type: 'string', description: 'Dashboard title (agent writes)' },
       description: { type: 'string', description: 'Executive summary/description text (agent writes full text with formatting)' },
       dateRange: { type: 'array', items: { type: 'string' }, minItems: 2, maxItems: 2 },
       platform: { type: 'string', enum: ['gsc', 'google_ads', 'analytics'] },
-      workspace_id: { type: 'string' }
+      workspace_id: { type: 'string' },
+
+      // NEW: Multi-page support
+      pages: {
+        type: 'array',
+        description: 'Array of page configurations (optional - if not provided, creates single page)',
+        items: {
+          type: 'object',
+          properties: {
+            name: { type: 'string', description: 'Page name' },
+            template: { type: 'string', description: 'Template ID for this page (optional)' },
+            filters: {
+              type: 'array',
+              description: 'Page-level filters (optional)',
+              items: {
+                type: 'object',
+                properties: {
+                  field: { type: 'string' },
+                  operator: { type: 'string' },
+                  values: { type: 'array', items: { type: 'string' } }
+                }
+              }
+            }
+          },
+          required: ['name']
+        }
+      },
+
+      // Keep template for backward compatibility (single page)
+      template: { type: 'string', description: 'Template ID (for single-page dashboards - e.g., "seo_overview")' },
+      rows: { type: 'array', description: 'Custom rows (advanced usage - if not using template)' }
     },
     required: ['bigqueryTable', 'title', 'dateRange', 'platform']
   },
@@ -123,67 +204,163 @@ SQL statements for agent to execute via mcp__supabase__execute_sql`,
       const datasetId = generateUUID();
       const [projectId, datasetIdBq, tableId] = input.bigqueryTable.split('.');
 
-      // Load template or use custom
-      const templateRows = input.template === 'seo_overview' ? SEO_OVERVIEW_TEMPLATE.rows : input.rows;
-
-      if (!templateRows) {
-        return { success: false, error: 'Either template or rows required' };
-      }
-
       // Use agent-provided description or default
       const description = input.description || 'Dashboard showing performance metrics for the selected time period.';
 
-      // Replace variables
-      let configJson = JSON.stringify({ title: input.title, rows: templateRows, theme: { primaryColor: '#191D63' }});
-      configJson = configJson
-        .replace(/\{\{DATASET_ID\}\}/g, datasetId)
-        .replace(/\{\{DATE_RANGE\}\}/g, JSON.stringify(input.dateRange))
-        .replace(/\{\{TITLE\}\}/g, input.title.replace(/"/g, '\\"'))
-        .replace(/\{\{DESCRIPTION\}\}/g, description.replace(/"/g, '\\"')); // Agent-written text
+      // Helper function to recursively replace template variables
+      function replaceTemplateVars(obj: any): any {
+        if (typeof obj === 'string') {
+          return obj
+            .replace(/\{\{DATASET_ID\}\}/g, datasetId)
+            .replace(/\{\{DATE_RANGE\}\}/g, JSON.stringify(input.dateRange))
+            .replace(/\{\{TITLE\}\}/g, input.title)
+            .replace(/\{\{DESCRIPTION\}\}/g, description);
+        }
+        if (Array.isArray(obj)) {
+          return obj.map(replaceTemplateVars);
+        }
+        if (obj && typeof obj === 'object') {
+          const result: any = {};
+          for (const key in obj) {
+            result[key] = replaceTemplateVars(obj[key]);
+          }
+          return result;
+        }
+        return obj;
+      }
 
-      // Generate SQL statements
-      const sql1 = `INSERT INTO datasets (id, workspace_id, name, bigquery_project_id, bigquery_dataset_id, bigquery_table_id, platform_metadata, refresh_interval_days)
-VALUES (
-  '${datasetId}',
-  '${workspaceId}',
-  '${input.title} - Dataset',
-  '${projectId}',
-  '${datasetIdBq}',
-  '${tableId}',
-  '{"platform": "${input.platform}", "property": "auto-created"}'::jsonb,
-  1
-) ON CONFLICT (id) DO NOTHING
-RETURNING id;`;
+      // Helper function to get template rows by template ID
+      function getTemplateRows(templateId: string) {
+        switch (templateId) {
+          case 'seo_overview':
+          case 'seo_overview_summary':
+          case 'seo_queries_detail':
+          case 'seo_pages_detail':
+            return SEO_OVERVIEW_TEMPLATE.rows;
+          // Add more templates as needed
+          default:
+            return SEO_OVERVIEW_TEMPLATE.rows;
+        }
+      }
 
-      const sql2 = `INSERT INTO dashboards (id, name, description, workspace_id, dataset_id, config)
-VALUES (
-  '${dashboardId}',
-  '${input.title}',
-  'Dashboard created via MCP tool',
-  '${workspaceId}',
-  '${datasetId}',
-  '${configJson.replace(/'/g, "''")}'::jsonb
-)
-RETURNING id, name;`;
+      // DETECT: Multi-page vs single-page
+      let pages: any[];
 
-      logger.info('[create_dashboard_from_table] Generated SQL', { dashboard_id: dashboardId });
+      if (input.pages && Array.isArray(input.pages) && input.pages.length > 0) {
+        // MULTI-PAGE MODE
+        pages = input.pages.map((pageInput: any, index: number) => {
+          const templateRows = pageInput.template
+            ? getTemplateRows(pageInput.template)
+            : SEO_OVERVIEW_TEMPLATE.rows;
+
+          return {
+            id: generateUUID(),
+            name: pageInput.name,
+            order: index,
+            rows: replaceTemplateVars(templateRows),
+            filters: pageInput.filters || [],
+            createdAt: new Date().toISOString()
+          };
+        });
+      } else {
+        // SINGLE-PAGE MODE (backward compatible)
+        const templateRows = input.template === 'seo_overview' ? SEO_OVERVIEW_TEMPLATE.rows : input.rows;
+
+        if (!templateRows) {
+          return { success: false, error: 'Either template, rows, or pages required' };
+        }
+
+        pages = [
+          {
+            id: generateUUID(),
+            name: 'Page 1',
+            order: 0,
+            rows: replaceTemplateVars(templateRows),
+            filters: [],
+            createdAt: new Date().toISOString()
+          }
+        ];
+      }
+
+      const config = {
+        title: input.title,
+        pages, // NEW: Use pages instead of rows
+        theme: { primaryColor: '#191D63' }
+      };
+
+      // Initialize Supabase from ENV
+      const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+      const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+      if (!supabaseUrl || !supabaseKey) {
+        return {
+          success: false,
+          error: 'Supabase credentials not configured. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY environment variables.'
+        };
+      }
+
+      const supabase = createClient(supabaseUrl, supabaseKey, {
+        auth: { persistSession: false }
+      });
+
+      // Insert dataset
+      const { error: datasetError } = await supabase
+        .from('datasets')
+        .insert({
+          id: datasetId,
+          workspace_id: workspaceId,
+          name: `${input.title} - Dataset`,
+          bigquery_project_id: projectId,
+          bigquery_dataset_id: datasetIdBq,
+          bigquery_table_id: tableId,
+          platform_metadata: { platform: input.platform, property: 'auto-created' },
+          refresh_interval_days: 1
+        })
+        .select()
+        .single();
+
+      if (datasetError) {
+        logger.error('[create_dashboard_from_table] Dataset insert failed', { error: datasetError });
+        return {
+          success: false,
+          error: `Failed to create dataset: ${datasetError.message}`
+        };
+      }
+
+      // Insert dashboard
+      const { error: dashboardError } = await supabase
+        .from('dashboards')
+        .insert({
+          id: dashboardId,
+          name: input.title,
+          description: 'Dashboard created via MCP tool',
+          workspace_id: workspaceId,
+          dataset_id: datasetId,
+          config: config
+        })
+        .select()
+        .single();
+
+      if (dashboardError) {
+        logger.error('[create_dashboard_from_table] Dashboard insert failed', { error: dashboardError });
+        return {
+          success: false,
+          error: `Failed to create dashboard: ${dashboardError.message}`
+        };
+      }
+
+      logger.info('[create_dashboard_from_table] Dashboard created successfully', {
+        dashboard_id: dashboardId,
+        dataset_id: datasetId
+      });
 
       return {
         success: true,
         dashboard_id: dashboardId,
         dataset_id: datasetId,
-        dashboard_url: `/dashboard/${dashboardId}/builder`,
-        view_url: `/dashboard/${dashboardId}/view`,
-        instructions: 'Execute these SQL statements using mcp__supabase__execute_sql in order:',
-        sql_statements: [
-          { step: 1, description: 'Register dataset', sql: sql1 },
-          { step: 2, description: 'Create dashboard', sql: sql2 }
-        ],
-        agent_workflow: [
-          'Step 1: mcp__supabase__execute_sql(sql_statements[0].sql)',
-          'Step 2: mcp__supabase__execute_sql(sql_statements[1].sql)',
-          'Step 3: Navigate to dashboard_url'
-        ]
+        dashboard_url: `http://localhost:3000/dashboard/${dashboardId}/builder`,
+        view_url: `http://localhost:3000/dashboard/${dashboardId}/view`,
+        message: `Dashboard "${input.title}" created successfully! Open in browser at the URLs above.`
       };
 
     } catch (error) {

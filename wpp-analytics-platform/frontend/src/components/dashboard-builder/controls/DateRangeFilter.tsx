@@ -149,46 +149,61 @@ const DATE_PRESETS: DatePreset[] = [
     value: 'last7days',
     label: 'Last 7 days',
     category: 'relative',
-    getDateRange: () => ({
-      startDate: startOfDay(subDays(new Date(), 6)),
-      endDate: endOfDay(new Date()),
-    }),
+    getDateRange: () => {
+      const yesterday = subDays(new Date(), 1);
+      return {
+        startDate: startOfDay(subDays(yesterday, 6)),
+        endDate: endOfDay(yesterday),
+      };
+    },
   },
   {
     value: 'last14days',
     label: 'Last 14 days',
     category: 'relative',
-    getDateRange: () => ({
-      startDate: startOfDay(subDays(new Date(), 13)),
-      endDate: endOfDay(new Date()),
-    }),
+    getDateRange: () => {
+      const yesterday = subDays(new Date(), 1);
+      return {
+        startDate: startOfDay(subDays(yesterday, 13)),
+        endDate: endOfDay(yesterday),
+      };
+    },
   },
   {
     value: 'last28days',
     label: 'Last 28 days',
     category: 'relative',
-    getDateRange: () => ({
-      startDate: startOfDay(subDays(new Date(), 27)),
-      endDate: endOfDay(new Date()),
-    }),
+    getDateRange: () => {
+      const yesterday = subDays(new Date(), 1);
+      return {
+        startDate: startOfDay(subDays(yesterday, 27)),
+        endDate: endOfDay(yesterday),
+      };
+    },
   },
   {
     value: 'last30days',
     label: 'Last 30 days',
     category: 'relative',
-    getDateRange: () => ({
-      startDate: startOfDay(subDays(new Date(), 29)),
-      endDate: endOfDay(new Date()),
-    }),
+    getDateRange: () => {
+      const yesterday = subDays(new Date(), 1);
+      return {
+        startDate: startOfDay(subDays(yesterday, 29)),
+        endDate: endOfDay(yesterday),
+      };
+    },
   },
   {
     value: 'last90days',
     label: 'Last 90 days',
     category: 'relative',
-    getDateRange: () => ({
-      startDate: startOfDay(subDays(new Date(), 89)),
-      endDate: endOfDay(new Date()),
-    }),
+    getDateRange: () => {
+      const yesterday = subDays(new Date(), 1);
+      return {
+        startDate: startOfDay(subDays(yesterday, 89)),
+        endDate: endOfDay(yesterday),
+      };
+    },
   },
   {
     value: 'thisWeek',

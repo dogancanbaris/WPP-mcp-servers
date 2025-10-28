@@ -149,7 +149,7 @@ See `src/ads/tools/budgets.ts` - `updateBudgetTool`
 
 ### Example 2: Campaign Status Update (Complete Implementation)
 
-See `src/ads/tools/campaigns.ts` - `updateCampaignStatusTool`
+See `src/ads/tools/campaigns/update-status.tool.ts` - `updateCampaignStatusTool`
 
 **Key Features:**
 - Vagueness detection (ensures specific campaign ID)
@@ -522,7 +522,7 @@ For each write operation tool:
 
 See completed implementations:
 - `src/ads/tools/budgets.ts` - Both create and update
-- `src/ads/tools/campaigns.ts` - Status updates
+- `src/ads/tools/campaigns/update-status.tool.ts` - Status updates
 
 Or refer to safety feature documentation:
 - `src/shared/approval-enforcer.ts` - Approval system

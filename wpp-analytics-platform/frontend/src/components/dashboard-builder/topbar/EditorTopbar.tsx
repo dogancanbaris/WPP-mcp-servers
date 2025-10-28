@@ -5,6 +5,8 @@ import Image from 'next/image';
 import { useDashboardStore } from '@/store/dashboardStore';
 import { MenuButton } from './MenuButton';
 import { ToolbarSection } from './ToolbarButton';
+import { Button } from '@/components/ui/button';
+import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import {
   createFileMenuItems,
@@ -14,7 +16,7 @@ import {
   PAGE_MENU_ITEMS,
   getArrangeMenuItems,
   RESOURCE_MENU_ITEMS,
-  HELP_MENU_ITEMS,
+  createHelpMenuItems,
 } from './menu-definitions';
 import {
   TOOLBAR_LEFT,
@@ -27,6 +29,15 @@ import { ThemeEditor } from '../ThemeEditor';
 import { LayoutPicker } from '../canvas/LayoutPicker';
 import { ComponentPicker } from '../dialogs/ComponentPicker';
 import { ShareDialog } from '../dialogs/ShareDialog';
+import { KeyboardShortcutsDialog } from '../KeyboardShortcutsDialog';
+import { ReportIssueDialog } from '../dialogs/ReportIssueDialog';
+import { FeedbackDialog } from '../dialogs/FeedbackDialog';
+import { ChangelogDialog } from '../dialogs/ChangelogDialog';
+import { InsertTextDialog } from '../dialogs/InsertTextDialog';
+import { InsertImageDialog } from '../dialogs/InsertImageDialog';
+import { InsertShapeDialog } from '../dialogs/InsertShapeDialog';
+import { InsertEmbedDialog } from '../dialogs/InsertEmbedDialog';
+import { NewDashboardDialog } from '../dialogs/NewDashboardDialog';
 import { useKeyboardShortcuts } from '@/hooks/use-keyboard-shortcuts';
 import { useFilterStore } from '@/store/filterStore';
 import { useViewActions } from '../actions/view-actions';
@@ -56,17 +67,24 @@ export const EditorTopbar: React.FC<EditorTopbarProps> = ({ dashboardId }) => {
   const [titleValue, setTitleValue] = useState(config.title);
 
   // Feature dialog states
+  const [isNewDashboardOpen, setIsNewDashboardOpen] = useState(false);
   const [isVersionHistoryOpen, setIsVersionHistoryOpen] = useState(false);
   const [isThemeEditorOpen, setIsThemeEditorOpen] = useState(false);
   const [isLayoutPickerOpen, setIsLayoutPickerOpen] = useState(false);
   const [isComponentPickerOpen, setIsComponentPickerOpen] = useState(false);
   const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
+  const [isKeyboardShortcutsOpen, setIsKeyboardShortcutsOpen] = useState(false);
+
+  // Help menu dialog states
+  const [isReportIssueOpen, setIsReportIssueOpen] = useState(false);
+  const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
+  const [isChangelogOpen, setIsChangelogOpen] = useState(false);
 
   // Global filters store
   const { isFilterBarVisible, toggleFilterBar } = useFilterStore();
 
-  // Action hooks
-  const fileActions = useFileActions();
+  // Action hooks - Pass callback to open new dashboard dialog
+  const fileActions = useFileActions(() => setIsNewDashboardOpen(true));
   const editActions = useEditActions();
   const viewActions = useViewActions();
   const insertActions = useInsertActions();
@@ -162,14 +180,11 @@ export const EditorTopbar: React.FC<EditorTopbarProps> = ({ dashboardId }) => {
 
   const editMenuItems = createEditMenuItems(editActions);
 
-  const connectedHelpMenu = HELP_MENU_ITEMS.map((item) => {
-    if ('label' in item && item.label === 'Keyboard shortcuts') {
-      return {
-        ...item,
-        action: () => console.log('Keyboard shortcuts - dialog temporarily disabled'),
-      };
-    }
-    return item;
+  const helpMenuItems = createHelpMenuItems({
+    onReportIssue: () => setIsReportIssueOpen(true),
+    onSendFeedback: () => setIsFeedbackOpen(true),
+    onWhatsNew: () => setIsChangelogOpen(true),
+    onKeyboardShortcuts: () => setIsKeyboardShortcutsOpen(true),
   });
 
   // Connect toolbar buttons
@@ -354,9 +369,9 @@ export const EditorTopbar: React.FC<EditorTopbarProps> = ({ dashboardId }) => {
   });
 
   return (
-    <div className="topbar flex flex-col w-full bg-background border-b shrink-0 z-50">
-      {/* ROW 1: MENU BAR */}
-      <div className="flex items-center h-10 border-b px-4 gap-2 bg-background">
+    <div className="topbar flex flex-col w-full shrink-0 z-50">
+      {/* ROW 1: MENU BAR - Professional Spacing */}
+      <div className="topbar-row-1 flex items-center px-4 lg:px-6 gap-2 bg-white border-b">
         <div className="flex items-center shrink-0">
           <Image
             src="/wpp-logo.svg"
@@ -368,78 +383,65 @@ export const EditorTopbar: React.FC<EditorTopbarProps> = ({ dashboardId }) => {
           />
         </div>
 
+        <Separator orientation="vertical" className="mx-2 h-4" />
+
         <div className="flex items-center">
           {isEditingTitle ? (
             <input
               type="text"
+              data-title-input
               value={titleValue}
               onChange={(e) => setTitleValue(e.target.value)}
               onBlur={handleTitleBlur}
               onKeyDown={handleTitleKeyDown}
               autoFocus
-              className={cn(
-                'h-8 px-3 text-sm font-medium',
-                'border border-primary rounded-md',
-                'focus:outline-none focus:ring-2 focus:ring-primary/20',
-                'min-w-[200px] max-w-[400px]',
-                'transition-all'
-              )}
+              className="h-9 px-3 text-base font-semibold border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring min-w-[200px] max-w-[400px]"
             />
           ) : (
             <button
               onClick={() => setIsEditingTitle(true)}
-              className={cn(
-                'h-8 px-3 text-sm font-medium',
-                'hover:bg-muted rounded-md',
-                'transition-colors'
-              )}
+              className="dashboard-title-button"
             >
               {config.title}
             </button>
           )}
         </div>
 
-        <div className="h-5 w-px bg-border mx-1" />
-
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 menu-group">
           <MenuButton label="File" items={fileMenuItems} />
           <MenuButton label="Edit" items={editMenuItems} />
           <MenuButton label="View" items={getViewMenuItems(viewActions)} />
         </div>
 
-        <div className="h-5 w-px bg-border mx-1" />
+        <Separator orientation="vertical" className="mx-2 h-4" />
 
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 menu-group">
           <MenuButton label="Insert" items={getInsertMenuItems(insertActions)} />
           <MenuButton label="Page" items={PAGE_MENU_ITEMS} />
           <MenuButton label="Arrange" items={getArrangeMenuItems(arrangeActions)} />
         </div>
 
-        <div className="h-5 w-px bg-border mx-1" />
+        <Separator orientation="vertical" className="mx-2 h-4" />
 
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 menu-group">
           <MenuButton label="Resource" items={RESOURCE_MENU_ITEMS} />
-          <MenuButton label="Help" items={connectedHelpMenu} />
+          <MenuButton label="Help" items={helpMenuItems} />
         </div>
       </div>
 
-      {/* ROW 2: TOOLBAR */}
-      <div className="flex items-center h-12 px-4 justify-between bg-muted/30 border-t">
+      {/* ROW 2: TOOLBAR - Professional Spacing */}
+      <div className="topbar-row-2 flex items-center px-4 lg:px-6 justify-between border-t">
         <ToolbarSection items={connectedToolbarLeft} />
 
         <div className="flex items-center gap-3">
-          <button
+          <Button
             onClick={() => setIsLayoutPickerOpen(true)}
-            className={cn(
-              'h-9 px-3 py-1.5 text-sm font-medium',
-              'border border-input bg-background rounded-md',
-              'hover:bg-accent hover:text-accent-foreground hover:border-accent',
-              'transition-all duration-200',
-              'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1'
-            )}
+            variant="outline"
+            size="sm"
+            className="gap-2"
           >
             + Add Row
-          </button>
+          </Button>
           <ToolbarSection items={connectedToolbarCenter} />
         </div>
 
@@ -474,6 +476,57 @@ export const EditorTopbar: React.FC<EditorTopbarProps> = ({ dashboardId }) => {
         onClose={() => setIsShareDialogOpen(false)}
         dashboardId={dashboardId}
         dashboardTitle={config.title}
+      />
+
+      <KeyboardShortcutsDialog
+        open={isKeyboardShortcutsOpen}
+        onOpenChange={setIsKeyboardShortcutsOpen}
+      />
+
+      <ReportIssueDialog
+        open={isReportIssueOpen}
+        onClose={() => setIsReportIssueOpen(false)}
+      />
+
+      <FeedbackDialog
+        open={isFeedbackOpen}
+        onClose={() => setIsFeedbackOpen(false)}
+      />
+
+      <ChangelogDialog
+        open={isChangelogOpen}
+        onClose={() => setIsChangelogOpen(false)}
+      />
+
+      {/* New Dashboard Dialog */}
+      <NewDashboardDialog
+        open={isNewDashboardOpen}
+        onClose={() => setIsNewDashboardOpen(false)}
+      />
+
+      {/* Content Dialogs */}
+      <InsertTextDialog
+        open={insertActions.contentDialogState.open && insertActions.contentDialogState.contentType === 'text'}
+        onClose={insertActions.closeContentDialog}
+        onInsert={insertActions.handleContentInsert}
+      />
+
+      <InsertImageDialog
+        open={insertActions.contentDialogState.open && insertActions.contentDialogState.contentType === 'image'}
+        onClose={insertActions.closeContentDialog}
+        onInsert={insertActions.handleContentInsert}
+      />
+
+      <InsertShapeDialog
+        open={insertActions.contentDialogState.open && ['rectangle', 'circle', 'line'].includes(insertActions.contentDialogState.contentType)}
+        onClose={insertActions.closeContentDialog}
+        onInsert={insertActions.handleContentInsert}
+      />
+
+      <InsertEmbedDialog
+        open={insertActions.contentDialogState.open && insertActions.contentDialogState.contentType === 'embed'}
+        onClose={insertActions.closeContentDialog}
+        onInsert={insertActions.handleContentInsert}
       />
     </div>
   );

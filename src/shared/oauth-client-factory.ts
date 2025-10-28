@@ -216,7 +216,7 @@ export async function autoRefreshToken(): Promise<string | null> {
  * TEMPORARY HACK: Until OMA is connected, load token from file with auto-refresh
  * Once OMA is integrated, it will pass __oauthToken in every request
  */
-export function extractOAuthToken(input: any): string | null {
+export async function extractOAuthToken(input: any): Promise<string | null> {
   // If OMA provides token, use it
   if (input.__oauthToken) {
     return input.__oauthToken;
@@ -246,7 +246,8 @@ export function extractOAuthToken(input: any): string | null {
     });
 
     if (isExpired) {
-      logger.warn('[extractOAuthToken] Token is EXPIRED! Run: node refresh-oauth-token.cjs');
+      logger.warn('[extractOAuthToken] Token expired, auto-refreshing...');
+      return await autoRefreshToken();
     }
 
     return tokens.accessToken;

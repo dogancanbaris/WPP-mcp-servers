@@ -32,7 +32,7 @@ export const listDatasetsTool = {
     async handler(_input) {
         try {
             // Extract OAuth token from request
-            const oauthToken = extractOAuthToken(_input);
+            const oauthToken = await extractOAuthToken(_input);
             if (!oauthToken) {
                 throw new Error('OAuth token required for BigQuery API access');
             }
@@ -108,7 +108,7 @@ export const createDatasetTool = {
                 inputParams: { datasetId },
             });
             // Extract OAuth token from request
-            const oauthToken = extractOAuthToken(input);
+            const oauthToken = await extractOAuthToken(input);
             if (!oauthToken) {
                 throw new Error('OAuth token required for BigQuery API access');
             }
@@ -197,7 +197,7 @@ export const runQueryTool = {
         try {
             const { sql, maxResults = 1000 } = input;
             // Extract OAuth token from request
-            const oauthToken = extractOAuthToken(input);
+            const oauthToken = await extractOAuthToken(input);
             if (!oauthToken) {
                 throw new Error('OAuth token required for BigQuery API access');
             }

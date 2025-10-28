@@ -9,9 +9,20 @@ This module provides MCP tools for programmatically creating and managing dashbo
 ```
 src/wpp-analytics/
 ├── tools/
-│   ├── dashboards.ts    # Main dashboard management tools
-│   └── index.ts         # Export all tools
-└── README.md           # This file
+│   ├── dashboards/              # Dashboard management tools (modular)
+│   │   ├── types.ts            # TypeScript type definitions
+│   │   ├── schemas.ts          # Zod validation schemas
+│   │   ├── helpers.ts          # Utility functions
+│   │   ├── templates.ts        # Pre-built dashboard templates
+│   │   ├── create-dashboard.tool.ts    # Create dashboard tool
+│   │   ├── update-dashboard.tool.ts    # Update dashboard tool
+│   │   ├── list-templates.tool.ts      # List templates tool
+│   │   └── index.ts            # Main exports
+│   ├── create-dashboard-from-table.ts  # Table-based dashboard creation
+│   ├── push-data-to-bigquery.ts        # Data pipeline tool
+│   ├── analyze-data-insights.ts        # Data analysis tool
+│   └── index.ts                # Export all tools
+└── README.md                   # This file
 ```
 
 ## Available Tools
@@ -372,6 +383,109 @@ await updateDashboardLayoutTool.handler({
   supabaseUrl: process.env.SUPABASE_URL,
   supabaseKey: process.env.SUPABASE_SERVICE_ROLE_KEY
 });
+```
+
+---
+
+## Multi-Page Dashboards
+
+The WPP Analytics Platform supports multi-page dashboards for better organization.
+
+### When to Use Pages
+
+Create multiple pages when:
+- You have 10+ components and want logical grouping
+- Different audiences need different views (executives vs analysts)
+- You have distinct data domains (Traffic, Conversions, Technical)
+
+### Page Examples
+
+**SEO Dashboard (3 pages):**
+1. **Overview Page** - Executive summary with key metrics
+2. **Query Analysis** - Deep dive into search queries
+3. **Page Performance** - Landing page analysis
+
+**Google Ads Dashboard (4 pages):**
+1. **Campaign Overview** - High-level performance
+2. **Campaign Details** - Campaign-by-campaign breakdown
+3. **Keyword Analysis** - Keyword performance and quality scores
+4. **Conversion Tracking** - Conversion funnel analysis
+
+### Filter Inheritance
+
+Filters cascade through 3 levels:
+
+```
+Global Filters (dashboard-wide)
+    ↓ (inherit or override)
+Page Filters (page-specific)
+    ↓ (inherit or override)
+Component Filters (component-specific)
+```
+
+**Example:**
+- Global: Show last 90 days
+- Page 2: Override to last 30 days (just for that page)
+- Component on Page 2: Override to all time (just that component)
+
+### Creating Multi-Page Dashboards
+
+**Single-Page (Backward Compatible):**
+```typescript
+await createDashboardFromTableTool.handler({
+  bigqueryTable: 'project.dataset.gsc_data',
+  title: 'SEO Dashboard',
+  template: 'seo_overview',
+  dateRange: ['2024-01-01', '2024-12-31'],
+  platform: 'gsc'
+});
+```
+
+**Multi-Page (New):**
+```typescript
+await createDashboardFromTableTool.handler({
+  bigqueryTable: 'project.dataset.gsc_data',
+  title: 'SEO Performance Dashboard',
+  dateRange: ['2024-01-01', '2024-12-31'],
+  platform: 'gsc',
+  pages: [
+    {
+      name: 'Overview',
+      template: 'seo_overview_summary'
+    },
+    {
+      name: 'Query Analysis',
+      template: 'seo_queries_detail',
+      filters: [
+        { field: 'impressions', operator: 'gt', values: ['100'] }
+      ]
+    },
+    {
+      name: 'Page Performance',
+      template: 'seo_pages_detail'
+    }
+  ]
+});
+```
+
+**With Page Filters:**
+```typescript
+pages: [
+  {
+    name: 'High Traffic Pages',
+    template: 'seo_pages_detail',
+    filters: [
+      { field: 'clicks', operator: 'gt', values: ['1000'] }
+    ]
+  },
+  {
+    name: 'Low Traffic Pages',
+    template: 'seo_pages_detail',
+    filters: [
+      { field: 'clicks', operator: 'lt', values: ['100'] }
+    ]
+  }
+]
 ```
 
 ---

@@ -7,6 +7,7 @@
 
 import { create } from 'zustand';
 import { devtools, persist } from 'zustand/middleware';
+import { getPageCacheManager } from '@/lib/cache/page-cache-manager';
 
 // Filter Types
 export type FilterOperator =
@@ -31,8 +32,12 @@ export interface DateRangeFilter {
   type: 'dateRange';
   label: string;
   dimension: string; // e.g., 'GoogleAds.date', 'SearchConsole.date'
-  startDate: string; // ISO 8601 format
-  endDate: string;
+
+  // NEW: Store preset name OR custom dates (not both)
+  preset?: keyof typeof DATE_RANGE_PRESETS;
+  customStartDate?: string;
+  customEndDate?: string;
+
   granularity?: 'day' | 'week' | 'month' | 'quarter' | 'year';
   enabled: boolean;
   scope?: 'all-pages' | 'current-page'; // Filter scope
@@ -83,36 +88,39 @@ export const DATE_RANGE_PRESETS = {
   last7Days: {
     label: 'Last 7 Days',
     getValue: () => {
-      const end = new Date();
-      const start = new Date();
-      start.setDate(start.getDate() - 7);
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1); // End at YESTERDAY
+      const start = new Date(yesterday);
+      start.setDate(start.getDate() - 6); // 7 days total (yesterday - 6)
       return {
         startDate: start.toISOString().split('T')[0],
-        endDate: end.toISOString().split('T')[0],
+        endDate: yesterday.toISOString().split('T')[0],
       };
     },
   },
   last30Days: {
     label: 'Last 30 Days',
     getValue: () => {
-      const end = new Date();
-      const start = new Date();
-      start.setDate(start.getDate() - 30);
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      const start = new Date(yesterday);
+      start.setDate(start.getDate() - 29); // 30 days total
       return {
         startDate: start.toISOString().split('T')[0],
-        endDate: end.toISOString().split('T')[0],
+        endDate: yesterday.toISOString().split('T')[0],
       };
     },
   },
   last90Days: {
     label: 'Last 90 Days',
     getValue: () => {
-      const end = new Date();
-      const start = new Date();
-      start.setDate(start.getDate() - 90);
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      const start = new Date(yesterday);
+      start.setDate(start.getDate() - 89); // 90 days total
       return {
         startDate: start.toISOString().split('T')[0],
-        endDate: end.toISOString().split('T')[0],
+        endDate: yesterday.toISOString().split('T')[0],
       };
     },
   },
@@ -171,6 +179,26 @@ export const DATE_RANGE_PRESETS = {
   },
 };
 
+/**
+ * Get actual date range from filter (evaluates presets dynamically)
+ * This makes dashboards "live" - dates update daily for preset filters
+ */
+export const getDateRangeFromFilter = (filter: DateRangeFilter): { startDate: string; endDate: string } => {
+  if (filter.preset && filter.preset !== 'custom') {
+    const presetDef = DATE_RANGE_PRESETS[filter.preset];
+    if (presetDef) {
+      const { startDate, endDate } = presetDef.getValue(); // ✅ EVALUATED DAILY
+      return { startDate, endDate };
+    }
+  }
+
+  // Custom range (static dates)
+  return {
+    startDate: filter.customStartDate || '',
+    endDate: filter.customEndDate || '',
+  };
+};
+
 interface FilterState {
   // State
   filters: GlobalFilter[];
@@ -224,41 +252,85 @@ export const useFilterStore = create<FilterState>()(
         activeDateRange: null, // Simple active date range for dashboard-wide filtering
 
         // Add a new filter
-        addFilter: (filter) =>
+        addFilter: (filter) => {
           set((state) => ({
             filters: [...state.filters, { ...filter, scope: filter.scope || state.filterScope } as GlobalFilter],
-          }), false, 'addFilter'),
+          }), false, 'addFilter');
+
+          // Invalidate cache when filter added
+          try {
+            const cacheManager = getPageCacheManager();
+            cacheManager.clearAll();
+          } catch (e) {
+            console.debug('PageCacheManager not available during filter change');
+          }
+        },
 
         // Update an existing filter
-        updateFilter: (id, updates) =>
+        updateFilter: (id, updates) => {
           set((state) => ({
             filters: state.filters.map((f) =>
               f.id === id ? { ...f, ...updates } : f
             ),
-          }), false, 'updateFilter'),
+          }), false, 'updateFilter');
+
+          // Invalidate cache when filter updated
+          try {
+            const cacheManager = getPageCacheManager();
+            cacheManager.clearAll();
+          } catch (e) {
+            console.debug('PageCacheManager not available during filter change');
+          }
+        },
 
         // Remove a filter
-        removeFilter: (id) =>
+        removeFilter: (id) => {
           set((state) => ({
             filters: state.filters.filter((f) => f.id !== id),
-          }), false, 'removeFilter'),
+          }), false, 'removeFilter');
+
+          // Invalidate cache when filter removed
+          try {
+            const cacheManager = getPageCacheManager();
+            cacheManager.clearAll();
+          } catch (e) {
+            console.debug('PageCacheManager not available during filter change');
+          }
+        },
 
         // Toggle filter enabled/disabled
-        toggleFilter: (id) =>
+        toggleFilter: (id) => {
           set((state) => ({
             filters: state.filters.map((f) =>
               f.id === id ? { ...f, enabled: !f.enabled } : f
             ),
-          }), false, 'toggleFilter'),
+          }), false, 'toggleFilter');
+
+          // Invalidate cache when filter toggled
+          try {
+            const cacheManager = getPageCacheManager();
+            cacheManager.clearAll();
+          } catch (e) {
+            console.debug('PageCacheManager not available during filter change');
+          }
+        },
 
         // Clear all filters
-        clearAllFilters: () =>
-          set({ filters: [], activePreset: null }, false, 'clearAllFilters'),
+        clearAllFilters: () => {
+          set({ filters: [], activePreset: null }, false, 'clearAllFilters');
+
+          // Invalidate cache when all filters cleared
+          try {
+            const cacheManager = getPageCacheManager();
+            cacheManager.clearAll();
+          } catch (e) {
+            console.debug('PageCacheManager not available during filter change');
+          }
+        },
 
         // Set date range from preset
         setDateRangePreset: (preset) => {
           const presetData = DATE_RANGE_PRESETS[preset];
-          const { startDate, endDate } = presetData.getValue();
 
           set((state) => {
             // Remove existing date range filters
@@ -267,17 +339,18 @@ export const useFilterStore = create<FilterState>()(
             );
 
             // Add new date range filter if not custom (custom requires manual input)
-            if (preset !== 'custom' && startDate && endDate) {
+            if (preset !== 'custom') {
               const dateFilter: DateRangeFilter = {
                 id: `dateRange-${Date.now()}`,
                 type: 'dateRange',
                 label: presetData.label,
                 dimension: 'date', // Generic, will be mapped per chart
-                startDate,
-                endDate,
+                preset,  // ✅ Store preset name (not dates!)
                 granularity: 'day',
                 enabled: true,
+                scope: state.filterScope,
               };
+
               return {
                 filters: [...filtersWithoutDateRange, dateFilter],
                 activePreset: preset,
@@ -303,10 +376,12 @@ export const useFilterStore = create<FilterState>()(
               type: 'dateRange',
               label: `${startDate} to ${endDate}`,
               dimension: 'date',
-              startDate,
-              endDate,
+              preset: 'custom',
+              customStartDate: startDate,  // ✅ Store as custom
+              customEndDate: endDate,
               granularity: 'day',
               enabled: true,
+              scope: state.filterScope,
             };
 
             return {
@@ -358,8 +433,18 @@ export const useFilterStore = create<FilterState>()(
           set({ isFilterBarVisible: visible }, false, 'setFilterBarVisible'),
 
         // Simple active date range setter (for dashboard-wide filtering)
-        setActiveDateRange: (range) =>
-          set({ activeDateRange: range }, false, 'setActiveDateRange'),
+        setActiveDateRange: (range) => {
+          set({ activeDateRange: range }, false, 'setActiveDateRange');
+
+          // Invalidate all page caches when global date range changes
+          try {
+            const cacheManager = getPageCacheManager();
+            cacheManager.clearAll();
+          } catch (e) {
+            // Cache manager not initialized yet (startup)
+            console.debug('PageCacheManager not available during filter change');
+          }
+        },
 
         // Get only active (enabled) filters
         getActiveFilters: () => {
@@ -372,10 +457,13 @@ export const useFilterStore = create<FilterState>()(
 
           return activeFilters.map((filter) => {
             if (filter.type === 'dateRange') {
+              // ✅ EVALUATE PRESET DYNAMICALLY (daily auto-update!)
+              const { startDate, endDate } = getDateRangeFromFilter(filter);
+
               return {
                 member: filter.dimension,
                 operator: 'inDateRange',
-                values: [filter.startDate, filter.endDate],
+                values: [startDate, endDate],
               };
             } else if (filter.type === 'dimension') {
               return {
@@ -472,10 +560,11 @@ export const getOperatorLabel = (operator: FilterOperator): string => {
  */
 export const validateFilter = (filter: GlobalFilter): { valid: boolean; error?: string } => {
   if (filter.type === 'dateRange') {
-    if (!filter.startDate || !filter.endDate) {
+    const { startDate, endDate } = getDateRangeFromFilter(filter);
+    if (!startDate || !endDate) {
       return { valid: false, error: 'Start and end dates are required' };
     }
-    if (new Date(filter.startDate) > new Date(filter.endDate)) {
+    if (new Date(startDate) > new Date(endDate)) {
       return { valid: false, error: 'Start date must be before end date' };
     }
   } else if (filter.type === 'dimension') {

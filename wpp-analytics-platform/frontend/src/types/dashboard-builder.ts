@@ -1,3 +1,5 @@
+import { PageConfig } from './page-config';
+
 // Column width options for responsive grid
 export type ColumnWidth = '1/1' | '1/2' | '1/3' | '2/3' | '1/4' | '3/4';
 
@@ -149,6 +151,36 @@ export interface ComponentConfig {
   filters?: FilterConfig[];
   dateRange?: DateRangeConfig;
 
+  // Filter cascade overrides (for multi-page dashboards)
+  /**
+   * Whether to inherit global dashboard filters
+   * @default true - Component will use global filters
+   * If false, component ignores global filters (but may still use page filters)
+   */
+  useGlobalFilters?: boolean;
+
+  /**
+   * Whether to inherit page-level filters
+   * @default true - Component will use page filters
+   * If false, component ignores page filters (but may still use global filters)
+   */
+  usePageFilters?: boolean;
+
+  /**
+   * Component-specific filter overrides
+   * These filters apply in addition to or instead of global/page filters
+   * depending on useGlobalFilters and usePageFilters settings
+   */
+  componentFilters?: FilterConfig[];
+
+  // Style cascade overrides (for multi-page dashboards)
+  /**
+   * Whether to inherit page-level styles
+   * @default true - Component will use page styles as base
+   * If false, component uses only global theme + its own component-level styles
+   */
+  usePageStyles?: boolean;
+
   // Title props (from TitleStyleAccordion)
   title?: string;
   showTitle?: boolean;
@@ -211,13 +243,46 @@ export interface DashboardLayout {
   id: string;
   name: string;
   title?: string; // Display title for the dashboard
-  theme?: 'light' | 'dark' | 'auto'; // Theme preference
-  rows: RowConfig[];
+  description?: string; // Dashboard description
+  dataset_id?: string; // Primary dataset UUID (links to datasets table)
+  datasource?: string; // Legacy: BigQuery table name (for backward compatibility)
+  theme?: {
+    primaryColor: string;
+    backgroundColor: string;
+    textColor: string;
+    borderColor: string;
+  };
+
+  /**
+   * Multi-page dashboard structure (new approach)
+   * Dashboard → Pages → Rows → Columns → Components
+   *
+   * Migration path:
+   * - New dashboards: Use `pages` array
+   * - Legacy dashboards: Continue using `rows` array (backward compatible)
+   * - During migration: System checks `pages` first, falls back to `rows` if empty
+   *
+   * Benefits of pages:
+   * - Organize complex dashboards (10+ components) into logical sections
+   * - 3-level filter cascade: Global → Page → Component
+   * - 3-level style cascade: Global Theme → Page Styles → Component Styles
+   */
+  pages?: PageConfig[];
+
+  /**
+   * Legacy flat row structure (backward compatible)
+   * @deprecated Use `pages` array for new dashboards
+   * This field is maintained for backward compatibility with existing dashboards
+   */
+  rows?: RowConfig[];
+
   globalStyles?: {
     backgroundColor?: string;
     padding?: number;
     gap?: number;
   };
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 // Alias for backward compatibility

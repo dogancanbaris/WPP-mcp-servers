@@ -1,80 +1,144 @@
-import React, { useMemo } from 'react';
-import ReactECharts from 'echarts-for-react';
-import type { EChartsOption } from 'echarts';
-import { formatValue } from '../../../utils/formatters';
+'use client';
 
-export interface StackedBarChartProps {
-  data: Array<{
-    category: string;
-    [key: string]: string | number;
-  }>;
-  series: Array<{
+/**
+ * Stacked Bar Chart Component - Dataset-Based
+ *
+ * Horizontal stacked bar chart showing categorical comparison.
+ *
+ * NEW ARCHITECTURE:
+ * - Queries registered dataset via /api/datasets/[id]/query
+ * - Backend handles caching, BigQuery connection
+ * - Global filter support via filterStore
+ */
+
+import { useQuery } from '@tanstack/react-query';
+import ReactECharts from 'echarts-for-react';
+import { Loader2 } from 'lucide-react';
+import { ComponentConfig } from '@/types/dashboard-builder';
+import { DASHBOARD_THEME } from '@/lib/themes/dashboard-theme';
+import { useFilterStore } from '@/store/filterStore';
+import type { EChartsOption } from 'echarts';
+
+export interface StackedBarChartProps extends Partial<ComponentConfig> {
+  /** Series configuration (if not using dataset metrics) */
+  seriesConfig?: Array<{
     key: string;
     name: string;
     color?: string;
   }>;
-  title?: string;
-  subtitle?: string;
-  height?: number | string;
-  showLegend?: boolean;
-  legendPosition?: 'top' | 'bottom' | 'left' | 'right';
   showValues?: boolean;
   valueFormat?: 'number' | 'currency' | 'percent' | 'decimal';
   isPercentStacked?: boolean;
-  gridLeft?: number | string;
-  gridRight?: number | string;
-  gridTop?: number | string;
-  gridBottom?: number | string;
-  colors?: string[];
-  animation?: boolean;
-  animationDuration?: number;
-  tooltip?: {
-    show?: boolean;
-    trigger?: 'item' | 'axis';
-    formatter?: string | ((params: any) => string);
-  };
-  xAxisLabel?: {
-    show?: boolean;
-    rotate?: number;
-    formatter?: string | ((value: any) => string);
-  };
-  yAxisLabel?: {
-    show?: boolean;
-    formatter?: string | ((value: any) => string);
-  };
+  chartHeight?: string;
 }
 
-const DEFAULT_COLORS = [
-  '#5470c6', '#91cc75', '#fac858', '#ee6666', '#73c0de',
-  '#3ba272', '#fc8452', '#9a60b4', '#ea7ccc', '#d4ec59'
-];
+export const StackedBarChart: React.FC<StackedBarChartProps> = (props) => {
+  const theme = DASHBOARD_THEME.charts;
 
-export const StackedBarChart: React.FC<StackedBarChartProps> = ({
-  data,
-  series,
-  title,
-  subtitle,
-  height = 400,
-  showLegend = true,
-  legendPosition = 'top',
-  showValues = false,
-  valueFormat = 'number',
-  isPercentStacked = false,
-  gridLeft = '10%',
-  gridRight = '10%',
-  gridTop = 80,
-  gridBottom = 60,
-  colors = DEFAULT_COLORS,
-  animation = true,
-  animationDuration = 1000,
-  tooltip,
-  xAxisLabel,
-  yAxisLabel,
-}) => {
-  const option: EChartsOption = useMemo(() => {
+  const {
+    dataset_id,
+    metrics = [],
+    dimension = 'category',
+    dateRange,
+    filters = [],
+    title = 'Stacked Bar Chart',
+    showTitle = true,
+    showLegend = true,
+    seriesConfig,
+    showValues = false,
+    valueFormat = 'number',
+    isPercentStacked = false,
+    chartHeight = '400px',
+    style,
+    ...rest
+  } = props;
+
+  // Subscribe to global filters
+  const globalDateRange = useFilterStore(state => state.activeDateRange);
+  const globalFilters = useFilterStore(state => state.activeFilters);
+
+  const effectiveDateRange = globalDateRange || dateRange;
+  const effectiveFilters = [...filters, ...globalFilters];
+
+  // Fetch from dataset API
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['stacked-bar', dataset_id, metrics, dimension, effectiveDateRange, effectiveFilters],
+    queryFn: async () => {
+      const params = new URLSearchParams({
+        dimensions: dimension,
+        metrics: metrics.join(','),
+        ...(effectiveDateRange && { dateRange: JSON.stringify(effectiveDateRange) }),
+        ...(effectiveFilters.length > 0 && { filters: JSON.stringify(effectiveFilters) })
+      });
+
+      const response = await fetch(`/api/datasets/${dataset_id}/query?${params}`);
+
+      if (!response.ok) {
+        throw new Error(`API error: ${response.statusText}`);
+      }
+
+      return response.json();
+    },
+    enabled: !!dataset_id && metrics.length > 0
+  });
+
+  // Styling
+  const containerStyle: React.CSSProperties = {
+    backgroundColor: style?.backgroundColor || theme.backgroundColor,
+    border: `${theme.borderWidth} solid ${theme.borderColor}`,
+    borderRadius: style?.borderRadius || theme.borderRadius,
+    padding: theme.padding,
+    boxShadow: theme.boxShadow,
+    opacity: DASHBOARD_THEME.global.opacity,
+    color: style?.textColor
+  };
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div style={containerStyle} className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div style={containerStyle} className="flex flex-col items-center justify-center min-h-[400px] gap-2">
+        <p className="text-sm text-red-600">Failed to load chart data</p>
+        <p className="text-xs text-muted-foreground">{error.message}</p>
+      </div>
+    );
+  }
+
+  // Extract data
+  const chartData = data?.data || [];
+
+  if (chartData.length === 0) {
+    return (
+      <div style={containerStyle} className="flex items-center justify-center min-h-[400px]">
+        <p className="text-sm text-muted-foreground">No data available</p>
+      </div>
+    );
+  }
+
+  const categories = chartData.map((row: any) => row[dimension]);
+  const series = seriesConfig || metrics.map(m => ({ key: m, name: m }));
+
+  const colors = [
+    DASHBOARD_THEME.colors.wppBlue,
+    DASHBOARD_THEME.colors.wppGreen,
+    DASHBOARD_THEME.colors.wppYellow,
+    DASHBOARD_THEME.colors.wppRed,
+    DASHBOARD_THEME.colors.wppCyan
+  ];
+
+  // Build option
+  const option: EChartsOption = (() => {
     // Calculate totals for percentage mode
     const totals = isPercentStacked
-      ? data.map(item => {
+      ? chartData.map(item => {
           return series.reduce((sum, s) => {
             const value = Number(item[s.key]) || 0;
             return sum + value;
@@ -84,7 +148,7 @@ export const StackedBarChart: React.FC<StackedBarChartProps> = ({
 
     // Transform data for ECharts series
     const chartSeries = series.map((s, index) => {
-      const seriesData = data.map((item, dataIndex) => {
+      const seriesData = chartData.map((item, dataIndex) => {
         const value = Number(item[s.key]) || 0;
         if (isPercentStacked && totals[dataIndex] > 0) {
           return (value / totals[dataIndex]) * 100;
@@ -112,7 +176,7 @@ export const StackedBarChart: React.FC<StackedBarChartProps> = ({
                 if (isPercentStacked) {
                   return value > 5 ? `${value.toFixed(1)}%` : '';
                 }
-                return value > 0 ? formatValue(value, valueFormat) : '';
+                return value > 0 ? value.toLocaleString() : '';
               },
             }
           : undefined,
@@ -120,128 +184,54 @@ export const StackedBarChart: React.FC<StackedBarChartProps> = ({
     });
 
     return {
-      title: title
-        ? {
-            text: title,
-            subtext: subtitle,
-            left: 'center',
-            textStyle: {
-              fontSize: 16,
-              fontWeight: 600,
-            },
-            subtextStyle: {
-              fontSize: 12,
-              color: '#666',
-            },
-          }
-        : undefined,
+      backgroundColor: '#ffffff',
+      title: showTitle ? {
+        text: title,
+        left: 'center',
+        textStyle: { fontSize: 16, fontWeight: 600, color: '#111827' }
+      } : undefined,
       tooltip: {
-        show: tooltip?.show !== false,
-        trigger: tooltip?.trigger || 'axis',
-        axisPointer: {
-          type: 'shadow',
-        },
-        formatter:
-          tooltip?.formatter ||
-          ((params: any) => {
-            if (!Array.isArray(params)) return '';
-
-            const categoryName = params[0]?.axisValue || '';
-            let tooltipContent = `<strong>${categoryName}</strong><br/>`;
-
-            let total = 0;
-            params.forEach((param: any) => {
-              const originalIndex = data.findIndex(d => d.category === categoryName);
-              const seriesKey = series[param.seriesIndex].key;
-              const originalValue = Number(data[originalIndex]?.[seriesKey]) || 0;
-              total += originalValue;
-
-              const marker = `<span style="display:inline-block;margin-right:5px;border-radius:10px;width:10px;height:10px;background-color:${param.color};"></span>`;
-
-              if (isPercentStacked) {
-                tooltipContent += `${marker}${param.seriesName}: ${formatValue(originalValue, valueFormat)} (${param.value.toFixed(1)}%)<br/>`;
-              } else {
-                tooltipContent += `${marker}${param.seriesName}: ${formatValue(originalValue, valueFormat)}<br/>`;
-              }
-            });
-
-            if (isPercentStacked) {
-              tooltipContent += `<br/><strong>Total: ${formatValue(total, valueFormat)}</strong>`;
-            } else {
-              tooltipContent += `<strong>Total: ${formatValue(total, valueFormat)}</strong>`;
-            }
-
-            return tooltipContent;
-          }),
+        show: true,
+        trigger: 'axis',
+        axisPointer: { type: 'shadow' }
       },
-      legend: showLegend
-        ? {
-            data: series.map(s => s.name),
-            [legendPosition]: legendPosition === 'top' || legendPosition === 'bottom' ? 'center' : 10,
-            top: legendPosition === 'top' ? 30 : legendPosition === 'bottom' ? 'auto' : 'middle',
-            bottom: legendPosition === 'bottom' ? 10 : 'auto',
-            orient: legendPosition === 'left' || legendPosition === 'right' ? 'vertical' : 'horizontal',
-            type: 'scroll',
-          }
-        : undefined,
+      legend: {
+        show: showLegend,
+        bottom: 0,
+        data: series.map(s => s.name),
+        textStyle: { color: '#666', fontSize: 12 }
+      },
       grid: {
-        left: gridLeft,
-        right: gridRight,
-        top: gridTop,
-        bottom: gridBottom,
-        containLabel: true,
+        left: '100px',
+        right: '30px',
+        top: showTitle ? '60px' : '30px',
+        bottom: showLegend ? '60px' : '30px',
+        containLabel: false
       },
       xAxis: {
         type: 'value',
         max: isPercentStacked ? 100 : undefined,
-        axisLabel: {
-          show: xAxisLabel?.show !== false,
-          formatter: xAxisLabel?.formatter || (isPercentStacked ? '{value}%' : '{value}'),
-        },
+        axisLine: { lineStyle: { color: '#e0e0e0' } },
+        axisLabel: { color: '#666', fontSize: 11, formatter: isPercentStacked ? '{value}%' : '{value}' },
+        splitLine: { lineStyle: { color: '#f5f5f5', type: 'dashed' } }
       },
       yAxis: {
         type: 'category',
-        data: data.map(item => item.category),
-        axisLabel: {
-          show: yAxisLabel?.show !== false,
-          rotate: yAxisLabel?.rotate || 0,
-          formatter: yAxisLabel?.formatter,
-        },
+        data: categories,
+        axisLine: { lineStyle: { color: '#e0e0e0' } },
+        axisLabel: { color: '#666', fontSize: 11 }
       },
-      series: chartSeries,
-      animation,
-      animationDuration,
+      series: chartSeries
     };
-  }, [
-    data,
-    series,
-    title,
-    subtitle,
-    showLegend,
-    legendPosition,
-    showValues,
-    valueFormat,
-    isPercentStacked,
-    gridLeft,
-    gridRight,
-    gridTop,
-    gridBottom,
-    colors,
-    animation,
-    animationDuration,
-    tooltip,
-    xAxisLabel,
-    yAxisLabel,
-  ]);
+  })();
+
+  console.log('[StackedBarChart] Data loaded:', chartData.length, 'categories');
 
   return (
-    <ReactECharts
-      option={option}
-      style={{ height: typeof height === 'number' ? `${height}px` : height, width: '100%' }}
-      notMerge={true}
-      lazyUpdate={true}
-    />
+    <div style={containerStyle}>
+      <ReactECharts option={option} style={{ height: chartHeight, width: '100%' }} />
+    </div>
   );
 };
 
-export default StackedBarChart;
+// Export functionality: Phase 4.4 (MCP-59)

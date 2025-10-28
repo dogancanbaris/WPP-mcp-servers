@@ -224,24 +224,25 @@ Build a **fully agentic analytics platform** where both AI agents and practition
 
 **Goal:** Migrate all 53 remaining charts to new dataset-based architecture.
 
-#### 4.3.1 - Priority Charts (Most Used)
-- [ ] BarChart.tsx
-- [ ] LineChart.tsx
-- [ ] AreaChart.tsx
-- [ ] DonutChart.tsx
-- [ ] FunnelChart.tsx
-- [ ] GaugeChart.tsx
-- [ ] HeatmapChart.tsx
-- [ ] RadarChart.tsx
+#### 4.3.1 - Priority Charts (Most Used) ✅ COMPLETE
+- [x] BarChart.tsx (Recharts - vertical/horizontal bars with stacking)
+- [x] LineChart.tsx (Recharts - smooth/linear lines with dots)
+- [x] AreaChart.tsx (Recharts - filled areas with gradients)
+- [x] FunnelChart.tsx (ECharts - conversion stages)
+- [x] GaugeChart.tsx (ECharts - single metric gauge)
+- [x] HeatmapChart.tsx (ECharts - 2D data matrix)
+- [x] RadarChart.tsx (ECharts - multivariate radial data)
+- [ ] DonutChart.tsx (Not needed - PieChart already supports donut mode)
 
-#### 4.3.2 - Secondary Charts
-- [ ] SankeyChart.tsx
-- [ ] ScatterChart.tsx
-- [ ] TreemapChart.tsx
-- [ ] WaterfallChart.tsx
-- [ ] BubbleChart.tsx
-- [ ] PolarChart.tsx
-- [ ] RadialBarChart.tsx
+#### 4.3.2 - Secondary Charts (MCP-57) ✅ COMPLETE
+- [x] SankeyChart.tsx (ECharts-based Sankey diagram)
+- [x] ScatterChart.tsx (Recharts scatter plot)
+- [x] TreemapChart.tsx (ECharts treemap)
+- [x] WaterfallChart.tsx (Recharts waterfall chart)
+- [x] BubbleChart.tsx (Recharts bubble chart with ZAxis)
+- [x] ComboChart.tsx (Recharts composed chart - bar + line)
+- [ ] PolarChart.tsx (Does not exist - skipped)
+- [ ] RadialBarChart.tsx (Does not exist - skipped)
 
 #### 4.3.3 - Specialized Charts (Lower Priority)
 - [ ] Remaining 38 chart variants
@@ -388,23 +389,60 @@ Build a **fully agentic analytics platform** where both AI agents and practition
 
 ---
 
-### **Phase 4.7: BigQuery Optimization** (PRIORITY 7)
+### **Phase 4.7: BigQuery Data Lake - Hot/Cold Storage System** (PRIORITY 1 - CRITICAL) 🔥
 
-**Goal:** Optimize data storage and query performance.
+**Goal:** Implement shared BigQuery data lake with on-demand pulls and daily refresh for truly live dashboards.
 
-#### 4.7.1 - Implement Hot/Cold Storage
-- [ ] Create BigQuery cold storage tables (90+ days)
-- [ ] Create BigQuery hot storage tables (<90 days)
-- [ ] Automated data archival cron job
-- [ ] Query router (check hot first, then cold)
+**Architecture:** Shared tables (one per platform) with workspace_id isolation, organic growth as practitioners use system.
 
-#### 4.7.2 - Query Performance
-- [ ] Add BigQuery materialized views for common queries
-- [ ] Implement query result caching (Redis or similar)
-- [ ] Add query cost monitoring
-- [ ] Optimize table partitioning
+**Reference:** See BIGQUERY-DATA-LAKE-ARCHITECTURE.md for complete design.
 
-**Success Criteria:** Query costs reduced by 50%+, <2s response time for all dashboards.
+#### 4.7.1 - Create Shared Table Infrastructure (Week 1)
+- [ ] Create `gsc_performance_shared` table with partitioning/clustering
+- [ ] Create `ga4_sessions_shared` table
+- [ ] Create `ads_performance_shared` table
+- [ ] Add row-level security policies
+- [ ] Create property_registry table in Supabase
+
+#### 4.7.2 - Implement On-Demand Pull System (Week 1)
+- [ ] Update dashboard creation API to check for existing data
+- [ ] Add OAuth flow for property access
+- [ ] Implement initial 12-month pull on first dashboard
+- [ ] Add smart deduplication (same workspace + property = reuse)
+- [ ] Store encrypted OAuth tokens for refresh
+
+#### 4.7.3 - Daily Refresh Automation (Week 2)
+- [ ] Deploy Cloud Function for daily refresh
+- [ ] Configure Cloud Scheduler (2 AM UTC daily)
+- [ ] Implement MERGE logic (yesterday's data only)
+- [ ] Add active property detection (last 30 days)
+- [ ] Add OAuth token expiry handling
+
+#### 4.7.4 - GSC Trial Run (Week 2)
+- [ ] Test with themindfulsteward.com property
+- [ ] Verify initial pull works (12 months)
+- [ ] Verify daily refresh works (yesterday only)
+- [ ] Verify dashboard shows fresh data daily
+- [ ] Verify filtering works (device, country, query, page)
+
+#### 4.7.5 - GA4 Implementation (Week 3)
+- [ ] Replicate pattern for GA4
+- [ ] Test with your GA4 property
+- [ ] Verify session-level aggregation
+- [ ] Add 25 core metrics + 20 dimensions
+
+#### 4.7.6 - Platform Metadata Registry (Week 3)
+- [ ] Create ads.json (20 metrics, 12 dimensions)
+- [ ] Create ga4.json (25 metrics, 20 dimensions)
+- [ ] Update gsc.json (already complete)
+- [ ] Add schema evolution documentation
+
+**Success Criteria:**
+- ✅ Dashboards show fresh data when opened (even after 2 years)
+- ✅ Deduplication works (no duplicate tables)
+- ✅ Daily refresh runs automatically
+- ✅ Cost < $500/month for 1,000 properties
+- ✅ Query response < 2 seconds
 
 ---
 

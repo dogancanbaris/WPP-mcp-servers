@@ -5,12 +5,17 @@ import type {
   ComponentConfig,
   RowConfig,
   ComponentType,
-  ColumnWidth
+  ColumnWidth,
+  FilterConfig
 } from '@/types/dashboard-builder';
+import type {
+  PageConfig,
+  PageStyles
+} from '@/types/page-config';
 import {
   saveDashboard as saveDashboardAPI,
   loadDashboard as loadDashboardAPI
-} from '@/lib/api/dashboards';
+} from '@/lib/supabase/dashboard-service';
 
 export type SaveStatus = 'saved' | 'saving' | 'unsaved' | 'error' | 'conflict';
 
@@ -44,6 +49,9 @@ interface DashboardStore {
   canUndo: boolean;
   canRedo: boolean;
 
+  // Page state
+  currentPageId: string | null;
+
   // Actions - Dashboard
   loadDashboard: (id: string) => Promise<void>;
   save: (id: string, force?: boolean) => Promise<void>;
@@ -54,6 +62,16 @@ interface DashboardStore {
   setViewMode: (mode: 'edit' | 'view') => void;
   resetError: () => void;
   resetSaveStatus: () => void;
+
+  // Actions - Pages
+  addPage: (name?: string) => void;
+  removePage: (pageId: string) => void;
+  reorderPages: (oldIndex: number, newIndex: number) => void;
+  updatePage: (pageId: string, updates: Partial<PageConfig>) => void;
+  duplicatePage: (pageId: string) => void;
+  setCurrentPage: (pageId: string) => void;
+  setPageFilters: (pageId: string, filters: FilterConfig[]) => void;
+  setPageStyles: (pageId: string, styles: PageStyles) => void;
 
   // Actions - Rows
   addRow: (layout: ColumnWidth[]) => void;
@@ -84,7 +102,16 @@ const createEmptyDashboard = (): DashboardConfig => ({
   id: '',
   title: 'Untitled Dashboard',
   description: '',
-  rows: [],
+  rows: [],  // Legacy format (kept for backwards compatibility)
+  pages: [    // NEW - Initialize with one empty page
+    {
+      id: crypto.randomUUID(),
+      name: 'Page 1',
+      order: 0,
+      rows: [],
+      createdAt: new Date().toISOString(),
+    }
+  ],
   theme: {
     primaryColor: '#3b82f6',
     backgroundColor: '#ffffff',
@@ -135,20 +162,38 @@ export const useDashboardStore = create<DashboardStore>()(
       conflictData: undefined,
       canUndo: false,
       canRedo: false,
+      currentPageId: null,
 
       // Dashboard Actions
       loadDashboard: async (id: string) => {
         set({ isLoading: true, error: undefined });
 
         try {
-          // Use API client instead of Supabase service directly
+          // Use Supabase service directly
           const response = await loadDashboardAPI(id);
 
-          if (!response.success || !response.dashboard) {
+          if (!response.success || !response.data) {
             throw new Error(response.error || 'Dashboard not found');
           }
 
-          const dashboard = response.dashboard;
+          const dashboard = response.data;
+
+          // Initialize currentPageId - check URL param or use first page
+          let initialPageId: string | null = null;
+          if (dashboard.pages && dashboard.pages.length > 0) {
+            // Try to get page from URL parameter
+            if (typeof window !== 'undefined') {
+              const params = new URLSearchParams(window.location.search);
+              const pageParam = params.get('page');
+              if (pageParam && dashboard.pages.some(p => p.id === pageParam)) {
+                initialPageId = pageParam;
+              }
+            }
+            // Fallback to first page if no valid URL param
+            if (!initialPageId) {
+              initialPageId = dashboard.pages[0].id;
+            }
+          }
 
           set({
             config: dashboard,
@@ -162,7 +207,8 @@ export const useDashboardStore = create<DashboardStore>()(
             lastSaved: new Date(dashboard.updatedAt),
             lastSyncedVersion: dashboard.updatedAt,
             saveAttempts: 0,
-            conflictData: undefined
+            conflictData: undefined,
+            currentPageId: initialPageId
           });
         } catch (error) {
           set({
@@ -192,14 +238,14 @@ export const useDashboardStore = create<DashboardStore>()(
             updatedAt: new Date().toISOString()
           };
 
-          // Use API client which handles both create and update
+          // Use Supabase service which handles both create and update
           const response = await saveDashboardAPI(id, configToSave);
 
           if (!response.success) {
             throw new Error(response.error || 'Failed to save dashboard');
           }
 
-          const savedDashboard = response.dashboard || configToSave;
+          const savedDashboard = response.data || configToSave;
 
           // Check for conflicts (if remote version is newer than our last sync)
           if (
@@ -356,169 +402,455 @@ export const useDashboardStore = create<DashboardStore>()(
         }
       },
 
+      // Page Actions
+      addPage: (name?: string) => {
+        const config = get().config;
+        if (!config) return;
+
+        const newPage: PageConfig = {
+          id: crypto.randomUUID(),
+          name: name || `Page ${(config.pages?.length || 0) + 1}`,
+          order: config.pages?.length || 0,
+          rows: [],
+          createdAt: new Date().toISOString(),
+        };
+
+        get().addToHistory();
+
+        set({
+          config: {
+            ...config,
+            pages: [...(config.pages || []), newPage],
+          },
+        });
+
+        // Auto-switch to new page
+        get().setCurrentPage(newPage.id);
+      },
+
+      removePage: (pageId: string) => {
+        const config = get().config;
+        if (!config || !config.pages) return;
+
+        // Don't allow removing last page
+        if (config.pages.length === 1) {
+          console.warn('Cannot remove the last page');
+          return;
+        }
+
+        const newPages = config.pages.filter(p => p.id !== pageId);
+
+        // Reorder remaining pages
+        newPages.forEach((page, index) => {
+          page.order = index;
+        });
+
+        get().addToHistory();
+
+        set({
+          config: {
+            ...config,
+            pages: newPages,
+          },
+        });
+
+        // If removed current page, switch to first page
+        if (get().currentPageId === pageId) {
+          get().setCurrentPage(newPages[0]?.id || null);
+        }
+      },
+
+      reorderPages: (oldIndex: number, newIndex: number) => {
+        const config = get().config;
+        if (!config || !config.pages) return;
+
+        const pages = [...config.pages];
+        const [movedPage] = pages.splice(oldIndex, 1);
+        pages.splice(newIndex, 0, movedPage);
+
+        // Update order property
+        pages.forEach((page, index) => {
+          page.order = index;
+        });
+
+        get().addToHistory();
+
+        set({
+          config: {
+            ...config,
+            pages,
+          },
+        });
+      },
+
+      updatePage: (pageId: string, updates: Partial<PageConfig>) => {
+        const config = get().config;
+        if (!config || !config.pages) return;
+
+        get().addToHistory();
+
+        set({
+          config: {
+            ...config,
+            pages: config.pages.map(page =>
+              page.id === pageId
+                ? { ...page, ...updates, updatedAt: new Date().toISOString() }
+                : page
+            ),
+          },
+        });
+      },
+
+      duplicatePage: (pageId: string) => {
+        const config = get().config;
+        if (!config || !config.pages) return;
+
+        const sourcePage = config.pages.find(p => p.id === pageId);
+        if (!sourcePage) return;
+
+        const newPage: PageConfig = {
+          ...deepClone(sourcePage),
+          id: crypto.randomUUID(),
+          name: `${sourcePage.name} (Copy)`,
+          order: config.pages.length,
+          createdAt: new Date().toISOString(),
+          updatedAt: undefined,
+        };
+
+        get().addToHistory();
+
+        set({
+          config: {
+            ...config,
+            pages: [...config.pages, newPage],
+          },
+        });
+      },
+
+      setCurrentPage: (pageId: string) => {
+        set({ currentPageId: pageId });
+      },
+
+      setPageFilters: (pageId: string, filters: FilterConfig[]) => {
+        get().updatePage(pageId, { filters });
+      },
+
+      setPageStyles: (pageId: string, styles: PageStyles) => {
+        get().updatePage(pageId, { pageStyles: styles });
+      },
+
       // Row Actions
       addRow: (layout: ColumnWidth[]) => {
-        set((state) => {
-          const newRow: RowConfig = {
-            id: generateId('row'),
-            height: 300,
-            columns: layout.map((width) => ({
-              id: generateId('col'),
-              width,
-              component: undefined
-            }))
-          };
+        const state = get();
+        const currentPageId = state.currentPageId;
 
-          get().addToHistory();
+        const newRow: RowConfig = {
+          id: generateId('row'),
+          height: 300,
+          columns: layout.map((width) => ({
+            id: generateId('col'),
+            width,
+            component: undefined
+          }))
+        };
 
-          return {
+        get().addToHistory();
+
+        // If we have pages, add row to current page
+        if (state.config.pages && currentPageId) {
+          set({
+            config: {
+              ...state.config,
+              pages: state.config.pages.map(page =>
+                page.id === currentPageId
+                  ? { ...page, rows: [...page.rows, newRow] }
+                  : page
+              ),
+            }
+          });
+        } else {
+          // Legacy: add to config.rows for backwards compatibility
+          set({
             config: {
               ...state.config,
               rows: [...state.config.rows, newRow]
             }
-          };
-        });
+          });
+        }
       },
 
       removeRow: (rowId: string) => {
-        set((state) => {
-          get().addToHistory();
+        const state = get();
+        const currentPageId = state.currentPageId;
 
-          return {
+        get().addToHistory();
+
+        // If we have pages, remove row from current page
+        if (state.config.pages && currentPageId) {
+          set({
+            config: {
+              ...state.config,
+              pages: state.config.pages.map(page =>
+                page.id === currentPageId
+                  ? { ...page, rows: page.rows.filter(row => row.id !== rowId) }
+                  : page
+              ),
+            },
+            selectedComponentId: undefined
+          });
+        } else {
+          // Legacy: remove from config.rows
+          set({
             config: {
               ...state.config,
               rows: state.config.rows.filter(row => row.id !== rowId)
             },
             selectedComponentId: undefined
-          };
-        });
+          });
+        }
       },
 
       reorderRows: (oldIndex: number, newIndex: number) => {
-        set((state) => {
+        const state = get();
+        const currentPageId = state.currentPageId;
+
+        get().addToHistory();
+
+        // If we have pages, reorder rows in current page
+        if (state.config.pages && currentPageId) {
+          set({
+            config: {
+              ...state.config,
+              pages: state.config.pages.map(page => {
+                if (page.id === currentPageId) {
+                  const newRows = [...page.rows];
+                  const [movedRow] = newRows.splice(oldIndex, 1);
+                  newRows.splice(newIndex, 0, movedRow);
+                  return { ...page, rows: newRows };
+                }
+                return page;
+              }),
+            }
+          });
+        } else {
+          // Legacy: reorder config.rows
           const newRows = [...state.config.rows];
           const [movedRow] = newRows.splice(oldIndex, 1);
           newRows.splice(newIndex, 0, movedRow);
 
-          get().addToHistory();
-
-          return {
+          set({
             config: {
               ...state.config,
               rows: newRows
             }
-          };
-        });
+          });
+        }
       },
 
       updateRowHeight: (rowId: string, height: number) => {
-        set((state) => {
-          const newRows = state.config.rows.map(row =>
-            row.id === rowId ? { ...row, height } : row
-          );
+        const state = get();
+        const currentPageId = state.currentPageId;
 
-          get().addToHistory();
+        get().addToHistory();
 
-          return {
+        // If we have pages, update row height in current page
+        if (state.config.pages && currentPageId) {
+          set({
             config: {
               ...state.config,
-              rows: newRows
+              pages: state.config.pages.map(page => {
+                if (page.id === currentPageId) {
+                  return {
+                    ...page,
+                    rows: page.rows.map(row =>
+                      row.id === rowId ? { ...row, height } : row
+                    )
+                  };
+                }
+                return page;
+              }),
             }
-          };
-        });
+          });
+        } else {
+          // Legacy: update in config.rows
+          set({
+            config: {
+              ...state.config,
+              rows: state.config.rows.map(row =>
+                row.id === rowId ? { ...row, height } : row
+              )
+            }
+          });
+        }
       },
 
       // Component Actions
       addComponent: (columnId: string, type: ComponentType) => {
-        set((state) => {
-          const newComponent: ComponentConfig = {
-            id: generateId('component'),
-            type,
-            title: `New ${type}`,
-            config: {}
-          };
+        const state = get();
+        const currentPageId = state.currentPageId;
 
-          const newRows = state.config.rows.map(row => ({
-            ...row,
-            columns: row.columns.map(col => {
-              if (col.id === columnId) {
-                return {
-                  ...col,
-                  component: newComponent
-                };
-              }
-              return col;
-            })
-          }));
+        const newComponent: ComponentConfig = {
+          id: generateId('component'),
+          type,
+          title: `New ${type}`,
+          config: {}
+        };
 
-          get().addToHistory();
+        get().addToHistory();
 
-          return {
+        // If we have pages, add component to current page
+        if (state.config.pages && currentPageId) {
+          set({
             config: {
               ...state.config,
-              rows: newRows
+              pages: state.config.pages.map(page => {
+                if (page.id === currentPageId) {
+                  return {
+                    ...page,
+                    rows: page.rows.map(row => ({
+                      ...row,
+                      columns: row.columns.map(col => {
+                        if (col.id === columnId) {
+                          return { ...col, component: newComponent };
+                        }
+                        return col;
+                      })
+                    }))
+                  };
+                }
+                return page;
+              }),
             },
             selectedComponentId: newComponent.id
-          };
-        });
+          });
+        } else {
+          // Legacy: add to config.rows
+          set({
+            config: {
+              ...state.config,
+              rows: state.config.rows.map(row => ({
+                ...row,
+                columns: row.columns.map(col => {
+                  if (col.id === columnId) {
+                    return { ...col, component: newComponent };
+                  }
+                  return col;
+                })
+              }))
+            },
+            selectedComponentId: newComponent.id
+          });
+        }
       },
 
       removeComponent: (componentId: string) => {
-        set((state) => {
-          const newRows = state.config.rows.map(row => ({
-            ...row,
-            columns: row.columns.map(col => {
-              if (col.component?.id === componentId) {
-                return {
-                  ...col,
-                  component: undefined
-                };
-              }
-              return col;
-            })
-          }));
+        const state = get();
+        const currentPageId = state.currentPageId;
 
-          get().addToHistory();
+        get().addToHistory();
 
-          return {
+        // If we have pages, remove component from current page
+        if (state.config.pages && currentPageId) {
+          set({
             config: {
               ...state.config,
-              rows: newRows
+              pages: state.config.pages.map(page => {
+                if (page.id === currentPageId) {
+                  return {
+                    ...page,
+                    rows: page.rows.map(row => ({
+                      ...row,
+                      columns: row.columns.map(col => {
+                        if (col.component?.id === componentId) {
+                          return { ...col, component: undefined };
+                        }
+                        return col;
+                      })
+                    }))
+                  };
+                }
+                return page;
+              }),
             },
             selectedComponentId: state.selectedComponentId === componentId
               ? undefined
               : state.selectedComponentId
-          };
-        });
+          });
+        } else {
+          // Legacy: remove from config.rows
+          set({
+            config: {
+              ...state.config,
+              rows: state.config.rows.map(row => ({
+                ...row,
+                columns: row.columns.map(col => {
+                  if (col.component?.id === componentId) {
+                    return { ...col, component: undefined };
+                  }
+                  return col;
+                })
+              }))
+            },
+            selectedComponentId: state.selectedComponentId === componentId
+              ? undefined
+              : state.selectedComponentId
+          });
+        }
       },
 
       updateComponent: (componentId: string, updates: Partial<ComponentConfig>) => {
-        set((state) => {
-          const newRows = state.config.rows.map(row => ({
-            ...row,
-            columns: row.columns.map(col => {
-              if (col.component?.id === componentId) {
-                return {
-                  ...col,
-                  component: {
-                    ...col.component,
-                    ...updates
-                  }
-                };
-              }
-              return col;
-            })
-          }));
+        const state = get();
+        const currentPageId = state.currentPageId;
 
-          get().addToHistory();
+        get().addToHistory();
 
-          return {
+        // If we have pages, update component in current page
+        if (state.config.pages && currentPageId) {
+          set({
             config: {
               ...state.config,
-              rows: newRows
+              pages: state.config.pages.map(page => {
+                if (page.id === currentPageId) {
+                  return {
+                    ...page,
+                    rows: page.rows.map(row => ({
+                      ...row,
+                      columns: row.columns.map(col => {
+                        if (col.component?.id === componentId) {
+                          return {
+                            ...col,
+                            component: { ...col.component, ...updates }
+                          };
+                        }
+                        return col;
+                      })
+                    }))
+                  };
+                }
+                return page;
+              }),
             }
-          };
-        });
+          });
+        } else {
+          // Legacy: update in config.rows
+          set({
+            config: {
+              ...state.config,
+              rows: state.config.rows.map(row => ({
+                ...row,
+                columns: row.columns.map(col => {
+                  if (col.component?.id === componentId) {
+                    return {
+                      ...col,
+                      component: { ...col.component, ...updates }
+                    };
+                  }
+                  return col;
+                })
+              }))
+            }
+          });
+        }
       },
 
       duplicateComponent: (componentId: string) => {
@@ -728,7 +1060,8 @@ export const useDashboardStore = create<DashboardStore>()(
           saveAttempts: 0,
           conflictData: undefined,
           canUndo: false,
-          canRedo: false
+          canRedo: false,
+          currentPageId: null
         });
       }
     }),
@@ -765,6 +1098,16 @@ export const useZoom = () => useDashboardStore((state) => state.zoom);
 export const useSaveStatus = () => useDashboardStore((state) => state.saveStatus);
 export const useLastSaved = () => useDashboardStore((state) => state.lastSaved);
 export const useConflictData = () => useDashboardStore((state) => state.conflictData);
+export const useCurrentPageId = () => useDashboardStore((state) => state.currentPageId);
+export const usePages = () => useDashboardStore((state) => state.config.pages);
+export const useCurrentPage = () => {
+  const currentPageId = useDashboardStore((state) => state.currentPageId);
+  const pages = useDashboardStore((state) => state.config.pages);
+
+  if (!currentPageId || !pages) return undefined;
+
+  return pages.find(page => page.id === currentPageId);
+};
 
 // Cleanup on unmount
 if (typeof window !== 'undefined') {

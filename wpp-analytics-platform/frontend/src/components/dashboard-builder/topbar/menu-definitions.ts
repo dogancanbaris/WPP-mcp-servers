@@ -111,6 +111,7 @@ export const createFileMenuItems = (actions: {
   onScheduleEmail: () => void;
   onPageSetup: () => void;
   onDashboardSettings: () => void;
+  onVersionHistory: () => void;
 }): MenuItem[] => [
   {
     label: 'New',
@@ -164,7 +165,7 @@ export const createFileMenuItems = (actions: {
     icon: History,
     shortcut: 'Ctrl+Alt+Shift+H',
     description: 'View and restore previous versions',
-    action: () => console.log('Version history'),
+    action: actions.onVersionHistory,
   },
   {
     label: 'Make a template',
@@ -340,12 +341,14 @@ export const getInsertMenuItems = (insertActions: {
   onInsertChart: (type?: string) => void;
   onInsertControl: (type: string) => void;
   onInsertContent: (type: string) => void;
+  onInsertPage?: () => void;
 }): MenuItem[] => [
   {
     label: 'Page',
     icon: FilePlus,
+    shortcut: 'Ctrl+Shift+P',
     description: 'Add new page to dashboard',
-    action: () => console.log('Add page'),
+    action: insertActions.onInsertPage || (() => console.log('Add page')),
   },
   { type: 'separator' },
   {
@@ -579,7 +582,13 @@ export const RESOURCE_MENU_ITEMS: MenuItem[] = [
 // ============================================================================
 // HELP MENU
 // ============================================================================
-export const HELP_MENU_ITEMS: MenuItem[] = [
+// Note: Actions are connected in EditorTopbar.tsx
+export const createHelpMenuItems = (actions: {
+  onReportIssue: () => void;
+  onSendFeedback: () => void;
+  onWhatsNew: () => void;
+  onKeyboardShortcuts: () => void;
+}): MenuItem[] => [
   {
     label: 'Documentation',
     icon: BookOpen,
@@ -589,7 +598,7 @@ export const HELP_MENU_ITEMS: MenuItem[] = [
     label: 'Keyboard shortcuts',
     icon: Keyboard,
     shortcut: 'Ctrl+/',
-    action: () => console.log('Shortcuts'),
+    action: actions.onKeyboardShortcuts,
   },
   {
     label: 'Video tutorials',
@@ -600,17 +609,17 @@ export const HELP_MENU_ITEMS: MenuItem[] = [
   {
     label: 'Report an issue',
     icon: AlertCircle,
-    action: () => console.log('Report issue'),
+    action: actions.onReportIssue,
   },
   {
     label: 'Send feedback',
     icon: MessageSquare,
-    action: () => console.log('Send feedback'),
+    action: actions.onSendFeedback,
   },
   { type: 'separator' },
   {
     label: "What's new",
     icon: Sparkles,
-    action: () => console.log('Whats new'),
+    action: actions.onWhatsNew,
   },
 ];

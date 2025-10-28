@@ -379,98 +379,6 @@ export declare const allTools: ({
                 type: string;
                 description: string;
             };
-            campaignId: {
-                type: string;
-                description: string;
-            };
-            status: {
-                type: string;
-                enum: string[];
-                description: string;
-            };
-            confirmationToken: {
-                type: string;
-                description: string;
-            };
-        };
-        required: string[];
-    };
-    handler(input: any): Promise<{
-        success: boolean;
-        requiresApproval: boolean;
-        preview: string;
-        confirmationToken: string;
-        message: string;
-        data?: undefined;
-    } | {
-        success: boolean;
-        data: {
-            customerId: any;
-            campaignId: any;
-            campaignName: any;
-            previousStatus: any;
-            newStatus: any;
-            result: any;
-            message: string;
-        };
-        requiresApproval?: undefined;
-        preview?: undefined;
-        confirmationToken?: undefined;
-        message?: undefined;
-    }>;
-} | {
-    name: string;
-    description: string;
-    inputSchema: {
-        type: "object";
-        properties: {
-            customerId: {
-                type: string;
-                description: string;
-            };
-            name: {
-                type: string;
-                description: string;
-            };
-            budgetId: {
-                type: string;
-                description: string;
-            };
-            campaignType: {
-                type: string;
-                enum: string[];
-                description: string;
-            };
-            status: {
-                type: string;
-                enum: string[];
-                description: string;
-            };
-        };
-        required: string[];
-    };
-    handler(input: any): Promise<{
-        success: boolean;
-        data: {
-            customerId: any;
-            campaignId: any;
-            name: any;
-            campaignType: any;
-            status: any;
-            message: string;
-        };
-        warning: string[];
-    }>;
-} | {
-    name: string;
-    description: string;
-    inputSchema: {
-        type: "object";
-        properties: {
-            customerId: {
-                type: string;
-                description: string;
-            };
         };
         required: string[];
     };
@@ -897,6 +805,98 @@ export declare const allTools: ({
             count: number;
             message: string;
         };
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            customerId: {
+                type: string;
+                description: string;
+            };
+            campaignId: {
+                type: string;
+                description: string;
+            };
+            status: {
+                type: string;
+                enum: string[];
+                description: string;
+            };
+            confirmationToken: {
+                type: string;
+                description: string;
+            };
+        };
+        required: string[];
+    };
+    handler(input: any): Promise<{
+        success: boolean;
+        requiresApproval: boolean;
+        preview: string;
+        confirmationToken: string;
+        message: string;
+        data?: undefined;
+    } | {
+        success: boolean;
+        data: {
+            customerId: any;
+            campaignId: any;
+            campaignName: any;
+            previousStatus: any;
+            newStatus: any;
+            result: any;
+            message: string;
+        };
+        requiresApproval?: undefined;
+        preview?: undefined;
+        confirmationToken?: undefined;
+        message?: undefined;
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            customerId: {
+                type: string;
+                description: string;
+            };
+            name: {
+                type: string;
+                description: string;
+            };
+            budgetId: {
+                type: string;
+                description: string;
+            };
+            campaignType: {
+                type: string;
+                enum: string[];
+                description: string;
+            };
+            status: {
+                type: string;
+                enum: string[];
+                description: string;
+            };
+        };
+        required: string[];
+    };
+    handler(input: any): Promise<{
+        success: boolean;
+        data: {
+            customerId: any;
+            campaignId: any;
+            name: any;
+            campaignType: any;
+            status: any;
+            message: string;
+        };
+        warning: string[];
     }>;
 } | {
     name: string;
@@ -2307,6 +2307,114 @@ export declare const allTools: ({
                 type: string;
                 description: string;
             };
+            supabaseUrl: {
+                type: string;
+                description: string;
+            };
+            supabaseKey: {
+                type: string;
+                description: string;
+            };
+            includeMetadata: {
+                type: string;
+                description: string;
+            };
+        };
+        required: string[];
+    };
+    handler(input: any): Promise<{
+        success: boolean;
+        dashboard: any;
+        error?: undefined;
+        details?: undefined;
+    } | {
+        success: boolean;
+        error: string;
+        details: string[];
+        dashboard?: undefined;
+    } | {
+        success: boolean;
+        error: string;
+        dashboard?: undefined;
+        details?: undefined;
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            workspaceId: {
+                type: string;
+                description: string;
+            };
+            search: {
+                type: string;
+                description: string;
+            };
+            limit: {
+                type: string;
+                description: string;
+            };
+            supabaseUrl: {
+                type: string;
+                description: string;
+            };
+            supabaseKey: {
+                type: string;
+                description: string;
+            };
+        };
+        required: never[];
+    };
+    handler(input: any): Promise<{
+        success: boolean;
+        dashboards: {
+            id: any;
+            name: any;
+            description: any;
+            workspace_id: any;
+            datasource: any;
+            dashboard_url: string;
+            created_at: any;
+            updated_at: any;
+            view_count: any;
+        }[];
+        count: number;
+        total: number;
+        filters: {
+            workspaceId: string;
+            search: string;
+        };
+        error?: undefined;
+        details?: undefined;
+    } | {
+        success: boolean;
+        error: string;
+        details: string[];
+        dashboards?: undefined;
+        count?: undefined;
+        total?: undefined;
+        filters?: undefined;
+    } | {
+        success: boolean;
+        error: string;
+        dashboards?: undefined;
+        count?: undefined;
+        total?: undefined;
+        filters?: undefined;
+        details?: undefined;
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            dashboard_id: {
+                type: string;
+                description: string;
+            };
             operation: {
                 type: string;
                 enum: string[];
@@ -2366,7 +2474,7 @@ export declare const allTools: ({
             name: string;
             description: string;
             datasource: string;
-            rows: import("../../wpp-analytics/tools/dashboards.js").RowConfig[];
+            rows: import("../../wpp-analytics/tools/index.js").RowConfig[];
             component_count: number;
             preview: string | undefined;
         }[];
@@ -2413,6 +2521,14 @@ export declare const allTools: ({
                 type: string;
                 description: string;
             };
+            useSharedTable: {
+                type: string;
+                description: string;
+            };
+            workspaceId: {
+                type: string;
+                description: string;
+            };
             __oauthToken: {
                 type: string;
                 description: string;
@@ -2433,7 +2549,7 @@ export declare const allTools: ({
     } | {
         success: boolean;
         table: string;
-        tableName: any;
+        tableName: string;
         rows_inserted: number;
         dimensions_pulled: any;
         platform: any;
@@ -2448,14 +2564,6 @@ export declare const allTools: ({
         type: "object";
         properties: {
             bigqueryTable: {
-                type: string;
-                description: string;
-            };
-            template: {
-                type: string;
-                description: string;
-            };
-            rows: {
                 type: string;
                 description: string;
             };
@@ -2482,6 +2590,53 @@ export declare const allTools: ({
             workspace_id: {
                 type: string;
             };
+            pages: {
+                type: string;
+                description: string;
+                items: {
+                    type: string;
+                    properties: {
+                        name: {
+                            type: string;
+                            description: string;
+                        };
+                        template: {
+                            type: string;
+                            description: string;
+                        };
+                        filters: {
+                            type: string;
+                            description: string;
+                            items: {
+                                type: string;
+                                properties: {
+                                    field: {
+                                        type: string;
+                                    };
+                                    operator: {
+                                        type: string;
+                                    };
+                                    values: {
+                                        type: string;
+                                        items: {
+                                            type: string;
+                                        };
+                                    };
+                                };
+                            };
+                        };
+                    };
+                    required: string[];
+                };
+            };
+            template: {
+                type: string;
+                description: string;
+            };
+            rows: {
+                type: string;
+                description: string;
+            };
         };
         required: string[];
     };
@@ -2492,22 +2647,14 @@ export declare const allTools: ({
         dataset_id?: undefined;
         dashboard_url?: undefined;
         view_url?: undefined;
-        instructions?: undefined;
-        sql_statements?: undefined;
-        agent_workflow?: undefined;
+        message?: undefined;
     } | {
         success: boolean;
         dashboard_id: string;
         dataset_id: string;
         dashboard_url: string;
         view_url: string;
-        instructions: string;
-        sql_statements: {
-            step: number;
-            description: string;
-            sql: string;
-        }[];
-        agent_workflow: string[];
+        message: string;
         error?: undefined;
     }>;
 } | {

@@ -1,0 +1,267 @@
+# WPP Marketing Analytics Platform
+
+**Fully Agent-Driven Analytics Platform for WPP Practitioners**
+
+## 🎯 The Vision: Zero-Touch Analytics
+
+**Practitioner** → **OMA Platform** → **Selects AI Agent** → **Agent Does Everything**
+
+**What Practitioners Do:**
+1. Connect OAuth (one-time: Google Ads, Search Console, Analytics)
+2. Talk to AI agent in natural language
+3. Review dashboards agent creates
+4. Make decisions based on insights
+
+**What Agents Do (100% Automated):**
+1. Pull data from marketing platforms (via practitioner's OAuth)
+2. Store in BigQuery data lake (shared tables, auto-deduplicated)
+3. Analyze data, find insights
+4. Create dashboards in reporting platform
+5. Set up daily auto-refresh
+6. Handle all backend complexity
+
+**Practitioner NEVER:**
+- ❌ Manually exports data
+- ❌ Configures BigQuery
+- ❌ Sets up data pipelines
+- ❌ Manages refresh schedules
+- ❌ Touches infrastructure
+
+**Everything is agent-driven via MCP tools + OAuth tokens.**
+
+---
+
+## 🤖 Agent-Driven Architecture
+
+```
+Practitioner: "Show me GSC performance for client1.com, last 30 days"
+    ↓
+AI Agent:
+  1. Checks BigQuery: Does client1.com data exist?
+  2. If not: Pulls 12 months via practitioner's OAuth
+  3. Stores in shared BigQuery table with workspace_id
+  4. Creates dashboard with charts
+  5. Sets up daily auto-refresh
+  6. Returns: "Here's your dashboard [link]"
+    ↓
+Practitioner: Opens dashboard, sees fresh data
+    ↓
+30 Days Later:
+Practitioner: Opens same dashboard
+AI Agent: (in background) Queried BigQuery with current "last 30 days"
+Practitioner: Sees UPDATED data (not 30-day-old snapshot)
+```
+
+**Key:** Dashboards store QUERIES (not data). Every open = fresh query = current data.
+
+---
+
+## 🔑 Core Capabilities
+
+**AI Agents Can (via MCP tools):**
+- ✅ Query any marketing platform (GSC, Ads, GA4) via OAuth
+- ✅ Pull data to BigQuery (on-demand or scheduled)
+- ✅ Create/edit dashboards in reporting platform
+- ✅ Analyze data, find insights, make recommendations
+- ✅ Optimize campaigns, budgets, keywords
+- ✅ Set up automated reporting
+- ✅ Export to PDF, Excel, presentations
+
+**Practitioners Can:**
+- ✅ Grant OAuth access (one-time)
+- ✅ Ask questions in natural language
+- ✅ Review agent-created dashboards
+- ✅ Request changes ("add device breakdown")
+- ✅ Make business decisions
+
+**Backend Does Automatically:**
+- ✅ Daily data refresh (2 AM UTC)
+- ✅ Data deduplication (shared tables)
+- ✅ OAuth token rotation
+- ✅ Cost optimization (pause inactive properties)
+- ✅ Multi-tenant isolation
+
+---
+
+## 🏗️ Complete Data Flow
+
+```
+┌─────────────────────────────────────────────────────────┐
+│ Practitioner at OMA Platform                            │
+│ "Create GSC dashboard for client1.com"                 │
+└────────────────────┬────────────────────────────────────┘
+                     │
+                     ▼
+┌─────────────────────────────────────────────────────────┐
+│ AI Agent (Claude with MCP tools)                        │
+│ 1. Checks if data exists in BigQuery                    │
+│ 2. If not: Requests OAuth consent                       │
+│ 3. Pulls data via push_platform_data_to_bigquery        │
+│ 4. Stores in shared BigQuery table                      │
+│ 5. Creates dashboard via create_dashboard               │
+│ 6. Returns link to practitioner                         │
+└────────────────────┬────────────────────────────────────┘
+                     │
+                     ▼
+┌─────────────────────────────────────────────────────────┐
+│ BigQuery Shared Tables                                  │
+│ - gsc_performance_shared (all workspaces)               │
+│ - ads_performance_shared (all workspaces)               │
+│ - ga4_sessions_shared (all workspaces)                  │
+│ Isolated by: workspace_id + RLS policies                │
+└────────────────────┬────────────────────────────────────┘
+                     │
+                     ▼
+┌─────────────────────────────────────────────────────────┐
+│ Daily Refresh (Automatic, 2 AM UTC)                     │
+│ - Cloud Scheduler triggers                              │
+│ - Pulls yesterday's data for active properties          │
+│ - Merges into shared tables                             │
+│ - All dashboards auto-update                            │
+└────────────────────┬────────────────────────────────────┘
+                     │
+                     ▼
+┌─────────────────────────────────────────────────────────┐
+│ Reporting Platform                                      │
+│ - Dashboards store: Query definitions (not data)        │
+│ - On open: Executes live query against BigQuery         │
+│ - Shows: Current data (always fresh)                    │
+└─────────────────────────────────────────────────────────┘
+```
+
+**Practitioner sees:** "Loading..." for 2-5 seconds, then fresh dashboard
+**Behind the scenes:** BigQuery query executed with current date ranges
+
+---
+
+## 🎯 For WPP Practitioners
+
+**How to Use:**
+1. Go to OMA Platform
+2. Select AI agent model (Claude, etc.)
+3. Say: "Show me performance for [client/property]"
+4. Grant OAuth if first time (one click)
+5. Agent creates everything
+6. Review dashboard
+7. Ask follow-ups: "Add device breakdown", "Show last 90 days"
+
+**That's it. No technical knowledge needed.**
+
+**For:** WPP marketing agencies and clients
+**How:** 100% agent-driven via OAuth 2.0 (zero manual data work)
+
+---
+
+## 🏗️ Tech Stack
+
+**MCP Server** (src/):
+- TypeScript + Node.js
+- 31 MCP tools across 7 Google APIs
+- OAuth 2.0 authentication (oauth-client-factory.ts)
+- Express HTTP wrapper for OMA integration
+
+**Reporting Platform** (wpp-analytics-platform/):
+- Next.js 15 + React 19 + TypeScript
+- ECharts 5.5 (primary) + Recharts 3.3 (secondary)
+- Supabase (PostgreSQL + RLS multi-tenant)
+- BigQuery (central data hub)
+- 34 chart types (24 need migration)
+- Drag-and-drop dashboard builder
+
+---
+
+## 📚 Full Documentation
+
+**Planning & Progress:**
+- **ROADMAP.md** - Phases 4.1-4.8, all tasks, 6-9 week timeline
+- **LINEAR_TICKETS_MCP47_TO_MCP75.md** - All 29 tickets detailed
+- **WORKFLOW.md** - How Claude + Sub-Agents + Skills + Linear work together
+
+**Technical:**
+- **wpp-analytics-platform/README.md** - Platform features, 34 chart types
+- **DATA-LAYER-ARCHITECTURE.md** - BigQuery → Dataset → API → Frontend flow
+
+---
+
+## 🤖 Sub-Agents (When to Use)
+
+**Fast Answers** (Haiku, <2s):
+- **knowledge-base** - "What is", "how does", "explain", "show me"
+- **mcp-tools-reference** - "What tools", "which API", "how to query"
+- **linear-status-checker** - "Status", "progress", "what's left"
+
+**Work Execution** (Sonnet, 5-60min):
+- **chart-migrator** - "Migrate chart", "fix BarChart", "chart not yet migrated"
+- **frontend-builder** - "Sidebar", "UI component", "settings tab"
+- **mcp-tool-builder** - "Create MCP tool", "new Google API"
+- **database-optimizer** - "BigQuery", "SQL query", "optimize"
+
+**Maintenance** (Haiku, <2min):
+- **doc-syncer** - "Update docs" (user-triggered only)
+- **code-reviewer** - "Review code" (before commits)
+
+---
+
+## 💡 Skills (Quick Reference)
+
+Stored in `.claude/skills/` (reference knowledge, not agents):
+- **mcp-server.md** - 31 tool catalog
+- **oauth.md** - OAuth 2.0 patterns
+- **linear.md** - Ticket format
+- **chrome-devtools-mcp.md** - WSL2 debugging
+- **reporting-platform.md** - Dashboard MCP tools
+
+**Skills provide knowledge, Agents do work.**
+
+---
+
+## ⚠️ Supabase Project - CRITICAL
+
+**Project Name:** "MCP Servers"
+**Project Reference:** `nbjlehblqctblhpbwgry`
+**Dashboard:** https://supabase.com/dashboard/project/nbjlehblqctblhpbwgry
+
+**IMPORTANT:** This project is under a DIFFERENT Supabase account than the main account.
+- Main account shows: "barisdogancan@gmail.com's project" and "SEO Tool"
+- MCP Servers project is on a separate account
+- All credentials are now in `.env` and `.env.local` files (updated Oct 26, 2025)
+
+**Database Tables:**
+- workspaces (1 row)
+- dashboards (1 row)
+- datasets (1 row)
+- dashboard_templates (1 row)
+- dashboard_shares (0 rows)
+- dataset_cache (9 rows)
+
+---
+
+## ⚠️ Development Server - CRITICAL
+
+**ALWAYS use port 3000 for the frontend dev server:**
+- Platform URL: http://localhost:3000
+- If port 3000 shows "in use", it means our server is already running
+- **DO NOT start on alternate ports** (like 3001, 3002, etc.)
+- **Action required:** Kill the existing process and restart on 3000
+
+**Kill existing process:**
+```bash
+# Kill all Next.js dev servers
+pkill -9 -f "next dev"
+
+# Or kill by port
+lsof -ti:3000 | xargs kill -9
+
+# Then start fresh
+cd wpp-analytics-platform/frontend && npm run dev
+```
+
+**Why port 3000 matters:**
+- OAuth callbacks configured for localhost:3000
+- API endpoints expect localhost:3000
+- Frontend ENV vars reference localhost:3000
+- Changing ports breaks authentication flow
+
+---
+
+**See WORKFLOW.md for complete usage guide** 🚀

@@ -90,7 +90,7 @@ export const createPropertyTool = {
       });
 
       // Extract OAuth token from request
-      const oauthToken = extractOAuthToken(input);
+      const oauthToken = await extractOAuthToken(input);
       if (!oauthToken) {
         throw new Error('OAuth token required for Google Analytics API access');
       }
@@ -256,7 +256,7 @@ export const createDataStreamTool = {
       }
 
       // Extract OAuth token from request
-      const oauthToken = extractOAuthToken(input);
+      const oauthToken = await extractOAuthToken(input);
       if (!oauthToken) {
         throw new Error('OAuth token required for Google Analytics API access');
       }
@@ -433,7 +433,7 @@ Custom dimension: "Customer Tier" → parameter: customer_tier, scope: EVENT`,
       });
 
       // Extract OAuth token from request
-      const oauthToken = extractOAuthToken(input);
+      const oauthToken = await extractOAuthToken(input);
       if (!oauthToken) {
         throw new Error('OAuth token required for Google Analytics API access');
       }
@@ -600,7 +600,7 @@ export const createCustomMetricTool = {
       });
 
       // Extract OAuth token from request
-      const oauthToken = extractOAuthToken(input);
+      const oauthToken = await extractOAuthToken(input);
       if (!oauthToken) {
         throw new Error('OAuth token required for Google Analytics API access');
       }
@@ -718,7 +718,7 @@ export const createConversionEventTool = {
       });
 
       // Extract OAuth token from request
-      const oauthToken = extractOAuthToken(input);
+      const oauthToken = await extractOAuthToken(input);
       if (!oauthToken) {
         throw new Error('OAuth token required for Google Analytics API access');
       }
@@ -830,7 +830,7 @@ export const createGoogleAdsLinkTool = {
       });
 
       // Extract OAuth token from request
-      const oauthToken = extractOAuthToken(input);
+      const oauthToken = await extractOAuthToken(input);
       if (!oauthToken) {
         throw new Error('OAuth token required for Google Analytics API access');
       }

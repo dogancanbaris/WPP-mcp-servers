@@ -4,12 +4,12 @@
 // Account & property management
 export { listAnalyticsAccountsTool, listAnalyticsPropertiesTool, listDataStreamsTool, } from './accounts.js';
 // Reporting tools
-export { runAnalyticsReportTool, getRealtimeUsersTool } from './reporting.js';
+export { runAnalyticsReportTool, getRealtimeUsersTool } from './reporting/index.js';
 // Admin API tools
 export { analyticsAdminTools } from './admin.js';
 // Re-export as collection
 import { listAnalyticsAccountsTool, listAnalyticsPropertiesTool, listDataStreamsTool, } from './accounts.js';
-import { runAnalyticsReportTool, getRealtimeUsersTool } from './reporting.js';
+import { runAnalyticsReportTool, getRealtimeUsersTool } from './reporting/index.js';
 import { analyticsAdminTools } from './admin.js';
 /**
  * All Google Analytics tools

@@ -1,304 +1,326 @@
 # WPP Analytics Platform - Data Layer Architecture
 
-> ⚠️ **NOTE:** This document describes the current architecture (post-Cube.js removal, Oct 2025).
-> The platform previously used Cube.js semantic layer but migrated to dataset-based architecture for better multi-platform blending and 80% complexity reduction.
+**Version:** 2.0 (Shared BigQuery Data Lake)
+**Updated:** October 27, 2025
+**Status:** Production Architecture (Approved)
 
-## Overview
-
-The platform uses BigQuery as the central data hub with a dataset-based architecture for efficient, scalable analytics.
-
-## Architecture Components
-
-### 1. BigQuery (Data Lake)
-- Central repository for all marketing platform data
-- 7 connected platforms: GSC, Google Ads, GA4, Business Profile, SERP, Bing, Amazon (future)
-- Automatic data refresh via MCP tools
-- Hot/cold storage for cost optimization
-
-### 2. Dataset Registry (Metadata)
-- JSON configurations per platform (gsc.json, ads.json, analytics.json, etc.)
-- Defines available dimensions and metrics
-- Specifies refresh intervals
-- Used by query builder to construct valid queries
-
-### 3. API Routes (Query Builder)
-- Next.js API routes in /app/api/
-- Validates dataset + metrics/dimensions combination
-- Constructs optimized BigQuery SQL
-- Returns pre-aggregated data (100-400 rows max)
-- Handles caching via Redis
-
-### 4. Frontend (React + Recharts)
-- Consumes /api/datasets/{id}/query
-- Fetches with React Query
-- Caches locally to minimize API calls
-- Renders 13 chart types with custom styling
-
-## Data Flow
-
-```
-Marketing Platforms (GSC, Ads, GA4)
-           ↓
-      BigQuery (data lake)
-           ↓
-    Dataset Registry (metadata)
-           ↓
-    API Routes (/api/datasets)
-           ↓
-      Frontend (React)
-```
-
-## Example: Creating a Dashboard Chart
-
-1. **User selects dataset**: "GSC Performance"
-2. **Frontend fetches metadata**: GET /api/metadata/gsc
-3. **User selects metrics**: ["clicks", "impressions"]
-4. **User selects dimensions**: ["date", "device"]
-5. **Frontend queries data**: POST /api/datasets/gsc_perf/query
-6. **API builds SQL**: SELECT metrics, dimensions FROM bigquery_table WHERE filters
-7. **BigQuery executes**: Returns aggregated results
-8. **Redis caches**: Results cached 1 hour
-9. **Frontend renders**: Recharts displays chart
-
-## Multi-Tenant Isolation
-
-All queries filtered by workspace_id:
-- BigQuery tables partitioned by workspace_id
-- API middleware enforces workspace_id from OAuth token
-- RLS policies at database level
-- Workspace isolation guaranteed
-
-## Query Optimization
-
-- Pre-aggregated: API returns only needed metrics/dimensions
-- Cached: Redis caches by dataset + query params
-- Partitioned: BigQuery tables partitioned by date
-- Clustered: Frequently filtered columns clustered
-- Materialized views: Common queries pre-computed
-
-## Platform Metadata Registry
-
-### GSC (gsc.json)
-```json
-{
-  "id": "gsc",
-  "name": "Google Search Console",
-  "dimensions": ["date", "query", "page", "device", "country"],
-  "metrics": ["clicks", "impressions", "ctr", "position"],
-  "blendable_with": ["google_ads", "analytics"]
-}
-```
-
-### Google Ads (ads.json)
-```json
-{
-  "id": "google_ads",
-  "name": "Google Ads",
-  "dimensions": ["date", "campaign", "ad_group", "keyword", "device"],
-  "metrics": ["cost", "clicks", "impressions", "conversions", "ctr", "cpc"],
-  "blendable_with": ["gsc", "analytics"]
-}
-```
-
-### Google Analytics (analytics.json)
-```json
-{
-  "id": "analytics",
-  "name": "Google Analytics 4",
-  "dimensions": ["date", "source", "medium", "campaign", "page", "device"],
-  "metrics": ["users", "sessions", "pageviews", "bounce_rate", "conversions"],
-  "blendable_with": ["gsc", "google_ads"]
-}
-```
-
-## Data Blending Strategy
-
-### Example: Paid + Organic Search Analysis
-
-**Step 1: Pull data from both platforms**
-```typescript
-// Pull GSC data
-const gscData = await pullGSCData({
-  dimensions: ['date', 'query'],
-  metrics: ['clicks', 'impressions']
-});
-
-// Pull Google Ads data
-const adsData = await pullAdsData({
-  dimensions: ['date', 'keyword'],
-  metrics: ['clicks', 'cost', 'conversions']
-});
-```
-
-**Step 2: Register datasets**
-```typescript
-const gscDataset = await registerDataset({
-  name: 'GSC Q4 2025',
-  bigquery_table: 'project.dataset.gsc_q4_2025',
-  platform: 'gsc'
-});
-
-const adsDataset = await registerDataset({
-  name: 'Ads Q4 2025',
-  bigquery_table: 'project.dataset.ads_q4_2025',
-  platform: 'google_ads'
-});
-```
-
-**Step 3: Query blended data**
-```sql
-SELECT
-  COALESCE(g.date, a.date) as date,
-  COALESCE(g.query, a.keyword) as search_term,
-  COALESCE(g.clicks, 0) as organic_clicks,
-  COALESCE(a.clicks, 0) as paid_clicks,
-  COALESCE(a.cost, 0) as cost,
-  COALESCE(a.conversions, 0) as conversions
-FROM gsc_dataset g
-FULL OUTER JOIN ads_dataset a
-  ON g.date = a.date
-  AND g.query = a.keyword
-```
-
-## Caching Strategy
-
-### Cache Key Structure
-```
-cache:dataset:{dataset_id}:query:{sha256_hash_of_params}
-```
-
-### Cache TTL
-- Default: 1 hour
-- Configurable per dataset
-- Invalidated on dataset refresh
-
-### Cache Hit Ratio Optimization
-- Common queries cached longer (24 hours)
-- Rare queries cached shorter (1 hour)
-- Cache warming for predicted queries
-- Cache pre-population for dashboards
-
-## Performance Benchmarks
-
-### Query Performance
-- Average query time: 200ms (with cache)
-- Average query time: 2s (without cache, from BigQuery)
-- Target: <500ms for all queries
-
-### Data Freshness
-- GSC: Daily refresh at 2 AM UTC
-- Google Ads: Hourly refresh
-- Google Analytics: Real-time + daily historical
-
-### Cost Optimization
-- Average cost per query: $0.0001 (cached)
-- Average cost per query: $0.01 (uncached)
-- Monthly BigQuery cost target: <$100
-
-## Migration from Cube.js
-
-### What Changed
-- ❌ Removed: Cube.js semantic layer (414MB backend)
-- ❌ Removed: Separate Cube.js server
-- ❌ Removed: Cube schemas and pre-aggregations
-- ✅ Added: Dataset registry (JSON metadata)
-- ✅ Added: Direct BigQuery query builder
-- ✅ Added: Redis caching layer
-
-### Why
-- Cube.js couldn't blend multiple platforms
-- Required separate backend (added complexity)
-- Not designed for dynamic agent queries
-- Pre-aggregations not useful for ad-hoc analysis
-
-### Benefits
-- 80% reduction in backend complexity
-- Faster query response times (200ms vs 2s)
-- Lower infrastructure costs ($20/mo vs $200/mo)
-- Agent-friendly API design
-- True multi-platform blending
-
-## Future Enhancements
-
-### Phase 1 (Q1 2025)
-- [ ] Add Bing Ads platform
-- [ ] Add Amazon Ads platform
-- [ ] Implement query result compression
-
-### Phase 2 (Q2 2025)
-- [ ] Real-time streaming data ingestion
-- [ ] Predictive caching based on user behavior
-- [ ] Query performance analytics dashboard
-
-### Phase 3 (Q3 2025)
-- [ ] Machine learning-powered query optimization
-- [ ] Automatic data quality monitoring
-- [ ] Advanced blending across 7+ platforms
-
-## Architecture Decisions
-
-### Why BigQuery?
-- Scales to petabyte-level data
-- Fast OLAP queries
-- Integrates with all Google APIs
-- Cost-effective for analytics workloads
-
-### Why Redis for Caching?
-- Sub-millisecond latency
-- TTL expiration built-in
-- Supports complex cache keys
-- Easy horizontal scaling
-
-### Why JSON Metadata Registry?
-- Version controlled
-- Easy for agents to understand
-- Fast to update
-- No database required
-
-### Why Dataset-Based Architecture?
-- Flexible: Any BigQuery table can be a dataset
-- Scalable: Unlimited datasets per workspace
-- Blendable: Easy to JOIN datasets
-- Agent-friendly: Simple API design
-
-## Troubleshooting
-
-### Query Returns No Data
-- Check dataset registration
-- Verify BigQuery table exists
-- Check workspace_id isolation
-- Validate date range filters
-
-### Query Too Slow
-- Check if query is cached
-- Verify BigQuery table partitioning
-- Review query complexity
-- Consider materialized views
-
-### Cache Misses
-- Check Redis connection
-- Verify cache key generation
-- Review TTL settings
-- Monitor cache hit ratio
-
-## Monitoring & Alerting
-
-### Key Metrics
-- Query response time (p50, p95, p99)
-- Cache hit ratio
-- BigQuery cost per day
-- Data freshness lag
-- Error rate per endpoint
-
-### Alerts
-- Query response time >5s (critical)
-- Cache hit ratio <50% (warning)
-- BigQuery cost >$10/day (warning)
-- Data freshness >48 hours (critical)
-- Error rate >1% (warning)
+> **Breaking Change:** Migrated from per-dashboard tables to shared BigQuery tables with workspace_id isolation.
+> See BIGQUERY-DATA-LAKE-ARCHITECTURE.md for complete implementation details.
 
 ---
 
-**Architecture Status:** Production-ready, OAuth-enabled
-**Last Updated:** October 25, 2025
-**Maintainer:** Database & Analytics Architect Agent
+## 🎯 Core Principle
+
+**Dashboards store QUERIES, not DATA.**
+
+Like Looker Studio, dashboards execute queries against live BigQuery tables every time they're opened. This ensures data is always current, even for dashboards created years ago.
+
+---
+
+## 🏗️ Architecture Overview
+
+```
+┌─────────────────────────────────────────────────────────┐
+│ Marketing Platforms (GSC, Ads, GA4, etc.)               │
+│ - Google Search Console                                 │
+│ - Google Ads (via MCC)                                  │
+│ - Google Analytics 4                                    │
+│ - Bing, Amazon, Meta, TikTok (future)                  │
+└────────────────────┬────────────────────────────────────┘
+                     │ OAuth / API
+                     ▼
+┌─────────────────────────────────────────────────────────┐
+│ BigQuery Data Lake (Hot Storage - Last 12 Months)      │
+│                                                          │
+│ Shared Tables (ONE per platform):                       │
+│ ├── gsc_performance_shared    (all workspaces)         │
+│ ├── ads_performance_shared    (all workspaces)         │
+│ └── ga4_sessions_shared       (all workspaces)         │
+│                                                          │
+│ Isolation: workspace_id column + RLS policies           │
+│ Partitioned: BY date (365-day expiration)              │
+│ Clustered: BY workspace_id, property, dimensions        │
+└────────────────────┬────────────────────────────────────┘
+                     │
+                     ▼
+┌─────────────────────────────────────────────────────────┐
+│ Dataset API (/api/datasets/[id]/query)                  │
+│ - Validates metrics/dimensions                          │
+│ - Applies global filters (date, dimension, measure)     │
+│ - Executes BigQuery SQL                                 │
+│ - Returns aggregated results                            │
+│ - Caches for 1-4 hours                                  │
+└────────────────────┬────────────────────────────────────┘
+                     │
+                     ▼
+┌─────────────────────────────────────────────────────────┐
+│ Frontend (Next.js + React Query + Recharts/ECharts)    │
+│ - Fetches via /api/datasets/[id]/query                 │
+│ - Subscribes to global filters (useGlobalFilters)       │
+│ - Renders 33 chart types                                │
+│ - Caches queries client-side                            │
+└─────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 🔄 Data Collection: On-Demand + Daily Refresh
+
+### On-Demand Pull (Dashboard Creation)
+
+**When:** Practitioner creates first dashboard for a property
+
+**Process:**
+1. Check if data exists in BigQuery for (workspace_id + property)
+2. If NOT found: Trigger OAuth consent
+3. Pull last 12 months from platform API
+4. Insert into shared table with workspace_id
+5. Register in property_registry (OAuth token stored)
+6. Create dashboard (points to shared table)
+
+**Duration:** 30-60 seconds (one-time)
+
+**Deduplication:**
+- If same workspace + property exists → Reuse data (instant)
+- If different workspace + property exists → Check if shareable
+- If different OAuth access → Might need separate pull
+
+### Daily Refresh (Automated)
+
+**When:** Every day at 2 AM UTC
+
+**Process:**
+1. Query property_registry for active properties (queried in last 30 days)
+2. For each property: Pull yesterday's data only (incremental)
+3. MERGE into shared table (upsert - update existing, insert new)
+4. Update last_refreshed_at timestamp
+5. Invalidate frontend cache
+
+**Duration:** 5-15 minutes for 1,000 properties
+
+**Inactive Properties:**
+- If not queried in 30 days → pause daily refresh (cost savings)
+- On next dashboard open → pull missing days, resume refresh
+
+---
+
+## 📊 Shared Table Design
+
+### Example: gsc_performance_shared
+
+```sql
+CREATE TABLE `mcp-servers-475317.wpp_marketing.gsc_performance_shared`
+(
+  date DATE NOT NULL,                 -- Partition key
+  query STRING,                       -- Search term
+  page STRING,                        -- Landing page
+  device STRING,                      -- MOBILE, DESKTOP, TABLET
+  country STRING,                     -- US, GB, CA, etc.
+  clicks INT64,
+  impressions INT64,
+  ctr FLOAT64,
+  position FLOAT64,
+  workspace_id STRING NOT NULL,       -- Tenant isolation
+  property STRING NOT NULL,           -- sc-domain:example.com
+  oauth_user_id STRING,
+  imported_at TIMESTAMP,
+  data_source STRING                  -- 'api' or 'bulk_export'
+)
+PARTITION BY date
+CLUSTER BY workspace_id, property, device, country
+OPTIONS(partition_expiration_days = 365);
+```
+
+**Key Features:**
+- **Shared:** All workspaces in ONE table
+- **Isolated:** workspace_id + RLS policies
+- **Partitioned:** Auto-delete after 12 months
+- **Clustered:** Fast filtered queries
+- **Complete:** ALL dimensions for flexible filtering
+
+---
+
+## 🔍 Query Pattern
+
+### Dashboard Opens → Executes Live Query
+
+```typescript
+// Dashboard component (Scorecard)
+const { filters: globalFilters } = useGlobalFilters();
+
+const { data } = useQuery({
+  queryKey: ['scorecard', dataset_id, metrics, globalFilters],
+  queryFn: async () => {
+    // Evaluate preset filter dynamically
+    const dateFilter = globalFilters.find(f => f.type === 'dateRange');
+    const { startDate, endDate } = getDateRangeFromFilter(dateFilter);
+    // Today: "last30Days" = 2025-09-28 to 2025-10-27
+    // In 30 days: "last30Days" = 2025-10-28 to 2025-11-26
+
+    const params = new URLSearchParams({
+      metrics: metrics.join(','),
+      filters: JSON.stringify([
+        { member: 'date', operator: 'inDateRange', values: [startDate, endDate] },
+        { member: 'workspace_id', operator: 'equals', values: [workspace_id] },
+        ...globalFilters
+      ])
+    });
+
+    return fetch(`/api/datasets/${dataset_id}/query?${params}`);
+  }
+});
+```
+
+**Backend SQL Generated:**
+```sql
+SELECT
+  SUM(clicks) as clicks_total,
+  SUM(impressions) as impressions_total
+FROM `mcp-servers-475317.wpp_marketing.gsc_performance_shared`
+WHERE date BETWEEN '2025-09-28' AND '2025-10-27'  -- Calculated TODAY
+AND workspace_id = 'workspace_A'
+AND property = 'sc-domain:themindfulsteward.com'
+-- User can also filter:
+AND device = 'MOBILE'  -- ✅ Works because we store device dimension
+AND country IN ('US', 'CA')  -- ✅ Works because we store country dimension
+```
+
+**Query Time:** 200ms (cached) or 2s (fresh from BigQuery)
+
+---
+
+## 💰 Cost Model
+
+### Storage Costs (12-Month Hot Storage)
+
+**Calculation:**
+- Properties: 1,000 active
+- Rows per property/year: 180K (GSC average)
+- Total rows: 180M
+- Row size: 200 bytes
+- **Total storage:** 36GB = **$0.72/month**
+
+**Scaling:**
+- 10,000 properties = $7.20/month
+- 100,000 properties = $72/month
+
+**Not linear!** Many practitioners share same properties (agencies managing client accounts).
+
+### Query Costs
+
+**Calculation:**
+- Dashboard opens: 1,000/day
+- Queries per open: 20 (5 charts × 4 queries with different filters)
+- Total queries: 20,000/day
+- Cache hit rate: 80% (after first load)
+- Uncached queries: 4,000/day
+- Data scanned per query: 5KB (with clustering)
+- **Cost:** 4,000 × $0.005 = **$20/day = $600/month**
+
+**Optimization:**
+- Materialized views: Reduce to $360/month
+- Longer cache TTL: Reduce to $250/month
+- **Optimized: $250-360/month**
+
+### Total Operating Cost
+
+**Conservative:**
+- Storage: $72/month (10K properties)
+- Queries: $600/month (1K daily opens)
+- **Total: $672/month**
+
+**Optimized:**
+- Storage: $72/month
+- Queries: $250/month
+- **Total: $322/month**
+
+**For 10,000 practitioners!**
+
+---
+
+## 🔐 Multi-Tenant Security
+
+### Row-Level Security (RLS)
+
+**BigQuery RLS Policy:**
+```sql
+CREATE ROW ACCESS POLICY workspace_isolation
+ON gsc_performance_shared
+GRANT TO ("allAuthenticatedUsers")
+FILTER USING (
+  workspace_id = SESSION_USER()
+  OR workspace_id IN (
+    SELECT shared_workspace_id
+    FROM workspace_sharing
+    WHERE user_workspace_id = SESSION_USER()
+  )
+);
+```
+
+**Result:** Users can ONLY see their workspace data, even querying directly in BigQuery Console.
+
+### OAuth Token Storage
+
+**Encryption:**
+- Tokens encrypted with AES-256
+- Stored in Supabase (encrypted column)
+- Decrypted only for daily refresh
+- Never exposed to frontend
+
+**Rotation:**
+- Auto-refresh when token expires
+- Email practitioner if refresh fails
+- Re-authorization flow in platform
+
+---
+
+## 📈 Growth Model
+
+### Month 1: Pilot (10 practitioners)
+- Properties: 15
+- Dashboards: 25
+- BigQuery rows: 2.7M
+- Cost: $18/month
+
+### Month 6: Early Adoption (100 practitioners)
+- Properties: 150 (many shared)
+- Dashboards: 300
+- BigQuery rows: 27M
+- Cost: $85/month
+
+### Month 12: Full Rollout (1,000 practitioners)
+- Properties: 1,200 (heavy sharing)
+- Dashboards: 3,500
+- BigQuery rows: 216M
+- Cost: $380/month
+
+### Month 24: Enterprise Scale (10,000 practitioners)
+- Properties: 8,000 (agencies share clients)
+- Dashboards: 40,000
+- BigQuery rows: 1.44B
+- Cost: $2,100/month
+
+**Growth is organic - you scale costs with actual usage!**
+
+---
+
+## 🎯 Key Benefits of This Architecture
+
+✅ **Truly Live Dashboards** - Data always current, like Looker Studio
+✅ **Cost-Effective** - Shared tables, not per-user duplication
+✅ **Organic Growth** - Lake builds as practitioners use system
+✅ **Smart Deduplication** - Same property + workspace = reuse data
+✅ **Complete Filter Support** - All dimensions stored for full flexibility
+✅ **Easy Extensibility** - Add metrics via ALTER TABLE anytime
+✅ **Automatic Daily Refresh** - Practitioners don't manage anything
+✅ **Secure Multi-Tenancy** - RLS + workspace_id isolation
+
+---
+
+**Documentation Updates Complete!**
+
+✅ ROADMAP.md - Phase 4.7 updated with BigQuery Data Lake
+✅ BIGQUERY-DATA-LAKE-ARCHITECTURE.md - Complete architecture created
+✅ DATA-LAYER-ARCHITECTURE.md - Updated with shared table model
+
+**Next: I'll explain exactly how we'll implement #2 (the actual trial run)**

@@ -470,7 +470,9 @@ mcp-servers/
 │   ├── ads/                            # Google Ads ⭐ EXPANDED
 │   │   ├── client.ts                   # Google Ads API wrapper
 │   │   └── tools/
-│   │       ├── accounts.ts, reporting.ts, campaigns.ts, budgets.ts, keywords.ts
+│   │       ├── reporting/              📁 Performance reports (5 tools, modular)
+│   │       ├── campaigns/              📁 Campaign management (2 tools, modular)
+│   │       ├── accounts.ts, budgets.ts, keywords.ts
 │   │       ├── conversions.ts          🆕 Conversion tracking (5 tools)
 │   │       ├── audiences.ts            🆕 Remarketing & audiences (4 tools)
 │   │       ├── assets.ts               🆕 Creative assets (1 tool)
@@ -482,8 +484,9 @@ mcp-servers/
 │   ├── analytics/                      # Google Analytics ⭐ EXPANDED
 │   │   ├── client.ts                   # Data API + Admin API client
 │   │   └── tools/
-│   │       ├── accounts.ts, reporting.ts
-│   │       ├── admin.ts                🆕 Property management, custom dimensions (6 tools)
+│   │       ├── reporting/              📁 GA4 reports (2 tools, modular)
+│   │       ├── accounts.ts
+│   │       ├── admin.ts                🆕 Property management, custom dimensions (8 tools)
 │   │       └── index.ts                # Exports all 11 Analytics tools
 │   │
 │   ├── business-profile/               🆕 NEW API

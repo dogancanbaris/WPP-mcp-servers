@@ -47,37 +47,10 @@ export type { HeatmapChartProps } from './HeatmapChart';
 export type { ParallelChartProps, ParallelAxis } from './ParallelChart';
 export type { PictorialBarChartProps } from './PictorialBarChart';
 export type { RadarChartProps } from './RadarChart';
+export type { SankeyChartProps } from './SankeyChart';
 export type { ScatterChartProps } from './ScatterChart';
 export type { SunburstChartProps } from './SunburstChart';
 export type { TreemapChartProps } from './TreemapChart';
 export type { WaterfallChartProps } from './WaterfallChart';
 export type { ScorecardProps } from './Scorecard';
 export type { TableChartProps } from './TableChart';
-
-// SankeyChart exports
-export type {
-  SankeyChartProps,
-  SankeyNode,
-  SankeyLink,
-  SankeyData,
-  ValueFormatter,
-  NodeClickHandler,
-  LinkClickHandler,
-  ChartOrientation,
-  NodeAlignment,
-  SankeyPreset,
-} from './SankeyChart.types';
-
-export { SANKEY_PRESETS } from './SankeyChart.types';
-
-// SankeyChart hooks
-export {
-  useSankeyData,
-  useSankeyState,
-  useSankeyInteractions,
-} from './useSankeyData';
-
-export type {
-  UseSankeyDataOptions,
-  UseSankeyDataReturn,
-} from './useSankeyData';

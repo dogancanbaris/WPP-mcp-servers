@@ -31,21 +31,17 @@ export const MenuButton: React.FC<MenuButtonProps> = ({ label, items }) => {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button
-          variant="ghost"
+          variant="ghost-menu"
           size="sm"
-          className={cn(
-            'h-10 px-3 text-sm font-medium',
-            'transition-colors',
-            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-0'
-          )}
+          className="h-9 px-3 font-medium"
         >
           {label}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align="start"
-        className="min-w-[240px] shadow-lg border"
-        sideOffset={4}
+        className="min-w-[240px]"
+        sideOffset={8}
       >
         {items.map((item, index) =>
           renderMenuItem(item, index, `${label}-${index}`)

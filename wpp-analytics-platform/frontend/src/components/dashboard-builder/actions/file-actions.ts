@@ -5,25 +5,39 @@ import { toast } from '@/lib/toast';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 
-export const useFileActions = () => {
+export const useFileActions = (onOpenNewDashboard?: () => void) => {
   const router = useRouter();
   const { config, setConfig } = useDashboardStore();
 
   const onNew = () => {
     if (confirm('Create new dashboard? Unsaved changes will be lost.')) {
-      router.push('/dashboard/new/builder');
+      if (onOpenNewDashboard) {
+        // Open dialog in current context
+        onOpenNewDashboard();
+      } else {
+        // Fallback: Navigate to dashboard list
+        router.push('/dashboard');
+      }
     }
   };
 
   const onMakeCopy = async () => {
     try {
-      const newId = `copy-${Date.now()}`;
+      const newId = crypto.randomUUID();
       const copyConfig = {
         ...config,
         id: newId,
         title: `${config.title} (Copy)`,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
       };
-      await saveDashboard(newId, copyConfig);
+
+      const result = await saveDashboard(newId, copyConfig);
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to save copy');
+      }
+
       toast.success('Dashboard copied successfully');
       router.push(`/dashboard/${newId}/builder`);
     } catch (error) {
@@ -32,7 +46,7 @@ export const useFileActions = () => {
     }
   };
 
-  const onRename = () => {
+  const onRename = async () => {
     // Trigger title edit mode (already exists in EditorTopbar)
     const titleInput = document.querySelector('[data-title-input]') as HTMLElement;
     if (titleInput) {
@@ -41,8 +55,26 @@ export const useFileActions = () => {
       // Fallback: Use prompt
       const newTitle = prompt('Enter new dashboard title:', config.title);
       if (newTitle && newTitle.trim()) {
-        setConfig({ ...config, title: newTitle.trim() });
-        toast.success('Dashboard renamed');
+        try {
+          const updatedConfig = {
+            ...config,
+            title: newTitle.trim(),
+            updatedAt: new Date().toISOString(),
+          };
+
+          const result = await saveDashboard(config.id, updatedConfig);
+
+          if (!result.success) {
+            throw new Error(result.error || 'Failed to rename');
+          }
+
+          // Update local state
+          setConfig(updatedConfig);
+          toast.success('Dashboard renamed');
+        } catch (error) {
+          toast.error('Failed to rename dashboard');
+          console.error('Rename error:', error);
+        }
       }
     }
   };
@@ -83,10 +115,15 @@ export const useFileActions = () => {
     }
   };
 
-  const onDownloadCSV = () => {
-    // Export first table chart data as CSV
-    // For now, just stub - will be implemented when data export is added
-    toast.info('CSV export coming soon');
+  const onDownloadCSV = async () => {
+    try {
+      const { exportDashboardToCSV } = await import('@/lib/export/csv-exporter');
+      await exportDashboardToCSV(config);
+      toast.success('CSV exported successfully');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to export CSV');
+      console.error('CSV export error:', error);
+    }
   };
 
   const onScheduleEmail = () => {

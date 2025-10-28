@@ -12,10 +12,10 @@ export {
   getSearchTermsReportTool,
   getKeywordPerformanceTool,
   listBudgetsTool,
-} from './reporting.js';
+} from './reporting/index.js';
 
 // Campaign write operations
-export { updateCampaignStatusTool, createCampaignTool } from './campaigns.js';
+export { updateCampaignStatusTool, createCampaignTool } from './campaigns/index.js';
 
 // Budget write operations
 export { createBudgetTool, updateBudgetTool } from './budgets.js';
@@ -49,8 +49,8 @@ import {
   getSearchTermsReportTool,
   getKeywordPerformanceTool,
   listBudgetsTool,
-} from './reporting.js';
-import { updateCampaignStatusTool, createCampaignTool } from './campaigns.js';
+} from './reporting/index.js';
+import { updateCampaignStatusTool, createCampaignTool } from './campaigns/index.js';
 import { createBudgetTool, updateBudgetTool } from './budgets.js';
 import { addKeywordsTool, addNegativeKeywordsTool } from './keywords.js';
 import { conversionTools } from './conversions.js';

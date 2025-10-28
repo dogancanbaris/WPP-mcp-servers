@@ -1,6 +1,9 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+/* Define CSS layer order - later layers have higher priority */
+@layer base, theme, builder, utilities;
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
@@ -45,6 +48,9 @@
 
 :root {
   --radius: 0.5rem;
+  --header-height: 48px;
+  --spacing: 4px;
+
   /* WPP Brand Color System */
   --background: #FFFFFF;
   --foreground: #202124;
@@ -58,8 +64,8 @@
   --secondary-foreground: #5F6368;
   --muted: #F8F9FA;
   --muted-foreground: #5F6368;
-  --accent: #191D63; /* WPP Blue for accents */
-  --accent-foreground: #FFFFFF;
+  --accent: #F1F3F4; /* Light gray for hovers (was WPP Blue) */
+  --accent-foreground: #202124; /* Dark text (was white) */
   --destructive: #EA4335;
   --border: #DADCE0;
   --input: #DADCE0;
@@ -125,6 +131,14 @@
   body {
     @apply bg-background text-foreground;
   }
+
+  /* Page-level defaults (can be overridden per page) */
+  :root {
+    --page-background: var(--background);
+    --page-padding: 24px;
+    --page-gap: 16px;
+    --page-border-radius: 8px;
+  }
 }
 
 /* Grid background pattern for canvas */
@@ -140,4 +154,268 @@
     linear-gradient(to right, rgba(255, 255, 255, 0.1) 1px, transparent 1px),
     linear-gradient(to bottom, rgba(255, 255, 255, 0.1) 1px, transparent 1px);
   background-size: 20px 20px;
+}
+/**
+ * Professional Builder Styling
+ * Based on shadcn dashboard-01 patterns
+ *
+ * Key principles from dashboard-01:
+ * - Clean typography with proper hierarchy
+ * - Consistent spacing system (4px, 8px, 16px, 24px)
+ * - Subtle borders, no heavy shadows
+ * - Light gray hovers, not dark blue
+ * - Flat, modern aesthetic
+ */
+
+@layer builder {
+
+/* ========================================
+   TYPOGRAPHY - Professional Hierarchy
+   ======================================== */
+
+.topbar {
+  font-family: var(--font-sans);
+  letter-spacing: -0.01em;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Dashboard title - prominent but not overwhelming */
+.topbar .dashboard-title-button,
+.topbar .dashboard-title-input {
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.5;
+  color: rgb(31, 41, 55);
+}
+
+.topbar .dashboard-title-input {
+  height: 36px;
+  padding: 0 12px;
+  border: 1px solid rgb(229, 231, 235);
+  border-radius: 6px;
+  background: white;
+}
+
+.topbar .dashboard-title-input:focus {
+  outline: none;
+  border-color: rgb(59, 130, 246);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.topbar .dashboard-title-button {
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 6px;
+  transition: background-color 150ms ease-linear;
+}
+
+/* ========================================
+   BUTTON HOVERS - Light Gray (Not Dark Blue!)
+   ======================================== */
+
+/* Override shadcn ghost button hover for topbar */
+.topbar button[data-slot="button"] {
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  transition: all 200ms ease-linear !important;
+}
+
+.topbar button[data-slot="button"]:hover {
+  background: rgb(243, 244, 246) !important;  /* Light gray */
+  color: rgb(17, 24, 39) !important;  /* Dark text */
+}
+
+/* Dashboard title button */
+.dashboard-title-button:hover {
+  background: rgb(243, 244, 246) !important;
+  color: rgb(17, 24, 39) !important;
+}
+
+/* Menu buttons specifically */
+.menu-button {
+  height: 36px;
+  padding: 0 12px;
+  font-size: 14px;
+  font-weight: 500;
+  color: rgb(55, 65, 81);
+  border-radius: 6px;
+  transition: all 150ms ease-linear;
+}
+
+.menu-button:hover {
+  background: rgb(243, 244, 246) !important;
+  color: rgb(17, 24, 39) !important;
+}
+
+/* ========================================
+   SPACING - Consistent System
+   ======================================== */
+
+.topbar-row-1 {
+  height: 48px;
+  padding: 0 16px;
+  gap: 8px;
+}
+
+/* Desktop gets more padding */
+@media (min-width: 1024px) {
+  .topbar-row-1 {
+    padding: 0 24px;
+    gap: 8px;
+  }
+}
+
+.topbar-row-2 {
+  height: 48px;
+  padding: 0 16px;
+  gap: 8px;
+}
+
+@media (min-width: 1024px) {
+  .topbar-row-2 {
+    padding: 0 24px;
+  }
+}
+
+/* Menu item groups */
+.topbar .menu-group {
+  gap: 4px;  /* Tight spacing between File/Edit/View */
+}
+
+/* ========================================
+   BORDERS - Clean & Subtle
+   ======================================== */
+
+.topbar {
+  border-bottom: 1px solid rgb(229, 231, 235);
+}
+
+.topbar-row-1 {
+  border-bottom: 1px solid rgb(229, 231, 235);
+}
+
+.topbar-row-2 {
+  border-top: 1px solid rgb(229, 231, 235);
+  /* Subtle gradient background */
+  background: linear-gradient(to bottom, rgb(249, 250, 251) 0%, rgb(255, 255, 255) 100%);
+}
+
+/* ========================================
+   NO SHADOWS - Flat Like dashboard-01
+   ======================================== */
+
+.topbar {
+  box-shadow: none !important;
+}
+
+.topbar button {
+  box-shadow: none !important;
+}
+
+/* Only subtle shadow on outline buttons */
+.topbar button[data-slot="button"][class*="outline"] {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+/* ========================================
+   SIDEBAR - Professional Settings Panel
+   ======================================== */
+
+.settings-sidebar {
+  border-left: 1px solid rgb(229, 231, 235);
+  background: white;
+}
+
+/* Sidebar section headers */
+.settings-sidebar h3,
+.settings-sidebar .section-header {
+  font-size: 14px;
+  font-weight: 600;
+  color: rgb(55, 65, 81);
+  margin-bottom: 12px;
+  letter-spacing: 0.01em;
+}
+
+/* Sidebar labels */
+.settings-sidebar label {
+  font-size: 14px;
+  font-weight: 500;
+  color: rgb(55, 65, 81);
+  margin-bottom: 8px;
+  display: block;
+}
+
+/* Sidebar inputs/selects */
+.settings-sidebar input,
+.settings-sidebar select,
+.settings-sidebar textarea {
+  font-size: 14px;
+  border: 1px solid rgb(229, 231, 235);
+  border-radius: 6px;
+  padding: 8px 12px;
+  transition: border-color 150ms ease-linear;
+}
+
+.settings-sidebar input:focus,
+.settings-sidebar select:focus,
+.settings-sidebar textarea:focus {
+  outline: none;
+  border-color: rgb(59, 130, 246);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* ========================================
+   SEPARATORS - Professional Dividers
+   ======================================== */
+
+.topbar-separator {
+  width: 1px;
+  height: 16px;
+  background: rgb(229, 231, 235);
+  margin: 0 8px;
+}
+
+/* ========================================
+   RESPONSIVE - Mobile Friendly
+   ======================================== */
+
+@media (max-width: 1024px) {
+  .topbar-row-1,
+  .topbar-row-2 {
+    padding: 0 16px;
+    gap: 4px;
+  }
+
+  /* Hide some buttons on mobile */
+  .topbar .hide-mobile {
+    display: none;
+  }
+}
+
+/* ========================================
+   TRANSITIONS - Smooth Like dashboard-01
+   ======================================== */
+
+.topbar button,
+.topbar input,
+.topbar select {
+  transition: all 200ms ease-linear;
+}
+
+/* ========================================
+   CLEAN BACKGROUNDS - No Noise
+   ======================================== */
+
+.topbar {
+  background: white;
+}
+
+.topbar-row-1 {
+  background: white;
+}
+
+/* Row 2 gets subtle gradient */
+.topbar-row-2 {
+  background: linear-gradient(to bottom, rgb(249, 250, 251), rgb(255, 255, 255));
+}
 }

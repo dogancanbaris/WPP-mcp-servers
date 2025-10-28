@@ -7,6 +7,8 @@
  * - Query execution
  */
 
+import type { DashboardConfig } from '@/types/dashboard-builder';
+
 export interface Field {
   id: string;
   name: string;
@@ -24,21 +26,6 @@ export interface DataSource {
 
 export interface FieldsResponse {
   sources: DataSource[];
-}
-
-export interface DashboardConfig {
-  id?: string;
-  title: string;
-  description?: string;
-  rows: Record<string, unknown>[];
-  theme?: {
-    primaryColor: string;
-    backgroundColor: string;
-    textColor: string;
-    borderColor: string;
-  };
-  createdAt?: string;
-  updatedAt?: string;
 }
 
 export interface SaveDashboardResponse {

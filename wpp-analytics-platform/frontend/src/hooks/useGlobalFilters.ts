@@ -6,14 +6,47 @@
  */
 
 import { useMemo } from 'react';
-import { useFilterStore, GlobalFilter } from '@/store/filterStore';
+import { useFilterStore, GlobalFilter, DATE_RANGE_PRESETS } from '@/store/filterStore';
 
 // Dataset query types
 export interface DatasetFilter {
-  field: string;
+  member: string; // Changed from 'field' to 'member' to match actual usage
   operator: string;
   values: (string | number)[];
 }
+
+export interface Query {
+  filters?: DatasetFilter[];
+  [key: string]: any;
+}
+
+/**
+ * Utility to get date range from filter with preset evaluation
+ * Evaluates presets dynamically (today, last7Days, etc.)
+ */
+export const getDateRangeFromFilter = (filter: GlobalFilter & { type: 'dateRange' }): { startDate: string; endDate: string } => {
+  // If filter has a preset and it's not 'custom', evaluate it dynamically
+  if ((filter as any).preset && (filter as any).preset !== 'custom') {
+    const preset = (filter as any).preset as keyof typeof DATE_RANGE_PRESETS;
+    if (DATE_RANGE_PRESETS[preset]) {
+      return DATE_RANGE_PRESETS[preset].getValue();
+    }
+  }
+
+  // Otherwise use custom dates (new structure) or fallback to old startDate/endDate
+  if ((filter as any).customStartDate && (filter as any).customEndDate) {
+    return {
+      startDate: (filter as any).customStartDate,
+      endDate: (filter as any).customEndDate,
+    };
+  }
+
+  // Fallback for old structure (backwards compatibility)
+  return {
+    startDate: (filter as any).startDate || '',
+    endDate: (filter as any).endDate || '',
+  };
+};
 
 interface UseGlobalFiltersOptions {
   /**
@@ -103,7 +136,6 @@ export const useGlobalFilters = (
 
     let activeFilters = globalFilters;
 
-    // Apply type filters
     if (includeTypes) {
       activeFilters = activeFilters.filter((f) => includeTypes.includes(f.type));
     }
@@ -112,14 +144,15 @@ export const useGlobalFilters = (
       activeFilters = activeFilters.filter((f) => !excludeTypes.includes(f.type));
     }
 
-    // Convert to dataset format
     let datasetFilters: DatasetFilter[] = activeFilters.map((filter) => {
       if (filter.type === 'dateRange') {
-        // Map generic 'date' dimension to chart-specific dimension
+        // ✅ EVALUATE PRESET DYNAMICALLY
+        const { startDate, endDate } = getDateRangeFromFilter(filter);
+
         return {
           member: filter.dimension === 'date' ? dateDimension : filter.dimension,
           operator: 'inDateRange',
-          values: [filter.startDate, filter.endDate],
+          values: [startDate, endDate],
         };
       } else if (filter.type === 'dimension') {
         return {
@@ -137,7 +170,6 @@ export const useGlobalFilters = (
       return null as any;
     }).filter(Boolean);
 
-    // Apply custom transformation
     if (transformFilters) {
       datasetFilters = transformFilters(datasetFilters);
     }

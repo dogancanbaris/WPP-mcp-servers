@@ -5,7 +5,7 @@
  * in the main MCP server.
  */
 
-import { dashboardTools } from './dashboards.js';
+import { dashboardTools } from './dashboards/index.js';
 import { dataPushTools } from './push-data-to-bigquery.js';
 import { dashboardCreationTools } from './create-dashboard-from-table.js';
 import { insightsTools } from './analyze-data-insights.js';
@@ -15,9 +15,11 @@ export { dashboardTools, dataPushTools, dashboardCreationTools, insightsTools };
 // Re-export individual tools for convenience
 export {
   createDashboardTool,
+  getDashboardTool,
+  listDashboardsTool,
   updateDashboardLayoutTool,
   listDashboardTemplatesTool,
-} from './dashboards.js';
+} from './dashboards/index.js';
 
 export {
   pushPlatformDataToBigQueryTool
@@ -40,7 +42,7 @@ export type {
   RowConfig,
   DashboardLayout,
   DashboardTemplate,
-} from './dashboards.js';
+} from './dashboards/index.js';
 
 // Export all tools combined
 export const allWppAnalyticsTools = [

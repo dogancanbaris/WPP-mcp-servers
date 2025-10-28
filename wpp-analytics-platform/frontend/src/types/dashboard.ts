@@ -1,76 +1,18 @@
-// Column width presets
-export type ColumnWidth = '1/1' | '1/2' | '1/3' | '2/3' | '1/4' | '3/4';
+/**
+ * DEPRECATED - Use types from dashboard-builder.ts instead
+ * This file kept for backward compatibility during migration
+ * All types re-exported from dashboard-builder.ts
+ */
 
-// All component types available in the builder
-export type ComponentType =
-  // Content components
-  | 'title'
-  | 'date_filter'
-  | 'text'
-  // Chart components
-  | 'scorecard'
-  | 'time_series'
-  | 'bar_chart'
-  | 'pie_chart'
-  | 'table'
-  | 'line_chart'
-  | 'area_chart'
-  | 'scatter_chart'
-  | 'heatmap'
-  | 'funnel'
-  | 'radar'
-  | 'gauge'
-  | 'treemap';
-
-// Configuration for a single component (chart, filter, etc.)
-export interface ComponentConfig {
-  id: string;
-  type: ComponentType;
-
-  // Display properties
-  title?: string;
-
-  // Data configuration
-  dataSource?: string;
-  dimension?: string;
-  metrics?: string[];
-  breakdownDimension?: string;
-  dateRange?: {
-    start: string;
-    end: string;
-    granularity?: 'day' | 'week' | 'month';
-  };
-
-  // Style properties
-  chartColors?: string[];
-  backgroundColor?: string;
-  borderWidth?: number;
-  borderRadius?: number;
-  padding?: number;
-}
-
-// Configuration for a column within a row
-export interface ColumnConfig {
-  id: string;
-  width: ColumnWidth;
-  component?: ComponentConfig;
-}
-
-// Configuration for a row (contains columns)
-export interface RowConfig {
-  id: string;
-  columns: ColumnConfig[];
-}
-
-// Complete dashboard configuration
-export interface DashboardConfig {
-  id: string;
-  title: string;
-  rows: RowConfig[];
-  createdAt: string;
-  updatedAt: string;
-  datasource?: string; // Default datasource for all components
-}
+export type {
+  ColumnWidth,
+  ComponentType,
+  ComponentConfig,
+  ColumnConfig,
+  RowConfig,
+  DashboardConfig,
+  DashboardLayout,
+} from './dashboard-builder';
 
 // Column layout templates
 export interface ColumnLayout {

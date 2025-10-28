@@ -13,7 +13,8 @@ import { getEChartsTheme } from '@/lib/themes/echarts-theme';
 import { Loader2 } from 'lucide-react';
 import { ComponentConfig } from '@/types/dashboard-builder';
 import { standardizeDimensionValue } from '@/lib/utils/data-formatter';
-import { useFilterStore } from '@/store/filterStore';
+import { useCascadedFilters } from '@/hooks/useCascadedFilters';
+import { useCurrentPageId } from '@/store/dashboardStore';
 
 export interface PieChartProps extends Partial<ComponentConfig> {
   pieRadius?: string | [string, string];
@@ -22,55 +23,66 @@ export interface PieChartProps extends Partial<ComponentConfig> {
   labelPosition?: 'outside' | 'inside' | 'center';
 }
 
-export const PieChart: React.FC<PieChartProps> = ({
-  // Data props
-  dataset_id,
-  dimension = null,
-  metrics = [],
-  dateRange,
+export const PieChart: React.FC<PieChartProps> = (props) => {
+  const {
+    // Component ID
+    id: componentId,
 
-  // Display props
-  title = 'Pie Chart',
-  showTitle = true,
-  titleFontFamily = 'roboto',
-  titleFontSize = '16',
-  titleFontWeight = '600',
-  titleColor = '#111827',
-  titleBackgroundColor = 'transparent',
-  titleAlignment = 'left',
+    // Data props
+    dataset_id,
+    dimension = null,
+    metrics = [],
+    dateRange,
 
-  // Background & Border
-  backgroundColor = '#ffffff',
-  showBorder = true,
-  borderColor = '#e0e0e0',
-  borderWidth = 1,
-  borderRadius = 8,
-  padding = 16,
+    // Display props
+    title = 'Pie Chart',
+    showTitle = true,
+    titleFontFamily = 'roboto',
+    titleFontSize = '16',
+    titleFontWeight = '600',
+    titleColor = '#111827',
+    titleBackgroundColor = 'transparent',
+    titleAlignment = 'left',
 
-  // Chart appearance
-  showLegend = true,
-  chartColors = ['#191D63', '#1E8E3E', '#fac858', '#ee6666', '#73c0de', '#3ba272'],
+    // Background & Border
+    backgroundColor = '#ffffff',
+    showBorder = true,
+    borderColor = '#e0e0e0',
+    borderWidth = 1,
+    borderRadius = 8,
+    padding = 16,
 
-  // Pie specific
-  pieRadius = '60%',
-  pieCenter = ['50%', '50%'],
-  showLabel = true,
-  labelPosition = 'outside',
+    // Chart appearance
+    showLegend = true,
+    chartColors = ['#191D63', '#1E8E3E', '#fac858', '#ee6666', '#73c0de', '#3ba272'],
 
-  ...rest
-}) => {
-  // Subscribe to global date range filter
-  const globalDateRange = useFilterStore(state => state.activeDateRange);
-  const effectiveDateRange = globalDateRange || dateRange;
+    // Pie specific
+    pieRadius = '60%',
+    pieCenter = ['50%', '50%'],
+    showLabel = true,
+    labelPosition = 'outside',
+
+    ...rest
+  } = props;
+
+  const currentPageId = useCurrentPageId();
+
+  // Use cascaded filters (Global → Page → Component)
+  const { filters: cascadedFilters } = useCascadedFilters({
+    pageId: currentPageId || undefined,
+    componentId,
+    componentConfig: props,
+    dateDimension: dimension || 'date',
+  });
 
   // Fetch from dataset API (with caching)
   const { data, isLoading, error } = useQuery({
-    queryKey: ['piechart', dataset_id, dimension, metrics, effectiveDateRange], // Global date in key
+    queryKey: ['piechart', dataset_id, dimension, metrics, cascadedFilters],
     queryFn: async () => {
       const params = new URLSearchParams({
         ...(dimension && { dimensions: dimension }),
         metrics: metrics.join(','),
-        ...(effectiveDateRange && { dateRange: JSON.stringify(effectiveDateRange) }),
+        ...(cascadedFilters.length > 0 && { filters: JSON.stringify(cascadedFilters) }),
         limit: '10' // Top 10 for pie charts
       });
 

@@ -14,7 +14,9 @@ import { Loader2 } from 'lucide-react';
 import { ComponentConfig } from '@/types/dashboard-builder';
 import { formatMetricValue } from '@/lib/utils/metric-formatter';
 import { DASHBOARD_THEME } from '@/lib/themes/dashboard-theme';
-import { useFilterStore } from '@/store/filterStore';
+import { usePageData } from '@/hooks/usePageData';
+import { useCurrentPageId } from '@/store/dashboardStore';
+import { useCascadedFilters } from '@/hooks/useCascadedFilters';
 
 export interface ScorecardProps extends Partial<ComponentConfig> {}
 
@@ -23,6 +25,7 @@ export const Scorecard: React.FC<ScorecardProps> = (props) => {
   const theme = DASHBOARD_THEME.scorecard;
 
   const {
+    id: componentId,
     dataset_id,
     metrics = [],
     dateRange,
@@ -32,6 +35,7 @@ export const Scorecard: React.FC<ScorecardProps> = (props) => {
   } = props;
 
   const firstMetric = metrics[0];
+  const currentPageId = useCurrentPageId();
 
   // Get metric color from theme or use default
   const metricColors: Record<string, string> = {
@@ -42,28 +46,22 @@ export const Scorecard: React.FC<ScorecardProps> = (props) => {
   };
   const chartColor = metricColors[firstMetric] || DASHBOARD_THEME.colors.wppBlue;
 
-  // Subscribe to global date range filter
-  const globalDateRange = useFilterStore(state => state.activeDateRange);
-  const effectiveDateRange = globalDateRange || dateRange; // Global overrides prop
+  // Use cascaded filters (Global → Page → Component)
+  const { filters: cascadedFilters } = useCascadedFilters({
+    pageId: currentPageId || undefined,
+    componentId,
+    componentConfig: props,
+    dateDimension: 'date',
+  });
 
-  // Fetch from dataset API (with caching)
-  const { data, isLoading, error } = useQuery({
-    queryKey: ['scorecard', dataset_id, metrics, effectiveDateRange], // Key includes effective date!
-    queryFn: async () => {
-      const params = new URLSearchParams({
-        metrics: metrics.join(','),
-        ...(effectiveDateRange && { dateRange: JSON.stringify(effectiveDateRange) })
-      });
-
-      const response = await fetch(`/api/datasets/${dataset_id}/query?${params}`);
-
-      if (!response.ok) {
-        throw new Error(`API error: ${response.statusText}`);
-      }
-
-      return response.json();
-    },
-    enabled: !!dataset_id && metrics.length > 0
+  // Use page-aware data fetching (only loads when page is active)
+  const { data, isLoading, error } = usePageData({
+    pageId: currentPageId || 'default',
+    componentId: componentId || 'scorecard',
+    datasetId: dataset_id || '',
+    metrics,
+    filters: cascadedFilters,
+    enabled: !!dataset_id && metrics.length > 0 && !!currentPageId,
   });
 
   // Styling from global theme

@@ -2,7 +2,7 @@
  * Export all Google Analytics MCP tools
  */
 export { listAnalyticsAccountsTool, listAnalyticsPropertiesTool, listDataStreamsTool, } from './accounts.js';
-export { runAnalyticsReportTool, getRealtimeUsersTool } from './reporting.js';
+export { runAnalyticsReportTool, getRealtimeUsersTool } from './reporting/index.js';
 export { analyticsAdminTools } from './admin.js';
 /**
  * All Google Analytics tools

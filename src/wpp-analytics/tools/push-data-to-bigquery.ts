@@ -88,6 +88,14 @@ After calling this tool, use the returned table name to create a dashboard with 
         type: 'string',
         description: 'Optional BigQuery table name (auto-generated if not provided)'
       },
+      useSharedTable: {
+        type: 'boolean',
+        description: 'Use shared table architecture (insert to gsc_performance_shared with workspace_id)'
+      },
+      workspaceId: {
+        type: 'string',
+        description: 'Workspace ID (required if useSharedTable=true)'
+      },
       __oauthToken: {
         type: 'string',
         description: 'OAuth token (auto-loaded if not provided)'
@@ -106,7 +114,7 @@ After calling this tool, use the returned table name to create a dashboard with 
       });
 
       // Get OAuth token
-      const oauthToken = extractOAuthToken(input);
+      const oauthToken = await extractOAuthToken(input);
       if (!oauthToken) {
         return {
           success: false,
@@ -141,12 +149,45 @@ After calling this tool, use the returned table name to create a dashboard with 
           };
       }
 
-      // STEP 2: Generate table name
-      const tableName = input.tableName || generateTableName(input.platform, input.property);
-      const fullTableRef = `mcp-servers-475317.wpp_marketing.${tableName}`;
+      // STEP 2: Determine table strategy
+      let tableName: string;
+      let fullTableRef: string;
 
-      // STEP 3: Create BigQuery table if it doesn't exist
-      await createBigQueryTable(tableName, input.platform);
+      if (input.useSharedTable) {
+        // Shared table architecture
+        if (!input.workspaceId) {
+          return {
+            success: false,
+            error: 'workspaceId required when useSharedTable=true'
+          };
+        }
+
+        tableName = `${input.platform}_performance_shared`;
+        fullTableRef = `mcp-servers-475317.wpp_marketing.${tableName}`;
+
+        // Add workspace_id and metadata to each row
+        const importTimestamp = new Date().toISOString();
+        platformData = platformData.map(row => ({
+          ...row,
+          workspace_id: input.workspaceId,
+          property: input.property,
+          oauth_user_id: null,
+          data_source: 'api',
+          imported_at: importTimestamp // Same timestamp for all rows in this batch
+        }));
+
+        logger.info('[push_platform_data_to_bigquery] Using shared table', {
+          table: fullTableRef,
+          workspace_id: input.workspaceId
+        });
+      } else {
+        // Per-dashboard table (legacy)
+        tableName = input.tableName || generateTableName(input.platform, input.property);
+        fullTableRef = `mcp-servers-475317.wpp_marketing.${tableName}`;
+
+        // STEP 3: Create BigQuery table if it doesn't exist
+        await createBigQueryTable(tableName, input.platform);
+      }
 
       // STEP 4: Insert data
       await insertToBigQuery(tableName, platformData);
@@ -191,7 +232,105 @@ function generateTableName(platform: string, property: string): string {
 }
 
 /**
- * Pull data from Google Search Console
+ * Calculate date chunks for GSC data pulling
+ * Splits date range into 30-day chunks to handle GSC's 25K row limit
+ */
+function chunkDateRange(
+  startDate: string,
+  endDate: string,
+  chunkDays: number = 30
+): Array<{ start: string; end: string }> {
+  const chunks: Array<{ start: string; end: string }> = [];
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+
+  let currentStart = new Date(start);
+
+  while (currentStart < end) {
+    const currentEnd = new Date(currentStart);
+    currentEnd.setDate(currentEnd.getDate() + chunkDays - 1);
+
+    if (currentEnd >= end) {
+      chunks.push({
+        start: currentStart.toISOString().split('T')[0],
+        end: end.toISOString().split('T')[0]
+      });
+      break;
+    }
+
+    chunks.push({
+      start: currentStart.toISOString().split('T')[0],
+      end: currentEnd.toISOString().split('T')[0]
+    });
+
+    currentStart = new Date(currentEnd);
+    currentStart.setDate(currentStart.getDate() + 1);
+  }
+
+  return chunks;
+}
+
+/**
+ * Pull a single chunk of data from Google Search Console
+ */
+async function pullGSCChunk(
+  property: string,
+  chunk: { start: string; end: string },
+  dimensions: string[],
+  webmasters: any,
+  chunkIndex: number,
+  totalChunks: number
+): Promise<any[]> {
+  logger.info(`[GSC] Pulling chunk ${chunkIndex}/${totalChunks}: ${chunk.start} to ${chunk.end}`);
+
+  const response = await webmasters.searchanalytics.query({
+    siteUrl: property,
+    requestBody: {
+      startDate: chunk.start,
+      endDate: chunk.end,
+      dimensions: dimensions,
+      rowLimit: 25000
+    }
+  });
+
+  const rows = response.data.rows || [];
+  logger.info(`[GSC] Chunk ${chunkIndex} retrieved ${rows.length} rows`);
+
+  return rows;
+}
+
+/**
+ * Transform GSC rows to BigQuery schema
+ */
+function transformGSCRows(rows: any[], dimensions: string[]): any[] {
+  return rows.map((row: any) => {
+    const result: any = {
+      clicks: row.clicks,
+      impressions: row.impressions,
+      ctr: row.ctr,
+      position: row.position
+    };
+
+    // Map keys to dimensions
+    dimensions.forEach((dim, index) => {
+      result[dim] = row.keys[index] || null;
+    });
+
+    // Fill in missing dimensions with null
+    ['date', 'query', 'page', 'device', 'country'].forEach(dim => {
+      if (!(dim in result)) {
+        result[dim] = null;
+      }
+    });
+
+    return result;
+  });
+}
+
+/**
+ * Pull data from Google Search Console using parallel chunking
+ * Splits date range into 30-day chunks and fetches all chunks concurrently
+ * This avoids the GSC 25K row limit by pulling data in smaller time windows
  */
 async function pullGSCData(
   property: string,
@@ -203,43 +342,28 @@ async function pullGSCData(
   oauth2Client.setCredentials({ access_token: oauthToken });
   const webmasters = google.webmasters({ version: 'v3', auth: oauth2Client });
 
-  const allRows: any[] = [];
+  // STEP 1: Calculate chunks
+  const chunks = chunkDateRange(dateRange[0], dateRange[1], 30);
+  logger.info(`[GSC] Splitting ${dateRange[0]} to ${dateRange[1]} into ${chunks.length} chunks`);
 
-  // Pull data for each dimension separately
-  for (const dimension of dimensions) {
-    logger.info(`[GSC] Pulling data for dimension: ${dimension}`);
+  // STEP 2: Fetch all chunks in parallel
+  logger.info(`[GSC] Pulling ${chunks.length} chunks in parallel with dimensions: ${dimensions.join(', ')}`);
 
-    const response = await webmasters.searchanalytics.query({
-      siteUrl: property,
-      requestBody: {
-        startDate: dateRange[0],
-        endDate: dateRange[1],
-        dimensions: [dimension],
-        rowLimit: dimension === 'date' ? 1000 : 100
-      }
-    });
+  const chunkResults = await Promise.all(
+    chunks.map((chunk, index) =>
+      pullGSCChunk(property, chunk, dimensions, webmasters, index + 1, chunks.length)
+    )
+  );
 
-    const rows = response.data.rows || [];
+  // STEP 3: Flatten results
+  const allRows = chunkResults.flat();
+  logger.info(`[GSC] Total rows from all ${chunks.length} chunks: ${allRows.length}`);
 
-    // Transform to BigQuery schema with NULL dimensions
-    const transformedRows = rows.map((row: any) => ({
-      date: dimension === 'date' ? row.keys[0] : null,
-      query: dimension === 'query' ? row.keys[0] : null,
-      page: dimension === 'page' ? row.keys[0] : null,
-      device: dimension === 'device' ? row.keys[0] : null,
-      country: dimension === 'country' ? row.keys[0] : null,
-      clicks: row.clicks,
-      impressions: row.impressions,
-      ctr: row.ctr,
-      position: row.position
-    }));
+  // STEP 4: Transform to BigQuery schema
+  const transformedRows = transformGSCRows(allRows, dimensions);
 
-    allRows.push(...transformedRows);
-    logger.info(`[GSC] Pulled ${transformedRows.length} rows for ${dimension}`);
-  }
-
-  logger.info(`[GSC] Total rows pulled: ${allRows.length}`);
-  return allRows;
+  logger.info(`[GSC] Pulled ${transformedRows.length} rows with all dimensions (${chunks.length} parallel chunks)`);
+  return transformedRows;
 }
 
 /**
@@ -281,7 +405,8 @@ async function createBigQueryTable(tableName: string, platform: string): Promise
 }
 
 /**
- * Insert data to BigQuery table
+ * Insert data to BigQuery table in batches
+ * BigQuery streaming insert limit: 10MB per request, so batch large inserts
  */
 async function insertToBigQuery(tableName: string, rows: any[]): Promise<void> {
   const { BigQuery } = await import('@google-cloud/bigquery');
@@ -291,9 +416,27 @@ async function insertToBigQuery(tableName: string, rows: any[]): Promise<void> {
   });
 
   const table = bigquery.dataset('wpp_marketing').table(tableName);
-  await table.insert(rows);
+  const BATCH_SIZE = 5000; // Safe batch size to stay under 10MB limit
 
-  logger.info(`[BigQuery] Inserted ${rows.length} rows to wpp_marketing.${tableName}`);
+  try {
+    // Insert in batches
+    for (let i = 0; i < rows.length; i += BATCH_SIZE) {
+      const batch = rows.slice(i, i + BATCH_SIZE);
+      await table.insert(batch);
+      logger.info(`[BigQuery] Inserted batch ${Math.floor(i / BATCH_SIZE) + 1}: ${batch.length} rows`);
+    }
+
+    logger.info(`[BigQuery] Inserted total ${rows.length} rows to wpp_marketing.${tableName}`);
+  } catch (error: any) {
+    logger.error(`[BigQuery] Insert failed`, {
+      table: tableName,
+      rowCount: rows.length,
+      error: error.message,
+      errors: error.errors,
+      sampleRow: rows[0]
+    });
+    throw error;
+  }
 }
 
 // ============================================================================

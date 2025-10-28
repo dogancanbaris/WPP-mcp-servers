@@ -78,7 +78,7 @@ export const createPropertyTool = {
                 inputParams: { accountId, displayName },
             });
             // Extract OAuth token from request
-            const oauthToken = extractOAuthToken(input);
+            const oauthToken = await extractOAuthToken(input);
             if (!oauthToken) {
                 throw new Error('OAuth token required for Google Analytics API access');
             }
@@ -213,7 +213,7 @@ export const createDataStreamTool = {
                 throw new Error('websiteUrl is required for WEB data streams');
             }
             // Extract OAuth token from request
-            const oauthToken = extractOAuthToken(input);
+            const oauthToken = await extractOAuthToken(input);
             if (!oauthToken) {
                 throw new Error('OAuth token required for Google Analytics API access');
             }
@@ -358,7 +358,7 @@ Custom dimension: "Customer Tier" → parameter: customer_tier, scope: EVENT`,
                 inputParams: { propertyId, displayName, parameterName, scope },
             });
             // Extract OAuth token from request
-            const oauthToken = extractOAuthToken(input);
+            const oauthToken = await extractOAuthToken(input);
             if (!oauthToken) {
                 throw new Error('OAuth token required for Google Analytics API access');
             }
@@ -492,7 +492,7 @@ export const createCustomMetricTool = {
                 inputParams: { propertyId, displayName, parameterName },
             });
             // Extract OAuth token from request
-            const oauthToken = extractOAuthToken(input);
+            const oauthToken = await extractOAuthToken(input);
             if (!oauthToken) {
                 throw new Error('OAuth token required for Google Analytics API access');
             }
@@ -585,7 +585,7 @@ export const createConversionEventTool = {
                 inputParams: { propertyId, eventName },
             });
             // Extract OAuth token from request
-            const oauthToken = extractOAuthToken(input);
+            const oauthToken = await extractOAuthToken(input);
             if (!oauthToken) {
                 throw new Error('OAuth token required for Google Analytics API access');
             }
@@ -672,7 +672,7 @@ export const createGoogleAdsLinkTool = {
                 inputParams: { propertyId, googleAdsCustomerId },
             });
             // Extract OAuth token from request
-            const oauthToken = extractOAuthToken(input);
+            const oauthToken = await extractOAuthToken(input);
             if (!oauthToken) {
                 throw new Error('OAuth token required for Google Analytics API access');
             }

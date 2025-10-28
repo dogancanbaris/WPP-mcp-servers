@@ -1534,5 +1534,197 @@
       "server": "GSC MCP started",
       "version": "1.0.0"
     }
+  },
+  {
+    "timestamp": "2025-10-27T00:57:03.669Z",
+    "user": "system",
+    "action": "authentication",
+    "property": "system",
+    "operationType": "read",
+    "result": "success",
+    "details": {
+      "server": "GSC MCP started",
+      "version": "1.0.0"
+    }
+  },
+  {
+    "timestamp": "2025-10-27T00:57:15.621Z",
+    "user": "system",
+    "action": "authentication",
+    "property": "system",
+    "operationType": "read",
+    "result": "success",
+    "details": {
+      "server": "GSC MCP started",
+      "version": "1.0.0"
+    }
+  },
+  {
+    "timestamp": "2025-10-27T11:41:33.676Z",
+    "user": "system",
+    "action": "authentication",
+    "property": "system",
+    "operationType": "read",
+    "result": "failure",
+    "details": {
+      "error": "Failed to load tokens: Failed to refresh access token: invalid_grant"
+    },
+    "errorMessage": "Authentication failed"
+  },
+  {
+    "timestamp": "2025-10-27T15:44:29.838Z",
+    "user": "system",
+    "action": "authentication",
+    "property": "system",
+    "operationType": "read",
+    "result": "failure",
+    "details": {
+      "error": "Failed to load tokens: Failed to refresh access token: invalid_grant"
+    },
+    "errorMessage": "Authentication failed"
+  },
+  {
+    "timestamp": "2025-10-27T16:09:28.809Z",
+    "user": "system",
+    "action": "authentication",
+    "property": "system",
+    "operationType": "read",
+    "result": "failure",
+    "details": {
+      "error": "Failed to load tokens: Failed to refresh access token: invalid_grant"
+    },
+    "errorMessage": "Authentication failed"
+  },
+  {
+    "timestamp": "2025-10-27T16:26:08.493Z",
+    "user": "system",
+    "action": "authentication",
+    "property": "system",
+    "operationType": "read",
+    "result": "failure",
+    "details": {
+      "error": "Failed to load tokens: Failed to refresh access token: invalid_grant"
+    },
+    "errorMessage": "Authentication failed"
+  },
+  {
+    "timestamp": "2025-10-27T16:27:16.469Z",
+    "user": "system",
+    "action": "authentication",
+    "property": "system",
+    "operationType": "read",
+    "result": "failure",
+    "details": {
+      "error": "Failed to load tokens: Failed to refresh access token: invalid_grant"
+    },
+    "errorMessage": "Authentication failed"
+  },
+  {
+    "timestamp": "2025-10-27T16:27:20.170Z",
+    "user": "system",
+    "action": "authentication",
+    "property": "system",
+    "operationType": "read",
+    "result": "failure",
+    "details": {
+      "error": "Failed to load tokens: Failed to refresh access token: invalid_grant"
+    },
+    "errorMessage": "Authentication failed"
+  },
+  {
+    "timestamp": "2025-10-27T17:00:09.565Z",
+    "user": "system",
+    "action": "authentication",
+    "property": "system",
+    "operationType": "read",
+    "result": "success",
+    "details": {
+      "server": "GSC MCP started",
+      "version": "1.0.0"
+    }
+  },
+  {
+    "timestamp": "2025-10-27T20:50:29.188Z",
+    "user": "system",
+    "action": "authentication",
+    "property": "system",
+    "operationType": "read",
+    "result": "success",
+    "details": {
+      "server": "GSC MCP started",
+      "version": "1.0.0"
+    }
+  },
+  {
+    "timestamp": "2025-10-27T20:55:11.412Z",
+    "user": "system",
+    "action": "authentication",
+    "property": "system",
+    "operationType": "read",
+    "result": "success",
+    "details": {
+      "server": "GSC MCP started",
+      "version": "1.0.0"
+    }
+  },
+  {
+    "timestamp": "2025-10-28T10:50:12.899Z",
+    "user": "system",
+    "action": "authentication",
+    "property": "system",
+    "operationType": "read",
+    "result": "success",
+    "details": {
+      "server": "GSC MCP started",
+      "version": "1.0.0"
+    }
+  },
+  {
+    "timestamp": "2025-10-28T10:54:44.150Z",
+    "user": "system",
+    "action": "authentication",
+    "property": "system",
+    "operationType": "read",
+    "result": "success",
+    "details": {
+      "server": "GSC MCP started",
+      "version": "1.0.0"
+    }
+  },
+  {
+    "timestamp": "2025-10-28T10:55:31.139Z",
+    "user": "system",
+    "action": "authentication",
+    "property": "system",
+    "operationType": "read",
+    "result": "success",
+    "details": {
+      "server": "GSC MCP started",
+      "version": "1.0.0"
+    }
+  },
+  {
+    "timestamp": "2025-10-28T11:17:06.642Z",
+    "user": "system",
+    "action": "authentication",
+    "property": "system",
+    "operationType": "read",
+    "result": "success",
+    "details": {
+      "server": "GSC MCP started",
+      "version": "1.0.0"
+    }
+  },
+  {
+    "timestamp": "2025-10-28T11:26:35.109Z",
+    "user": "system",
+    "action": "authentication",
+    "property": "system",
+    "operationType": "read",
+    "result": "success",
+    "details": {
+      "server": "GSC MCP started",
+      "version": "1.0.0"
+    }
   }
 ]

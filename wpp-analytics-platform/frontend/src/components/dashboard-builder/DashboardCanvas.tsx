@@ -17,7 +17,7 @@ import {
 } from '@dnd-kit/sortable';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
-import { useDashboardStore } from '@/store/dashboardStore';
+import { useDashboardStore, useCurrentPage } from '@/store/dashboardStore';
 import { Row } from './Row';
 import { cn } from '@/lib/utils';
 import { ColumnWidth, RowConfig } from '@/types/dashboard-builder';
@@ -45,8 +45,12 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
   viewMode = 'edit',
 }) => {
   const { config, zoom, addRow, removeRow, reorderRows, addComponent, updateComponent, removeComponent } = useDashboardStore();
+  const currentPage = useCurrentPage();
   const [activeId, setActiveId] = React.useState<string | null>(null);
   const [showLayoutPicker, setShowLayoutPicker] = React.useState(false);
+
+  // Use current page's rows, or fall back to legacy config.rows for backwards compatibility
+  const rows = currentPage?.rows || config.rows || [];
 
   // Configure drag sensors
   const sensors = useSensors(
@@ -65,8 +69,8 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
     const { active, over } = event;
 
     if (over && active.id !== over.id) {
-      const oldIndex = config.rows.findIndex((row: RowConfig) => row.id === active.id);
-      const newIndex = config.rows.findIndex((row: RowConfig) => row.id === over.id);
+      const oldIndex = rows.findIndex((row: RowConfig) => row.id === active.id);
+      const newIndex = rows.findIndex((row: RowConfig) => row.id === over.id);
 
       if (oldIndex !== -1 && newIndex !== -1) {
         reorderRows(oldIndex, newIndex);
@@ -97,6 +101,7 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
         }}
       >
         <div
+          data-canvas
           className="mx-auto smooth-zoom origin-top"
           style={{
             transform: `scale(${scale})`,
@@ -112,11 +117,11 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
             onDragEnd={handleDragEnd}
           >
             <SortableContext
-              items={config.rows.map((row: RowConfig) => row.id)}
+              items={rows.map((row: RowConfig) => row.id)}
               strategy={verticalListSortingStrategy}
             >
               {/* Render Rows */}
-              {config.rows.length === 0 ? (
+              {rows.length === 0 ? (
                 // Empty State - Professional design
                 <div className="empty-state fade-in">
                   <div className="empty-state-icon">
@@ -140,7 +145,7 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
               ) : (
                 // Rows List - Smooth fade-in animation
                 <div className="space-y-4 fade-in">
-                  {config.rows.map((row: RowConfig, index: number) => (
+                  {rows.map((row: RowConfig, index: number) => (
                     <Row
                       key={row.id}
                       id={row.id}
@@ -187,7 +192,7 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
           </DndContext>
 
           {/* Add Row Button (when rows exist) - Professional styling */}
-          {config.rows.length > 0 && viewMode === 'edit' && (
+          {rows.length > 0 && viewMode === 'edit' && (
             <div className="mt-6 flex justify-center fade-in">
               <Button
                 variant="outline"

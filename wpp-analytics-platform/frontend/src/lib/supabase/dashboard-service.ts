@@ -1,32 +1,8 @@
 // Dashboard Service - CRUD operations for dashboards in Supabase
 import { createClient } from './client';
-
-export interface ChartConfig {
-  id: string;
-  type: 'kpi' | 'line' | 'bar' | 'pie' | 'table' | 'treemap' | 'sankey' | 'heatmap' | 'gauge' | 'area' | 'scatter' | 'funnel' | 'radar';
-  measure: string;
-  dimension?: string;
-  title: string;
-  size: { w: number; h: number };
-}
-
-export interface FilterConfig {
-  field: string;
-  operator: string;
-  values: (string | number | boolean)[];
-}
-
-export interface DashboardConfig {
-  id?: string;
-  name: string;
-  description?: string;
-  datasource: string;
-  charts: ChartConfig[];
-  filters: FilterConfig[];
-  layout?: Record<string, unknown>;
-  created_at?: string;
-  updated_at?: string;
-}
+import type { DashboardConfig } from '@/types/dashboard-builder';
+import { toDB, fromDB, type DashboardDB } from '@/types/dashboard-mappers';
+import { migrateDashboardConfig } from '@/lib/migrations/dashboard-migration';
 
 /**
  * Save dashboard to Supabase
@@ -34,7 +10,7 @@ export interface DashboardConfig {
  */
 export async function saveDashboard(
   dashboardId: string,
-  config: Omit<DashboardConfig, 'id'>
+  config: DashboardConfig
 ): Promise<{ success: boolean; data?: DashboardConfig; error?: string }> {
   try {
     const supabase = createClient();
@@ -64,20 +40,12 @@ export async function saveDashboard(
       .eq('workspace_id', workspace.id)
       .single();
 
+    // Convert app format to DB format using mapper
+    const dbData = toDB(config);
     const dashboardData = {
-      name: config.name,
-      description: config.description,
+      ...dbData,
       workspace_id: workspace.id,
-      bigquery_table: config.datasource,
-      cube_model_name: config.datasource,
-      layout: config.charts, // Store charts in layout column
-      filters: config.filters || {},
-      config: {
-        datasource: config.datasource,
-        charts: config.charts,
-        filters: config.filters,
-        layout: config.layout
-      }
+      bigquery_table: config.datasource || null
     };
 
     if (existing) {
@@ -93,28 +61,33 @@ export async function saveDashboard(
         .single();
 
       if (error) {
+        console.error('Supabase update error:', error);
         return { success: false, error: error.message };
       }
 
-      return { success: true, data };
+      return { success: true, data: fromDB(data as DashboardDB) };
     } else {
       // Create new dashboard
       const { data, error } = await supabase
         .from('dashboards')
         .insert([{
           id: dashboardId,
-          ...dashboardData
+          ...dashboardData,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
         }])
         .select()
         .single();
 
       if (error) {
+        console.error('Supabase insert error:', error);
         return { success: false, error: error.message };
       }
 
-      return { success: true, data };
+      return { success: true, data: fromDB(data as DashboardDB) };
     }
   } catch (error) {
+    console.error('saveDashboard error:', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error'
@@ -157,6 +130,7 @@ export async function loadDashboard(
       .single();
 
     if (error) {
+      console.error('Load dashboard error:', error);
       return { success: false, error: error.message };
     }
 
@@ -164,21 +138,15 @@ export async function loadDashboard(
       return { success: false, error: 'Dashboard not found' };
     }
 
-    // Transform database format to DashboardConfig
-    const config: DashboardConfig = {
-      id: data.id,
-      name: data.name,
-      description: data.description,
-      datasource: data.config.datasource,
-      charts: data.config.charts,
-      filters: data.config.filters || [],
-      layout: data.config.layout,
-      created_at: data.created_at,
-      updated_at: data.updated_at
-    };
+    // Convert DB format to app format using mapper
+    const config = fromDB(data as DashboardDB);
 
-    return { success: true, data: config };
+    // Apply migration to ensure pages array exists and old dashboards are migrated
+    const migratedConfig = migrateDashboardConfig(config);
+
+    return { success: true, data: migratedConfig };
   } catch (error) {
+    console.error('loadDashboard error:', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error'
@@ -225,54 +193,8 @@ export async function listDashboards(): Promise<{
       return { success: false, error: error.message };
     }
 
-    // Transform to DashboardConfig[]
-    const dashboards: DashboardConfig[] = (data || []).map(d => {
-      const datasource = d.config?.datasource || d.bigquery_table || d.cube_model_name || '';
-      const filters = d.config?.filters || d.filters || [];
-
-      // Extract charts from layout array
-      // Layout structure: array of rows, each row has columns, each column has a component
-      let charts: ChartConfig[] = [];
-
-      if (Array.isArray(d.layout)) {
-        // Flatten row/column structure to extract individual chart components
-        d.layout.forEach((row: any) => {
-          if (row.columns && Array.isArray(row.columns)) {
-            row.columns.forEach((col: any) => {
-              if (col.component && col.component.type) {
-                // Convert component to ChartConfig format
-                // Map 'scorecard' type to 'kpi' for TypeScript compatibility
-                const componentType = col.component.type === 'scorecard' ? 'kpi' : col.component.type;
-
-                charts.push({
-                  id: col.id || crypto.randomUUID(),
-                  type: componentType,
-                  measure: col.component.measure || '',
-                  dimension: col.component.dimension,
-                  title: col.component.title || '',
-                  size: { w: 6, h: 4 } // Default size
-                });
-              }
-            });
-          }
-        });
-      } else if (d.config?.charts && Array.isArray(d.config.charts)) {
-        // Fallback to flat charts array
-        charts = d.config.charts;
-      }
-
-      return {
-        id: d.id,
-        name: d.name,
-        description: d.description,
-        datasource: datasource,
-        charts: charts,
-        filters: Array.isArray(filters) ? filters : [],
-        layout: d.config?.layout || d.layout,
-        created_at: d.created_at,
-        updated_at: d.updated_at
-      };
-    });
+    // Convert all DB records to app format using mapper
+    const dashboards: DashboardConfig[] = (data || []).map(d => fromDB(d as DashboardDB));
 
     return { success: true, data: dashboards };
   } catch (error) {

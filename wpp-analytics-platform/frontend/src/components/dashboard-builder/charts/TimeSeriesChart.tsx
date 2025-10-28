@@ -13,7 +13,10 @@ import { Loader2 } from 'lucide-react';
 import { ComponentConfig } from '@/types/dashboard-builder';
 import { formatMetricValue } from '@/lib/utils/metric-formatter';
 import { DASHBOARD_THEME } from '@/lib/themes/dashboard-theme';
-import { useFilterStore } from '@/store/filterStore';
+import { useGlobalFilters } from '@/hooks/useGlobalFilters';
+import { usePageData } from '@/hooks/usePageData';
+import { useCurrentPageId } from '@/store/dashboardStore';
+import { useCascadedFilters } from '@/hooks/useCascadedFilters';
 
 export interface TimeSeriesChartProps extends Partial<ComponentConfig> {}
 
@@ -23,6 +26,7 @@ export const TimeSeriesChart: React.FC<TimeSeriesChartProps> = (props) => {
   const tsTheme = theme.timeSeries;
 
   const {
+    id: componentId,
     dataset_id,
     dimension = 'date',
     metrics = [],
@@ -33,9 +37,15 @@ export const TimeSeriesChart: React.FC<TimeSeriesChartProps> = (props) => {
     ...rest
   } = props;
 
-  // Subscribe to global date range filter
-  const globalDateRange = useFilterStore(state => state.activeDateRange);
-  const effectiveDateRange = globalDateRange || dateRange; // Global overrides prop
+  const currentPageId = useCurrentPageId();
+
+  // Use cascaded filters (Global → Page → Component)
+  const { filters: cascadedFilters } = useCascadedFilters({
+    pageId: currentPageId || undefined,
+    componentId,
+    componentConfig: props,
+    dateDimension: dimension || 'date',
+  });
 
   // Chart colors from global theme
   const chartColors = [
@@ -46,25 +56,15 @@ export const TimeSeriesChart: React.FC<TimeSeriesChartProps> = (props) => {
     DASHBOARD_THEME.colors.wppCyan
   ];
 
-  // Fetch from dataset API (with caching)
-  const { data, isLoading, error } = useQuery({
-    queryKey: ['timeseries', dataset_id, dimension, metrics, effectiveDateRange], // Global date in key
-    queryFn: async () => {
-      const params = new URLSearchParams({
-        dimensions: dimension,
-        metrics: metrics.join(','),
-        ...(effectiveDateRange && { dateRange: JSON.stringify(effectiveDateRange) })
-      });
-
-      const response = await fetch(`/api/datasets/${dataset_id}/query?${params}`);
-
-      if (!response.ok) {
-        throw new Error(`API error: ${response.statusText}`);
-      }
-
-      return response.json();
-    },
-    enabled: !!dataset_id && metrics.length > 0 && !!dimension
+  // Use page-aware data fetching (only loads when page is active)
+  const { data, isLoading, error } = usePageData({
+    pageId: currentPageId || 'default',
+    componentId: componentId || 'timeseries',
+    datasetId: dataset_id || '',
+    metrics,
+    dimensions: dimension ? [dimension] : undefined,
+    filters: cascadedFilters,
+    enabled: !!dataset_id && metrics.length > 0 && !!dimension && !!currentPageId,
   });
 
   // Styling from global theme

@@ -42,7 +42,7 @@ export const listLocationsTool = {
         try {
             const { accountId } = input;
             // Extract OAuth token from request
-            const oauthToken = extractOAuthToken(input);
+            const oauthToken = await extractOAuthToken(input);
             if (!oauthToken) {
                 throw new Error('OAuth token required for Business Profile API access');
             }
@@ -114,7 +114,7 @@ export const getLocationTool = {
         try {
             const { locationName } = input;
             // Extract OAuth token from request
-            const oauthToken = extractOAuthToken(input);
+            const oauthToken = await extractOAuthToken(input);
             if (!oauthToken) {
                 throw new Error('OAuth token required for Business Profile API access');
             }
@@ -199,7 +199,7 @@ export const updateLocationTool = {
         try {
             const { locationName, updates, confirmationToken } = input;
             // Extract OAuth token from request
-            const oauthToken = extractOAuthToken(input);
+            const oauthToken = await extractOAuthToken(input);
             if (!oauthToken) {
                 throw new Error('OAuth token required for Business Profile API access');
             }

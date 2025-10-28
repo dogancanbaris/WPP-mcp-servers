@@ -4,9 +4,9 @@
 // Account management
 export { listAccessibleAccountsTool } from './accounts.js';
 // Performance reporting
-export { listCampaignsTool, getCampaignPerformanceTool, getSearchTermsReportTool, getKeywordPerformanceTool, listBudgetsTool, } from './reporting.js';
+export { listCampaignsTool, getCampaignPerformanceTool, getSearchTermsReportTool, getKeywordPerformanceTool, listBudgetsTool, } from './reporting/index.js';
 // Campaign write operations
-export { updateCampaignStatusTool, createCampaignTool } from './campaigns.js';
+export { updateCampaignStatusTool, createCampaignTool } from './campaigns/index.js';
 // Budget write operations
 export { createBudgetTool, updateBudgetTool } from './budgets.js';
 // Keyword write operations
@@ -25,8 +25,8 @@ export { biddingTools } from './bidding.js';
 export { extensionTools } from './extensions.js';
 // Re-export as collection
 import { listAccessibleAccountsTool } from './accounts.js';
-import { listCampaignsTool, getCampaignPerformanceTool, getSearchTermsReportTool, getKeywordPerformanceTool, listBudgetsTool, } from './reporting.js';
-import { updateCampaignStatusTool, createCampaignTool } from './campaigns.js';
+import { listCampaignsTool, getCampaignPerformanceTool, getSearchTermsReportTool, getKeywordPerformanceTool, listBudgetsTool, } from './reporting/index.js';
+import { updateCampaignStatusTool, createCampaignTool } from './campaigns/index.js';
 import { createBudgetTool, updateBudgetTool } from './budgets.js';
 import { addKeywordsTool, addNegativeKeywordsTool } from './keywords.js';
 import { conversionTools } from './conversions.js';

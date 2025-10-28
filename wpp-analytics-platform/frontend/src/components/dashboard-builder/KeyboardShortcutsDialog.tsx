@@ -41,11 +41,75 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 interface KeyboardShortcutsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  shortcuts: (ShortcutConfig & { binding: ShortcutBinding; isCustomized: boolean })[];
-  onCustomizeShortcut: (description: string, binding: ShortcutBinding) => void;
-  onResetShortcut: (description: string) => void;
-  onResetAllShortcuts: () => void;
+  shortcuts?: (ShortcutConfig & { binding: ShortcutBinding; isCustomized: boolean })[];
+  onCustomizeShortcut?: (description: string, binding: ShortcutBinding) => void;
+  onResetShortcut?: (description: string) => void;
+  onResetAllShortcuts?: () => void;
 }
+
+// Default keyboard shortcuts for the platform
+const DEFAULT_SHORTCUTS: (ShortcutConfig & { binding: ShortcutBinding; isCustomized: boolean })[] = [
+  {
+    description: 'Save dashboard',
+    binding: { key: 's', ctrlKey: true, metaKey: false, altKey: false, shiftKey: false },
+    category: 'file' as ShortcutCategory,
+    isCustomized: false,
+  },
+  {
+    description: 'Add chart',
+    binding: { key: 'k', ctrlKey: true, metaKey: false, altKey: false, shiftKey: false },
+    category: 'insert' as ShortcutCategory,
+    isCustomized: false,
+  },
+  {
+    description: 'Toggle filters',
+    binding: { key: 'f', ctrlKey: true, metaKey: false, altKey: false, shiftKey: false },
+    category: 'view' as ShortcutCategory,
+    isCustomized: false,
+  },
+  {
+    description: 'Export PDF',
+    binding: { key: 'e', ctrlKey: true, metaKey: false, altKey: false, shiftKey: false },
+    category: 'file' as ShortcutCategory,
+    isCustomized: false,
+  },
+  {
+    description: 'Undo',
+    binding: { key: 'z', ctrlKey: true, metaKey: false, altKey: false, shiftKey: false },
+    category: 'edit' as ShortcutCategory,
+    isCustomized: false,
+  },
+  {
+    description: 'Redo',
+    binding: { key: 'y', ctrlKey: true, metaKey: false, altKey: false, shiftKey: false },
+    category: 'edit' as ShortcutCategory,
+    isCustomized: false,
+  },
+  {
+    description: 'Cut',
+    binding: { key: 'x', ctrlKey: true, metaKey: false, altKey: false, shiftKey: false },
+    category: 'edit' as ShortcutCategory,
+    isCustomized: false,
+  },
+  {
+    description: 'Copy',
+    binding: { key: 'c', ctrlKey: true, metaKey: false, altKey: false, shiftKey: false },
+    category: 'edit' as ShortcutCategory,
+    isCustomized: false,
+  },
+  {
+    description: 'Paste',
+    binding: { key: 'v', ctrlKey: true, metaKey: false, altKey: false, shiftKey: false },
+    category: 'edit' as ShortcutCategory,
+    isCustomized: false,
+  },
+  {
+    description: 'Delete',
+    binding: { key: 'Delete', ctrlKey: false, metaKey: false, altKey: false, shiftKey: false },
+    category: 'edit' as ShortcutCategory,
+    isCustomized: false,
+  },
+];
 
 /**
  * Component for recording keyboard input
@@ -180,10 +244,10 @@ const KeyRecorder: React.FC<{
 export const KeyboardShortcutsDialog: React.FC<KeyboardShortcutsDialogProps> = ({
   open,
   onOpenChange,
-  shortcuts,
-  onCustomizeShortcut,
-  onResetShortcut,
-  onResetAllShortcuts,
+  shortcuts = DEFAULT_SHORTCUTS,
+  onCustomizeShortcut = () => {},
+  onResetShortcut = () => {},
+  onResetAllShortcuts = () => {},
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [editingShortcut, setEditingShortcut] = useState<string | null>(null);
@@ -250,7 +314,7 @@ export const KeyboardShortcutsDialog: React.FC<KeyboardShortcutsDialogProps> = (
 
   // Count customized shortcuts
   const customizedCount = useMemo(() => {
-    return shortcuts.filter(s => s.isCustomized).length;
+    return shortcuts?.filter(s => s.isCustomized)?.length || 0;
   }, [shortcuts]);
 
   return (

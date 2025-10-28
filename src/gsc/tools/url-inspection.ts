@@ -35,7 +35,7 @@ export const inspectUrlTool = {
       const { property, url } = input;
 
       // Extract OAuth token from request
-      const oauthToken = extractOAuthToken(input);
+      const oauthToken = await extractOAuthToken(input);
       if (!oauthToken) {
         throw new Error('OAuth token required for Google Search Console API access');
       }

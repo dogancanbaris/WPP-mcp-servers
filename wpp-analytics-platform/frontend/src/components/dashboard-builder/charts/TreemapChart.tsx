@@ -1,1 +1,184 @@
-'use client'; export const TreemapChart = () => <div>Chart not yet migrated</div>;
+'use client';
+
+/**
+ * TreemapChart Component - Dataset-Based
+ *
+ * NEW ARCHITECTURE:
+ * - Queries registered dataset via /api/datasets/[id]/query
+ * - Backend handles caching, BigQuery connection
+ * - ECharts-based treemap for hierarchical data visualization
+ * - Global filter support via filterStore
+ */
+
+import { useQuery } from '@tanstack/react-query';
+import { Loader2 } from 'lucide-react';
+import ReactECharts from 'echarts-for-react';
+import { ComponentConfig } from '@/types/dashboard-builder';
+import { DASHBOARD_THEME } from '@/lib/themes/dashboard-theme';
+import { useFilterStore } from '@/store/filterStore';
+
+export interface TreemapChartProps extends Partial<ComponentConfig> {
+  labelField?: string;
+  valueField?: string;
+}
+
+export const TreemapChart: React.FC<TreemapChartProps> = (props) => {
+  const theme = DASHBOARD_THEME.charts;
+
+  const {
+    dataset_id,
+    metrics = [],
+    dimensions = [],
+    dateRange,
+    filters = [],
+    title = 'Treemap',
+    showTitle = true,
+    labelField = dimensions[0],
+    valueField = metrics[0],
+    ...rest
+  } = props;
+
+  // Subscribe to global date range filter
+  const globalDateRange = useFilterStore(state => state.activeDateRange);
+  const effectiveDateRange = globalDateRange || dateRange;
+
+  // Fetch from dataset API
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['treemap', dataset_id, metrics, dimensions, filters, effectiveDateRange],
+    queryFn: async () => {
+      const payload = {
+        metrics,
+        dimensions,
+        filters,
+        ...(effectiveDateRange && { dateRange: effectiveDateRange })
+      };
+
+      const response = await fetch(`/api/datasets/${dataset_id}/query`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) {
+        throw new Error(`API error: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      console.log('[TreemapChart] Data loaded:', result?.data?.length || 0, 'rows');
+      return result;
+    },
+    enabled: !!dataset_id && metrics.length > 0 && dimensions.length > 0
+  });
+
+  // Container styling
+  const containerStyle: React.CSSProperties = {
+    width: '100%',
+    height: '100%',
+    minHeight: '400px',
+    backgroundColor: theme.backgroundColor,
+    borderRadius: theme.borderRadius,
+    padding: theme.padding,
+    display: 'flex',
+    flexDirection: 'column'
+  };
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div style={containerStyle} className="flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div style={containerStyle} className="flex flex-col items-center justify-center gap-2">
+        <p className="text-sm text-red-600">Failed to load data</p>
+        <p className="text-xs text-muted-foreground">{error.message}</p>
+      </div>
+    );
+  }
+
+  // No data state
+  if (!data?.data || data.data.length === 0) {
+    return (
+      <div style={containerStyle} className="flex items-center justify-center">
+        <p className="text-sm text-muted-foreground">No data available</p>
+      </div>
+    );
+  }
+
+  // Transform data for treemap
+  const treemapData = data.data.map((row: any) => ({
+    name: row[labelField] || 'Unknown',
+    value: parseFloat(row[valueField]) || 0
+  }));
+
+  const option = {
+    title: showTitle ? {
+      text: title,
+      left: 'center',
+      textStyle: {
+        color: theme.textColor,
+        fontSize: 16,
+        fontWeight: 'bold'
+      }
+    } : undefined,
+    tooltip: {
+      trigger: 'item',
+      formatter: (params: any) => {
+        return `${params.name}<br/>Value: ${params.value}`;
+      }
+    },
+    series: [
+      {
+        type: 'treemap',
+        data: treemapData,
+        label: {
+          show: true,
+          formatter: '{b}\n{c}',
+          color: '#fff',
+          fontSize: 12
+        },
+        upperLabel: {
+          show: true,
+          height: 30,
+          color: theme.textColor
+        },
+        itemStyle: {
+          borderColor: theme.borderColor,
+          borderWidth: 2,
+          gapWidth: 2
+        },
+        levels: [
+          {
+            itemStyle: {
+              borderColor: theme.borderColor,
+              borderWidth: 3,
+              gapWidth: 3
+            }
+          },
+          {
+            colorSaturation: [0.35, 0.5],
+            itemStyle: {
+              gapWidth: 1,
+              borderColorSaturation: 0.6
+            }
+          }
+        ]
+      }
+    ]
+  };
+
+  return (
+    <div style={containerStyle}>
+      <ReactECharts
+        option={option}
+        style={{ width: '100%', height: '100%' }}
+        opts={{ renderer: 'svg' }}
+      />
+    </div>
+  );
+};

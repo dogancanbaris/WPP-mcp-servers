@@ -234,17 +234,26 @@ wpp-mcp-servers/
 │   ├── ads/                      # Google Ads module
 │   │   ├── client.ts             # Ads API client factory
 │   │   └── tools/                # 25 tools
-│   │       ├── accounts.ts       # Account management (3 tools)
-│   │       ├── campaigns.ts      # Campaign CRUD (6 tools)
+│   │       ├── reporting/        # Performance reports (5 tools, modular)
+│   │       │   ├── list-campaigns.tool.ts
+│   │       │   ├── get-campaign-performance.tool.ts
+│   │       │   ├── get-search-terms.tool.ts
+│   │       │   ├── list-budgets.tool.ts
+│   │       │   ├── get-keyword-performance.tool.ts
+│   │       │   └── index.ts
+│   │       ├── campaigns/        # Campaign management (2 tools, modular)
+│   │       │   ├── update-status.tool.ts
+│   │       │   ├── create-campaign.tool.ts
+│   │       │   └── index.ts
+│   │       ├── accounts.ts       # Account management (1 tool)
 │   │       ├── budgets.ts        # Budget management (2 tools)
-│   │       ├── bidding.ts        # Bidding strategies (2 tools)
-│   │       ├── keywords.ts       # Keyword management (5 tools)
-│   │       ├── keyword-planning.ts  # Keyword ideas/forecasts (2 tools)
-│   │       ├── assets.ts         # Ad assets (2 tools)
+│   │       ├── bidding.ts        # Bidding strategies (1 tool)
+│   │       ├── keywords.ts       # Keyword management (2 tools)
+│   │       ├── keyword-planning.ts  # Keyword ideas/forecasts (1 tool)
+│   │       ├── assets.ts         # Ad assets (1 tool)
 │   │       ├── extensions.ts     # Ad extensions (1 tool)
-│   │       ├── audiences.ts      # Audience targeting (2 tools)
-│   │       ├── conversions.ts    # Conversion tracking (2 tools)
-│   │       ├── reporting.ts      # Performance reports (6 tools)
+│   │       ├── audiences.ts      # Audience targeting (4 tools)
+│   │       ├── conversions.ts    # Conversion tracking (5 tools)
 │   │       └── index.ts          # Tool registry
 │   │
 │   ├── gsc/                      # Google Search Console module
@@ -259,9 +268,13 @@ wpp-mcp-servers/
 │   │
 │   ├── analytics/                # Google Analytics module
 │   │   └── tools/
-│   │       ├── reporting.ts      # GA4 reports (4 tools)
-│   │       ├── admin.ts          # Property admin (3 tools)
-│   │       └── accounts.ts       # Account listing (1 tool)
+│   │       ├── reporting/       # GA4 reports (2 tools, modular)
+│   │       │   ├── run-report.tool.ts
+│   │       │   ├── get-realtime-users.tool.ts
+│   │       │   └── index.ts
+│   │       ├── admin.ts          # Property admin (8 tools)
+│   │       ├── accounts.ts       # Account listing (3 tools)
+│   │       └── index.ts          # Tool registry
 │   │
 │   ├── bigquery/                 # BigQuery module
 │   │   └── tools.ts              # Query, create table, load data (3 tools)
@@ -277,7 +290,19 @@ wpp-mcp-servers/
 │   │
 │   ├── wpp-analytics/            # Dashboard API tools
 │   │   └── tools/
-│   │       └── dashboards.ts     # Dashboard CRUD (2 tools)
+│   │       ├── dashboards/       # Dashboard CRUD (3 tools, modular)
+│   │       │   ├── types.ts
+│   │       │   ├── schemas.ts
+│   │       │   ├── helpers.ts
+│   │       │   ├── templates.ts
+│   │       │   ├── create-dashboard.tool.ts
+│   │       │   ├── update-dashboard.tool.ts
+│   │       │   ├── list-templates.tool.ts
+│   │       │   └── index.ts
+│   │       ├── create-dashboard-from-table.ts
+│   │       ├── push-data-to-bigquery.ts
+│   │       ├── analyze-data-insights.ts
+│   │       └── index.ts
 │   │
 │   ├── shared/                   # Shared utilities
 │   │   ├── oauth-client-factory.ts  # OAuth client per tenant

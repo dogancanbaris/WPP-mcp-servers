@@ -137,6 +137,63 @@ updateDashboardLayoutTool.handler({
 
 ---
 
+## 📄 Creating Multi-Page Dashboards
+
+### Single Page (Simple)
+```typescript
+await createDashboardFromTableTool.handler({
+  bigqueryTable: 'project.dataset.gsc_data',
+  title: 'SEO Dashboard',
+  template: 'seo_overview',
+  dateRange: ['2024-01-01', '2024-12-31'],
+  platform: 'gsc'
+});
+```
+
+### Multiple Pages (Advanced)
+```typescript
+await createDashboardFromTableTool.handler({
+  bigqueryTable: 'project.dataset.gsc_data',
+  title: 'SEO Performance Dashboard',
+  dateRange: ['2024-01-01', '2024-12-31'],
+  platform: 'gsc',
+  pages: [
+    { name: 'Overview', template: 'seo_overview_summary' },
+    { name: 'Queries', template: 'seo_queries_detail' },
+    { name: 'Pages', template: 'seo_pages_detail' }
+  ]
+});
+```
+
+### With Page Filters
+```typescript
+pages: [
+  {
+    name: 'High Traffic Pages',
+    template: 'seo_pages_detail',
+    filters: [
+      { field: 'clicks', operator: 'gt', values: ['1000'] }
+    ]
+  }
+]
+```
+
+### Filter Hierarchy
+```
+Global (dashboard-wide)
+  ↓ inherit or override
+Page (page-specific)
+  ↓ inherit or override
+Component (component-specific)
+```
+
+### When to Use Multi-Page
+- 10+ components (split into logical pages)
+- Different audiences (Overview for execs, Details for analysts)
+- Distinct domains (Traffic, Conversions, Technical)
+
+---
+
 ## 🗂️ Templates Available
 
 ### 1. SEO Overview (8 components)
@@ -238,7 +295,10 @@ const result = await createDashboardTool.handler({
 ## 📁 File Locations
 
 **Source:**
-- `src/wpp-analytics/tools/dashboards.ts`
+- `src/wpp-analytics/tools/dashboards/` (modular: 3 tools in 8 files)
+  - `types.ts`, `schemas.ts`, `helpers.ts`, `templates.ts`
+  - `create-dashboard.tool.ts`, `update-dashboard.tool.ts`, `list-templates.tool.ts`
+  - `index.ts`
 - `src/wpp-analytics/tools/index.ts`
 
 **Docs:**

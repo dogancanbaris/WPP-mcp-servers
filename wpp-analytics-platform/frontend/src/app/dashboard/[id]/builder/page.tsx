@@ -1,21 +1,28 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import { DashboardCanvas } from '@/components/dashboard-builder/DashboardCanvas';
 import { EditorTopbar } from '@/components/dashboard-builder/topbar';
 import { SettingsSidebar } from '@/components/dashboard-builder/sidebar';
 import { GlobalFilters } from '@/components/dashboard-builder/GlobalFilters';
-import { useDashboardStore } from '@/store/dashboardStore';
+import { PageTabs } from '@/components/dashboard-builder/PageTabs';
+import { useDashboardStore, useCurrentPageId, usePages, useCurrentPage } from '@/store/dashboardStore';
 import { useFilterStore } from '@/store/filterStore';
 import { useViewActions } from '@/components/dashboard-builder/actions/view-actions';
+import { useDataRefresh } from '@/hooks/useDataRefresh';
 import type { RowConfig, ColumnConfig } from '@/types/dashboard-builder';
 import '@/styles/dashboard-builder-professional.css';
 
 export default function DashboardBuilder() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const dashboardId = params.id as string;
+  const pageIdFromUrl = searchParams.get('page');
+
+  // Enable daily auto-refresh for preset date filters
+  useDataRefresh();
 
   const {
     config,
@@ -26,10 +33,15 @@ export default function DashboardBuilder() {
     selectComponent,
     updateComponent,
     loadDashboard: loadDashboardFromStore,
+    setCurrentPage,
   } = useDashboardStore();
 
   const { isFilterBarVisible } = useFilterStore();
   const { showGrid } = useViewActions();
+
+  const currentPageId = useCurrentPageId();
+  const pages = usePages();
+  const currentPage = useCurrentPage();
 
   // Load dashboard on mount
   useEffect(() => {
@@ -37,6 +49,13 @@ export default function DashboardBuilder() {
       loadDashboardFromStore(dashboardId);
     }
   }, [dashboardId, loadDashboardFromStore]);
+
+  // Set page from URL on mount or when URL changes
+  useEffect(() => {
+    if (pageIdFromUrl && pages && pages.find(p => p.id === pageIdFromUrl)) {
+      setCurrentPage(pageIdFromUrl);
+    }
+  }, [pageIdFromUrl, pages, setCurrentPage]);
 
   // Loading state - Professional with fade-in animation
   if (isLoading) {
@@ -76,6 +95,11 @@ export default function DashboardBuilder() {
         <EditorTopbar dashboardId={dashboardId} />
       </div>
 
+      {/* Page Tabs - NEW: Google Sheets-style navigation */}
+      {pages && pages.length > 0 && (
+        <PageTabs />
+      )}
+
       {/* Global Filters Bar - Smooth slide-in animation */}
       {isFilterBarVisible && (
         <div className="border-b bg-surface shadow-elevation-1 slide-in-top">
@@ -99,8 +123,8 @@ export default function DashboardBuilder() {
         {viewMode === 'edit' && (
           <div className="z-sidebar slide-in-right">
             <SettingsSidebar
-              selectedComponent={config.rows
-                .flatMap((r: RowConfig) => r.columns)
+              selectedComponent={currentPage?.rows
+                ?.flatMap((r: RowConfig) => r.columns)
                 .find((c: ColumnConfig) => c.component?.id === selectedComponentId)
                 ?.component
               }

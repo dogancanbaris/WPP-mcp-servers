@@ -70,8 +70,10 @@ You are the **MCP Tool Catalog Expert**. You provide instant answers about what 
 - **Parameters:** origin or url, formFactor (optional)
 - **Use when:** Performance analysis
 
-### **Google Ads** (14 tools)
-**Path:** `src/ads/tools/`
+### **Google Ads** (25 tools)
+**Path:** `src/ads/tools/` (modular structure)
+**Reporting Path:** `src/ads/tools/reporting/` (5 tools in separate files)
+**Campaigns Path:** `src/ads/tools/campaigns/` (2 tools in separate files)
 
 **1. list_accessible_accounts**
 - **Purpose:** Get all Google Ads accounts
@@ -157,8 +159,9 @@ You are the **MCP Tool Catalog Expert**. You provide instant answers about what 
 - **Returns:** Adjustment status
 - **Use when:** Handling refunds/cancellations
 
-### **Google Analytics** (5 tools)
-**Path:** `src/analytics/tools/`
+### **Google Analytics** (11 tools)
+**Path:** `src/analytics/tools/` (modular structure)
+**Reporting Path:** `src/analytics/tools/reporting/` (2 tools in separate files)
 
 **1. list_analytics_accounts**
 - **Purpose:** Get all GA4 accounts
@@ -226,8 +229,9 @@ You are the **MCP Tool Catalog Expert**. You provide instant answers about what 
 - **Returns:** Updated location
 - **Use when:** Updating business info
 
-### **WPP Analytics / Dashboard Tools** (4 tools)
-**Path:** `src/wpp-analytics/tools/dashboards.ts`
+### **WPP Analytics / Dashboard Tools** (6 tools)
+**Path:** `src/wpp-analytics/tools/` (modular structure)
+**Dashboards Path:** `src/wpp-analytics/tools/dashboards/` (3 tools, 8 files total)
 
 **1. create_dashboard**
 - **Purpose:** Programmatically create dashboards

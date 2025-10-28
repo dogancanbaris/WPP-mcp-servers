@@ -13,66 +13,78 @@ import { ComponentConfig } from '@/types/dashboard-builder';
 import { formatMetricValue } from '@/lib/utils/metric-formatter';
 import { standardizeDimensionValue } from '@/lib/utils/data-formatter';
 import { useState, useMemo } from 'react';
-import { useFilterStore } from '@/store/filterStore';
+import { useCascadedFilters } from '@/hooks/useCascadedFilters';
+import { useCurrentPageId } from '@/store/dashboardStore';
 
 export interface TableChartProps extends Partial<ComponentConfig> {}
 
 type SortDirection = 'asc' | 'desc' | null;
 
-export const TableChart: React.FC<TableChartProps> = ({
-  // Data props
-  dataset_id,
-  dimension = null,
-  metrics = [],
-  dateRange,
+export const TableChart: React.FC<TableChartProps> = (props) => {
+  const {
+    // Component ID
+    id: componentId,
 
-  // Display props
-  title = 'Data Table',
-  showTitle = true,
-  titleFontFamily = 'roboto',
-  titleFontSize = '16',
-  titleFontWeight = '600',
-  titleColor = '#111827',
-  titleBackgroundColor = 'transparent',
-  titleAlignment = 'left',
+    // Data props
+    dataset_id,
+    dimension = null,
+    metrics = [],
+    dateRange,
 
-  // Background & Border
-  backgroundColor = '#ffffff',
-  showBorder = true,
-  borderColor = '#e0e0e0',
-  borderWidth = 1,
-  borderRadius = 8,
-  padding = 16,
+    // Display props
+    title = 'Data Table',
+    showTitle = true,
+    titleFontFamily = 'roboto',
+    titleFontSize = '16',
+    titleFontWeight = '600',
+    titleColor = '#111827',
+    titleBackgroundColor = 'transparent',
+    titleAlignment = 'left',
 
-  // Table styles
-  tableHeaderStyle = {
-    backgroundColor: '#f9fafb',
-    textColor: '#111827',
-    fontSize: '12px',
-    fontWeight: '600'
-  },
-  tableBodyStyle = {
-    evenRowColor: '#ffffff',
-    oddRowColor: '#f9fafb'
-  }
-}) => {
+    // Background & Border
+    backgroundColor = '#ffffff',
+    showBorder = true,
+    borderColor = '#e0e0e0',
+    borderWidth = 1,
+    borderRadius = 8,
+    padding = 16,
+
+    // Table styles
+    tableHeaderStyle = {
+      backgroundColor: '#f9fafb',
+      textColor: '#111827',
+      fontSize: '12px',
+      fontWeight: '600'
+    },
+    tableBodyStyle = {
+      evenRowColor: '#ffffff',
+      oddRowColor: '#f9fafb'
+    }
+  } = props;
+
   const [sortConfig, setSortConfig] = useState<{ column: string; direction: SortDirection }>({
     column: '',
     direction: null
   });
 
-  // Subscribe to global date range filter
-  const globalDateRange = useFilterStore(state => state.activeDateRange);
-  const effectiveDateRange = globalDateRange || dateRange;
+  const currentPageId = useCurrentPageId();
+
+  // Use cascaded filters (Global → Page → Component)
+  const { filters: cascadedFilters } = useCascadedFilters({
+    pageId: currentPageId || undefined,
+    componentId,
+    componentConfig: props,
+    dateDimension: dimension || 'date',
+  });
 
   // Fetch from dataset API (with caching)
   const { data, isLoading, error } = useQuery({
-    queryKey: ['table', dataset_id, dimension, metrics, effectiveDateRange], // Global date in key
+    queryKey: ['table', dataset_id, dimension, metrics, cascadedFilters],
     queryFn: async () => {
       const params = new URLSearchParams({
         ...(dimension && { dimensions: dimension }),
         metrics: metrics.join(','),
-        ...(effectiveDateRange && { dateRange: JSON.stringify(effectiveDateRange) }),
+        ...(cascadedFilters.length > 0 && { filters: JSON.stringify(cascadedFilters) }),
         limit: '100'
       });
 

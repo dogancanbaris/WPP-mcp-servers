@@ -22,7 +22,7 @@ export const listPropertiesTool = {
     async handler(_input) {
         try {
             // Extract OAuth token from request
-            const oauthToken = extractOAuthToken(_input);
+            const oauthToken = await extractOAuthToken(_input);
             if (!oauthToken) {
                 throw new Error('OAuth token required for Google Search Console API access');
             }
@@ -78,7 +78,7 @@ export const getPropertyTool = {
         try {
             const { property } = input;
             // Extract OAuth token from request
-            const oauthToken = extractOAuthToken(input);
+            const oauthToken = await extractOAuthToken(input);
             if (!oauthToken) {
                 throw new Error('OAuth token required for Google Search Console API access');
             }
@@ -130,7 +130,7 @@ export const addPropertyTool = {
         try {
             const { siteUrl } = input;
             // Extract OAuth token from request
-            const oauthToken = extractOAuthToken(input);
+            const oauthToken = await extractOAuthToken(input);
             if (!oauthToken) {
                 throw new Error('OAuth token required for Google Search Console API access');
             }
