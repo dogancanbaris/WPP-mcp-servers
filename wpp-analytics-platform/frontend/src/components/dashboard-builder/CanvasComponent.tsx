@@ -136,9 +136,9 @@ const CanvasComponentInner: React.FC<CanvasComponentProps> = ({
         ? '0 4px 12px rgba(0, 0, 0, 0.15)'
         : 'none', // No shadow unless selected
       transition: 'border-color 200ms, box-shadow 200ms',
-      zIndex, // Apply z-index for layering
+      // Z-index moved to wrapping div style
     }),
-    [isSelected, isEditing, zIndex]
+    [isSelected, isEditing]
   );
 
   const handleDragStart = useCallback(() => {
@@ -199,43 +199,44 @@ const CanvasComponentInner: React.FC<CanvasComponentProps> = ({
   }, [id, onSizeChange]);
 
   return (
-    <Rnd
-      size={{ width: position.width, height: position.height }}
-      position={{ x: position.x, y: position.y }}
-      onDragStart={handleDragStart}
-      onDragStop={handleDragStop}
-      onResize={handleResize} // Live resize preview
-      onResizeStop={handleResizeStop}
-      bounds="parent"
-      grid={[20, 20]} // 20px grid snapping
-      minWidth={minWidth}
-      minHeight={minHeight}
-      disableDragging={!enableDrag}
-      enableResizing={
-        enableResize
-          ? {
-              top: true,
-              right: true,
-              bottom: true,
-              left: true,
-              topRight: true,
-              bottomRight: true,
-              bottomLeft: true,
-              topLeft: true,
-            }
-          : false
-      }
-      style={rndStyle}
-      className={cn(
-        'group canvas-component',
-        isLocked && 'locked',
-        isSelected && 'selected'
-      )}
-      onClick={(e) => {
-        e.stopPropagation();
-        onSelect(id, e); // Pass event for shift-click detection
-      }}
-    >
+    <div style={{ zIndex, position: 'absolute' }}> {/* Wrapper for z-index */}
+      <Rnd
+        size={{ width: position.width, height: position.height }}
+        position={{ x: position.x, y: position.y }}
+        onDragStart={handleDragStart}
+        onDragStop={handleDragStop}
+        onResize={handleResize} // Live resize preview
+        onResizeStop={handleResizeStop}
+        bounds="parent"
+        grid={[20, 20]} // 20px grid snapping
+        minWidth={minWidth}
+        minHeight={minHeight}
+        disableDragging={!enableDrag}
+        enableResizing={
+          enableResize
+            ? {
+                top: true,
+                right: true,
+                bottom: true,
+                left: true,
+                topRight: true,
+                bottomRight: true,
+                bottomLeft: true,
+                topLeft: true,
+              }
+            : false
+        }
+        style={rndStyle}
+        className={cn(
+          'group canvas-component',
+          isLocked && 'locked',
+          isSelected && 'selected'
+        )}
+        onClick={(e) => {
+          e.stopPropagation();
+          onSelect(id, e); // Pass event for shift-click detection
+        }}
+      >
       {/* Drag Handle */}
       {isEditing && !isLocked && (
         <div
@@ -375,6 +376,7 @@ const CanvasComponentInner: React.FC<CanvasComponentProps> = ({
         </div>
       )}
     </Rnd>
+    </div> {/* Close z-index wrapper */}
   );
 };
 

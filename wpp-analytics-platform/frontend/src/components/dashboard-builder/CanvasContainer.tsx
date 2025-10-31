@@ -9,8 +9,12 @@ import { Ruler } from 'lucide-react';
 interface CanvasContainerProps {
   /** Canvas width in pixels */
   canvasWidth: number;
+  /** Canvas height in pixels */
+  canvasHeight?: number;
   /** Callback when canvas width changes */
   onCanvasWidthChange: (width: number) => void;
+  /** Callback when canvas height changes */
+  onCanvasHeightChange?: (height: number) => void;
   /** Child components to render (CanvasComponent wrappers) */
   children: React.ReactNode;
   /** Whether grid background is visible */
@@ -35,7 +39,9 @@ interface CanvasContainerProps {
  */
 export const CanvasContainer: React.FC<CanvasContainerProps> = ({
   canvasWidth,
+  canvasHeight = 800,
   onCanvasWidthChange,
+  onCanvasHeightChange,
   children,
   showGrid = true,
   isEditing = true,
@@ -44,11 +50,16 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [inputWidth, setInputWidth] = React.useState(canvasWidth.toString());
+  const [inputHeight, setInputHeight] = React.useState(canvasHeight.toString());
 
-  // Sync input with prop
+  // Sync input with props
   useEffect(() => {
     setInputWidth(canvasWidth.toString());
   }, [canvasWidth]);
+
+  useEffect(() => {
+    setInputHeight(canvasHeight.toString());
+  }, [canvasHeight]);
 
   const handleWidthChange = (value: string) => {
     setInputWidth(value);
@@ -70,6 +81,28 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
     }
   };
 
+  const handleHeightChange = (value: string) => {
+    setInputHeight(value);
+
+    const parsed = parseInt(value);
+    if (!isNaN(parsed) && parsed >= 600 && parsed <= 5000 && onCanvasHeightChange) {
+      onCanvasHeightChange(parsed);
+    }
+  };
+
+  const handleHeightBlur = () => {
+    if (!onCanvasHeightChange) return;
+
+    const parsed = parseInt(inputHeight);
+    if (isNaN(parsed) || parsed < 600) {
+      setInputHeight('600');
+      onCanvasHeightChange(600);
+    } else if (parsed > 5000) {
+      setInputHeight('5000');
+      onCanvasHeightChange(5000);
+    }
+  };
+
   // Calculate scale for zoom
   const scale = zoom / 100;
 
@@ -81,7 +114,7 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
           <div className="flex items-center gap-2">
             <Ruler className="w-4 h-4 text-gray-500" />
             <Label htmlFor="canvas-width" className="text-sm font-medium">
-              Canvas Width
+              Width
             </Label>
             <Input
               id="canvas-width"
@@ -94,8 +127,29 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
               onBlur={handleWidthBlur}
               className="w-24 h-8 text-sm"
             />
-            <span className="text-xs text-gray-500">px (800-3000)</span>
+            <span className="text-xs text-gray-500">px</span>
           </div>
+
+          {/* Canvas Height Control */}
+          {onCanvasHeightChange && (
+            <div className="flex items-center gap-2">
+              <Label htmlFor="canvas-height" className="text-sm font-medium">
+                Height
+              </Label>
+              <Input
+                id="canvas-height"
+                type="number"
+                min={600}
+                max={5000}
+                step={100}
+                value={inputHeight}
+                onChange={(e) => handleHeightChange(e.target.value)}
+                onBlur={handleHeightBlur}
+                className="w-24 h-8 text-sm"
+              />
+              <span className="text-xs text-gray-500">px</span>
+            </div>
+          )}
 
           <div className="text-xs text-gray-500">
             Zoom: {zoom}%
@@ -127,8 +181,8 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
           style={{
             transform: `scale(${scale})`,
             width: `${canvasWidth}px`,
-            minHeight: '800px',
-            transition: 'width 300ms ease-in-out, transform 250ms cubic-bezier(0.4, 0, 0.2, 1)',
+            height: `${canvasHeight}px`, // Use canvasHeight
+            transition: 'width 300ms ease-in-out, height 300ms ease-in-out, transform 250ms cubic-bezier(0.4, 0, 0.2, 1)',
             position: 'relative', // Important for react-rnd bounds
           }}
         >

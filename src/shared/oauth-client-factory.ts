@@ -87,6 +87,16 @@ export function createAnalyticsAdminClient(accessToken: string): AnalyticsAdminS
 }
 
 /**
+ * Create Google Analytics client (wrapper with both Data and Admin clients)
+ * Per-request pattern - creates new client instance for each API call
+ */
+export async function createAnalyticsClient(accessToken: string) {
+  const { AnalyticsClient } = await import('../analytics/client.js');
+  const auth = createOAuth2ClientFromToken(accessToken);
+  return new AnalyticsClient(auth);
+}
+
+/**
  * Create PageSpeed Insights (CrUX) client from OAuth token
  */
 export function createPageSpeedClient(accessToken: string) {

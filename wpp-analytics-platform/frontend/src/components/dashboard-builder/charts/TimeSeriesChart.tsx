@@ -8,6 +8,7 @@
  */
 
 import ReactECharts from 'echarts-for-react';
+import { useRef } from 'react';
 import { Loader2 } from 'lucide-react';
 import { ComponentConfig } from '@/types/dashboard-builder';
 import { formatMetricValue } from '@/lib/utils/metric-formatter';
@@ -18,6 +19,7 @@ import { useCascadedFilters } from '@/hooks/useCascadedFilters';
 import { getChartDefaults, resolveSortField } from '@/lib/defaults/chart-defaults';
 import { formatChartLabel } from '@/lib/utils/label-formatter';
 import { addDays, format as formatDate, parseISO } from 'date-fns';
+import { useChartResize } from '@/hooks/useChartResize';
 
 export interface TimeSeriesChartProps extends Partial<ComponentConfig> {
   sortBy?: string;
@@ -26,10 +28,44 @@ export interface TimeSeriesChartProps extends Partial<ComponentConfig> {
   containerSize?: { width: number; height: number };
 }
 
+/**
+ * Calculate dynamic grid padding based on container size
+ * Ensures all chart elements (labels, legend, axes) remain visible
+ */
+function calculateDynamicGrid(
+  containerSize: { width: number; height: number } | undefined,
+  showLegend: boolean,
+  useDualAxis: boolean
+) {
+  const width = containerSize?.width || 600;
+  const height = containerSize?.height || 400;
+
+  // Calculate responsive padding (minimum pixels, maximum percentage)
+  const leftPx = Math.min(Math.max(40, width * 0.08), width * 0.15);
+  const rightPx = useDualAxis
+    ? Math.min(Math.max(50, width * 0.08), width * 0.15)
+    : Math.min(Math.max(30, width * 0.05), width * 0.10);
+  const topPx = Math.min(Math.max(30, height * 0.08), height * 0.12);
+  const bottomPx = showLegend
+    ? Math.min(Math.max(60, height * 0.15), height * 0.25)
+    : Math.min(Math.max(30, height * 0.08), height * 0.12);
+
+  return {
+    left: leftPx,
+    right: rightPx,
+    top: topPx,
+    bottom: bottomPx,
+    containLabel: true, // CRITICAL - keeps all labels visible
+  };
+}
+
 export const TimeSeriesChart: React.FC<TimeSeriesChartProps> = (props) => {
   // Apply global theme
   const theme = DASHBOARD_THEME.charts;
   const tsTheme = theme.timeSeries;
+
+  // Chart ref for ResizeObserver
+  const chartRef = useRef<ReactECharts>(null);
 
   const {
     id: componentId,
@@ -43,10 +79,14 @@ export const TimeSeriesChart: React.FC<TimeSeriesChartProps> = (props) => {
     sortBy,
     sortDirection,
     limit,
+    containerSize,
     ...rest
   } = props;
 
   const currentPageId = useCurrentPageId();
+
+  // Enable auto-resize when container changes
+  useChartResize(chartRef, containerSize);
 
   // Apply professional defaults
   const defaults = getChartDefaults('time_series');
@@ -364,13 +404,7 @@ export const TimeSeriesChart: React.FC<TimeSeriesChartProps> = (props) => {
       type: 'scroll', // Scroll if too many items
       textStyle: { color: '#666', fontSize: Math.max(10, Math.min(12, (containerSize?.width || 600) / 60)) }
     },
-    grid: {
-      left: '8%', // Percentage-based for responsiveness
-      right: useDualAxis ? '8%' : '5%',
-      bottom: showLegend ? '15%' : '8%',
-      top: '8%',
-      containLabel: true // CRITICAL - keeps labels inside bounds
-    },
+    grid: calculateDynamicGrid(containerSize, showLegend, useDualAxis),
     xAxis: {
       type: 'category',
       data: (xAxisDates ? xAxisDates : currentData.map((row: any) => row[dimension])),
@@ -431,6 +465,7 @@ export const TimeSeriesChart: React.FC<TimeSeriesChartProps> = (props) => {
     <div style={containerStyle}>
       {showTitle && <div style={titleStyle}>{title}</div>}
       <ReactECharts
+        ref={chartRef}
         option={option}
         style={{ height: chartHeight, width: '100%' }}
         opts={{ renderer: 'svg' }} // SVG for better scaling
