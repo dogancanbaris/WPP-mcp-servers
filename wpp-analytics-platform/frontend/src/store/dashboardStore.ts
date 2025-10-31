@@ -1345,11 +1345,23 @@ export const useDashboardStore = create<DashboardStore>()(
       },
 
       selectMultiple: (componentIds: string[]) => {
+        console.log('📦 [Store] selectMultiple called');
+        console.log('  - Input IDs:', componentIds);
+        console.log('  - Count:', componentIds.length);
+
         const newSelection = new Set(componentIds);
+        console.log('  - New Set size:', newSelection.size);
+        console.log('  - First in set:', Array.from(newSelection)[0]);
+
         set({
           selectedComponentIds: newSelection,
           selectedComponentId: newSelection.size > 0 ? Array.from(newSelection)[0] : undefined
         });
+
+        const state = get();
+        console.log('  - After set - selectedComponentIds size:', state.selectedComponentIds.size);
+        console.log('  - After set - selectedComponentId:', state.selectedComponentId);
+        console.log('  - After set - Full Set:', Array.from(state.selectedComponentIds));
       },
 
       deselectAll: () => {
@@ -1721,18 +1733,35 @@ export const useDashboardStore = create<DashboardStore>()(
 
       // Z-index management for layering
       bringToFront: (canvasId: string) => {
+        console.log('⬆️ [Store] bringToFront called');
+        console.log('  - Canvas ID:', canvasId);
+
         const state = get();
         const currentPageId = state.currentPageId;
 
-        if (!state.config.pages || !currentPageId) return;
+        if (!state.config.pages || !currentPageId) {
+          console.log('  - ❌ No pages or currentPageId');
+          return;
+        }
 
         const currentPage = state.config.pages.find(p => p.id === currentPageId);
-        if (!currentPage?.components) return;
+        if (!currentPage?.components) {
+          console.log('  - ❌ No components in current page');
+          return;
+        }
+
+        console.log('  - Current page components:', currentPage.components.length);
+        console.log('  - Current z-indices:', currentPage.components.map(c => ({
+          id: c.id,
+          zIndex: c.zIndex || 0
+        })));
 
         get().addToHistory();
 
         // Find highest z-index
         const maxZ = Math.max(0, ...currentPage.components.map(c => c.zIndex || 0));
+        console.log('  - Max z-index:', maxZ);
+        console.log('  - New z-index will be:', maxZ + 1);
 
         set({
           config: {
@@ -1752,22 +1781,48 @@ export const useDashboardStore = create<DashboardStore>()(
           }
         });
 
+        const newState = get();
+        const updatedPage = newState.config.pages?.find(p => p.id === currentPageId);
+        const updatedComp = updatedPage?.components?.find(c => c.id === canvasId);
+        console.log('  - ✅ After update, component z-index:', updatedComp?.zIndex);
+        console.log('  - All z-indices now:', updatedPage?.components?.map(c => ({
+          id: c.id,
+          zIndex: c.zIndex || 0
+        })));
+
         get().autoSave();
       },
 
       sendToBack: (canvasId: string) => {
+        console.log('⬇️ [Store] sendToBack called');
+        console.log('  - Canvas ID:', canvasId);
+
         const state = get();
         const currentPageId = state.currentPageId;
 
-        if (!state.config.pages || !currentPageId) return;
+        if (!state.config.pages || !currentPageId) {
+          console.log('  - ❌ No pages or currentPageId');
+          return;
+        }
 
         const currentPage = state.config.pages.find(p => p.id === currentPageId);
-        if (!currentPage?.components) return;
+        if (!currentPage?.components) {
+          console.log('  - ❌ No components in current page');
+          return;
+        }
+
+        console.log('  - Current page components:', currentPage.components.length);
+        console.log('  - Current z-indices:', currentPage.components.map(c => ({
+          id: c.id,
+          zIndex: c.zIndex || 0
+        })));
 
         get().addToHistory();
 
         // Find lowest z-index
         const minZ = Math.min(0, ...currentPage.components.map(c => c.zIndex || 0));
+        console.log('  - Min z-index:', minZ);
+        console.log('  - New z-index will be:', minZ - 1);
 
         set({
           config: {
@@ -1786,6 +1841,15 @@ export const useDashboardStore = create<DashboardStore>()(
             )
           }
         });
+
+        const newState = get();
+        const updatedPage = newState.config.pages?.find(p => p.id === currentPageId);
+        const updatedComp = updatedPage?.components?.find(c => c.id === canvasId);
+        console.log('  - ✅ After update, component z-index:', updatedComp?.zIndex);
+        console.log('  - All z-indices now:', updatedPage?.components?.map(c => ({
+          id: c.id,
+          zIndex: c.zIndex || 0
+        })));
 
         get().autoSave();
       },

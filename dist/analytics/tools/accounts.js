@@ -142,12 +142,10 @@ export const listAnalyticsPropertiesTool = {
             // Create Analytics Admin client using googleapis wrapper
             const analyticsAdmin = createGoogleAnalyticsAdminClient(oauthToken);
             logger.info('Listing Analytics properties', { accountId });
-            // Call Analytics Admin API
-            const requestParams = {};
-            if (accountId) {
-                requestParams.filter = `parent:accounts/${accountId}`;
-            }
-            const res = await analyticsAdmin.properties.list(requestParams);
+            // Call Analytics Admin API - omit filter entirely if no accountId
+            const res = accountId
+                ? await analyticsAdmin.properties.list({ filter: `parent:accounts/${accountId}` })
+                : await analyticsAdmin.properties.list({});
             const propertyList = res.data.properties || [];
             const properties = propertyList.map((prop) => ({
                 name: prop.name,

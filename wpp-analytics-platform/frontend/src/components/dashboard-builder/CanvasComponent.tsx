@@ -120,6 +120,18 @@ const CanvasComponentInner: React.FC<CanvasComponentProps> = ({
   // Get component-type specific minimum sizes
   const { minWidth, minHeight } = getMinSize(component.type);
 
+  // Log component state on render
+  console.log(`🎨 [CanvasComponent] Rendering ${component.title || id}:`, {
+    id,
+    zIndex,
+    isSelected,
+    isMultiSelect,
+    position,
+    enableDrag,
+    enableResize,
+    dataCanvasId: id // This should match what Selecto looks for
+  });
+
   const rndStyle = useMemo(
     () => ({
       display: 'flex',

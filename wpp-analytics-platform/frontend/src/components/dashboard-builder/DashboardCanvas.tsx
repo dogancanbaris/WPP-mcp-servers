@@ -219,40 +219,68 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
             toggleContinueSelect={['shift']} // Shift key for multi-select
             keyContainer={window}
             onDragStart={(e) => {
+              console.log('🟦 [Selecto] onDragStart triggered');
+              console.log('  - Input event target:', e.inputEvent.target);
+              console.log('  - Target tagName:', (e.inputEvent.target as HTMLElement).tagName);
+              console.log('  - Target className:', (e.inputEvent.target as HTMLElement).className);
+
               // CRITICAL: If clicking a component, stop Selecto and let react-rnd handle it!
               const target = e.inputEvent.target as HTMLElement;
               const componentEl = target.closest('.canvas-component');
+              console.log('  - Closest .canvas-component:', componentEl);
 
               if (componentEl) {
+                console.log('  - ❌ STOPPED - Let react-rnd handle drag');
                 e.stop(); // Let react-rnd handle the drag
                 return;
               }
+              console.log('  - ✅ PROCEEDING - Selecto will handle selection');
             }}
             onSelectStart={(e) => {
+              console.log('🟦 [Selecto] onSelectStart');
+              console.log('  - Input event:', e.inputEvent.type);
+
               // Clear alignment guides when starting selection
               setActiveCanvasComponent(null);
             }}
             onSelect={(e) => {
+              console.log('🟦 [Selecto] onSelect event');
+              console.log('  - Selected DOM elements:', e.selected.length);
+              console.log('  - Added:', e.added.length);
+              console.log('  - Removed:', e.removed.length);
+
               // Get canvas IDs from selected DOM elements
               const selectedCanvasIds: string[] = [];
 
-              e.selected.forEach((el) => {
+              e.selected.forEach((el, index) => {
                 const canvasId = el.getAttribute('data-canvas-id');
+                console.log(`  - Element ${index}:`, {
+                  tagName: el.tagName,
+                  className: el.className,
+                  dataCanvasId: canvasId,
+                  hasAttribute: el.hasAttribute('data-canvas-id')
+                });
+
                 if (canvasId) {
                   selectedCanvasIds.push(canvasId);
                 }
               });
 
+              console.log('  - Canvas IDs extracted:', selectedCanvasIds);
+              console.log('  - Calling selectMultiple with', selectedCanvasIds.length, 'IDs');
+
               if (selectedCanvasIds.length > 0) {
                 selectMultiple(selectedCanvasIds);
               } else if (e.selected.length === 0 && !e.inputEvent.shiftKey) {
-                // Deselect if no components selected and not shift-selecting
+                console.log('  - No elements selected, calling deselectAll');
                 deselectAll();
               }
             }}
             onSelectEnd={(e) => {
-              // Optional: Handle drag start after selection for group move
-              console.log('[Selecto] Selected:', e.selected.length, 'components');
+              console.log('🟦 [Selecto] onSelectEnd');
+              console.log('  - Final selected count:', e.selected.length);
+              console.log('  - Is drag start:', e.isDragStart);
+              console.log('  - Is click:', e.isClick);
             }}
           />
         )}
@@ -268,33 +296,46 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
         )}
 
         {/* Render Canvas Components */}
-        {canvasComponents.map((canvasComp) => (
-          <CanvasComponent
-            key={canvasComp.id}
-            id={canvasComp.id}
-            position={{
-              x: canvasComp.x,
-              y: canvasComp.y,
-              width: canvasComp.width,
-              height: canvasComp.height,
-            }}
-            component={canvasComp.component}
-            zIndex={canvasComp.zIndex || 0}
-            isEditing={isEditing}
-            isSelected={selectedComponentIds.has(canvasComp.id)}
-            isMultiSelect={selectedComponentIds.size > 1}
-            selectedComponentIds={selectedComponentIds}
-            onPositionChange={handlePositionChange}
-            onGroupMove={moveGroup}
-            onSizeChange={handleSizeChange}
-            onRemove={handleRemove}
-            onSelect={handleSelect}
-            onToggleLock={handleToggleLock}
-            onBringToFront={bringToFront}
-            onSendToBack={sendToBack}
-            onDragStart={handleDragStart}
-          />
-        ))}
+        {canvasComponents.map((canvasComp) => {
+          const isSelected = selectedComponentIds.has(canvasComp.id);
+          console.log(`🎨 [Render] Component ${canvasComp.component.title || canvasComp.id}:`, {
+            canvasId: canvasComp.id,
+            position: { x: canvasComp.x, y: canvasComp.y },
+            size: { w: canvasComp.width, h: canvasComp.height },
+            zIndex: canvasComp.zIndex || 0,
+            isSelected,
+            selectedIdsSize: selectedComponentIds.size,
+            allSelectedIds: Array.from(selectedComponentIds)
+          });
+
+          return (
+            <CanvasComponent
+              key={canvasComp.id}
+              id={canvasComp.id}
+              position={{
+                x: canvasComp.x,
+                y: canvasComp.y,
+                width: canvasComp.width,
+                height: canvasComp.height,
+              }}
+              component={canvasComp.component}
+              zIndex={canvasComp.zIndex || 0}
+              isEditing={isEditing}
+              isSelected={isSelected}
+              isMultiSelect={selectedComponentIds.size > 1}
+              selectedComponentIds={selectedComponentIds}
+              onPositionChange={handlePositionChange}
+              onGroupMove={moveGroup}
+              onSizeChange={handleSizeChange}
+              onRemove={handleRemove}
+              onSelect={handleSelect}
+              onToggleLock={handleToggleLock}
+              onBringToFront={bringToFront}
+              onSendToBack={sendToBack}
+              onDragStart={handleDragStart}
+            />
+          );
+        })}
 
         {/* Empty State */}
         {canvasComponents.length === 0 && isEditing && (

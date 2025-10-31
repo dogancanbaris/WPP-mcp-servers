@@ -161,11 +161,27 @@ export const listAnalyticsPropertiesTool = {
 
       logger.info('Listing Analytics properties', { accountId });
 
-      // Call Analytics Admin API - omit filter entirely if no accountId
-      const res = accountId
-        ? await analyticsAdmin.properties.list({ filter: `parent:accounts/${accountId}` })
-        : await analyticsAdmin.properties.list({});
-      const propertyList = res.data.properties || [];
+      // Call Analytics Admin API
+      // If no accountId, get all accounts first, then get their properties
+      let propertyList: any[] = [];
+
+      if (accountId) {
+        const res = await analyticsAdmin.properties.list({
+          filter: `parent:accounts/${accountId}`,
+        });
+        propertyList = res.data.properties || [];
+      } else {
+        // Get all accounts, then get properties for each
+        const accountsRes = await analyticsAdmin.accounts.list({});
+        const accounts = accountsRes.data.accounts || [];
+
+        for (const account of accounts) {
+          const res = await analyticsAdmin.properties.list({
+            filter: `parent:${account.name}`,
+          });
+          propertyList.push(...(res.data.properties || []));
+        }
+      }
 
       const properties = propertyList.map((prop: any) => ({
         name: prop.name,

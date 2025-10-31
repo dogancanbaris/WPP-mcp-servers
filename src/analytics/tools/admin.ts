@@ -150,8 +150,8 @@ export const createPropertyTool = {
         confirmationToken,
         dryRun,
         async () => {
-          const [createdProperty] = await client.createProperty({
-            property: {
+          const res = await client.properties.create({
+            requestBody: {
               parent: `accounts/${accountId}`,
               displayName,
               timeZone,
@@ -159,6 +159,7 @@ export const createPropertyTool = {
               industryCategory: industryCategory || undefined,
             },
           });
+          const createdProperty = res.data;
 
           return createdProperty;
         }
@@ -326,10 +327,11 @@ export const createDataStreamTool = {
             };
           }
 
-          const [createdStream] = await client.createDataStream({
+          const res = await client.properties.dataStreams.create({
             parent: `properties/${propertyId}`,
-            dataStream,
+            requestBody: dataStream,
           });
+          const createdStream = res.data;
 
           return createdStream;
         }
@@ -496,15 +498,16 @@ Custom dimension: "Customer Tier" → parameter: customer_tier, scope: EVENT`,
         confirmationToken,
         dryRun,
         async () => {
-          const [createdDimension] = await client.createCustomDimension({
+          const res = await client.properties.customDimensions.create({
             parent: `properties/${propertyId}`,
-            customDimension: {
+            requestBody: {
               displayName,
               parameterName,
               scope,
               description: description || '',
             },
           });
+          const createdDimension = res.data;
 
           return createdDimension;
         }
@@ -645,16 +648,16 @@ export const createCustomMetricTool = {
         confirmationToken,
         dryRun,
         async () => {
-          const [created] = await client.createCustomMetric({
+          const res = await client.properties.customMetrics.create({
             parent: `properties/${propertyId}`,
-            customMetric: {
+            requestBody: {
               displayName,
               parameterName,
               measurementUnit,
               scope,
             },
           });
-          return created;
+          return res.data;
         }
       );
 
@@ -763,13 +766,13 @@ export const createConversionEventTool = {
         confirmationToken,
         dryRun,
         async () => {
-          const [created] = await client.createConversionEvent({
+          const res = await client.properties.conversionEvents.create({
             parent: `properties/${propertyId}`,
-            conversionEvent: {
+            requestBody: {
               eventName,
             },
           });
-          return created;
+          return res.data;
         }
       );
 
@@ -878,13 +881,13 @@ export const createGoogleAdsLinkTool = {
         confirmationToken,
         dryRun,
         async () => {
-          const [createdLink] = await client.createGoogleAdsLink({
+          const res = await client.properties.googleAdsLinks.create({
             parent: `properties/${propertyId}`,
-            googleAdsLink: {
+            requestBody: {
               customerId: googleAdsCustomerId,
             },
           });
-          return createdLink;
+          return res.data;
         }
       );
 
