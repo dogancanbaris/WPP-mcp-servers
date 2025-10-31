@@ -1,12 +1,13 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
 import { useDashboardStore, useCurrentPage } from '@/store/dashboardStore';
 import { CanvasContainer } from './CanvasContainer';
 import { CanvasComponent } from './CanvasComponent';
 import { AlignmentGuides } from './AlignmentGuides';
+import { SelectionBox } from './SelectionBox';
 import { rowColumnToAbsolute } from '@/lib/utils/layout-converter';
 import { cn } from '@/lib/utils';
 import type { ComponentType, CanvasComponent as CanvasComponentType } from '@/types/dashboard-builder';
@@ -36,22 +37,38 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
     config,
     zoom,
     selectedComponentId,
+    selectedComponentIds,
     canvasWidth,
     setCanvasWidth,
     moveComponentAbsolute,
     resizeComponent,
     removeComponent,
     selectComponent,
+    selectMultiple,
+    deselectAll,
     toggleLock,
     convertToCanvas,
     bringToFront,
     sendToBack,
+    moveGroup,
   } = useDashboardStore();
 
   const currentPage = useCurrentPage();
 
   // Track active component for alignment guides
   const [activeCanvasComponent, setActiveCanvasComponent] = useState<CanvasComponentType | null>(null);
+
+  // Selection box state for drag-to-select
+  const [selectionBox, setSelectionBox] = useState<{
+    start: { x: number; y: number };
+    current: { x: number; y: number };
+  } | null>(null);
+
+  const canvasRef = useRef<HTMLDivElement>(null);
+
+  // Get components from current page
+  const canvasComponents = currentPage?.components || [];
+  const pageCanvasWidth = currentPage?.canvasWidth || canvasWidth;
 
   // Auto-convert rows to canvas if needed
   useEffect(() => {
@@ -61,9 +78,41 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
     }
   }, [currentPage?.id, convertToCanvas]);
 
-  // Get components from current page
-  const canvasComponents = currentPage?.components || [];
-  const pageCanvasWidth = currentPage?.canvasWidth || canvasWidth;
+  // Keyboard shortcuts for multi-select
+  useEffect(() => {
+    const viewMode = 'edit'; // Access from parent prop
+    if (viewMode !== 'edit') return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Escape - Deselect all
+      if (e.key === 'Escape') {
+        deselectAll();
+      }
+
+      // Ctrl+A / Cmd+A - Select all components
+      if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
+        e.preventDefault();
+        const allCanvasIds = canvasComponents.map(c => c.id);
+        selectMultiple(allCanvasIds);
+      }
+
+      // Delete - Remove all selected components
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        if (selectedComponentIds.size > 0) {
+          e.preventDefault();
+          selectedComponentIds.forEach(id => {
+            const canvasComp = canvasComponents.find(c => c.id === id);
+            if (canvasComp && !canvasComp.component.locked) {
+              removeComponent(canvasComp.component.id);
+            }
+          });
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [canvasComponents, selectedComponentIds, deselectAll, selectMultiple, removeComponent]);
 
   const handlePositionChange = (id: string, x: number, y: number) => {
     moveComponentAbsolute(id, x, y);
@@ -107,10 +156,12 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
     }
   };
 
-  const handleSelect = (id: string) => {
+  const handleSelect = (id: string, event?: React.MouseEvent) => {
     const canvasComp = canvasComponents.find((c) => c.id === id);
     if (canvasComp) {
-      selectComponent(canvasComp.component.id);
+      // Shift+click: Add/remove from selection
+      const addToSelection = event?.shiftKey || false;
+      selectComponent(canvasComp.component.id, addToSelection);
       onSelectComponent(canvasComp.component.id);
     }
   };
@@ -126,6 +177,86 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
     setCanvasWidth(width);
   };
 
+  // Selection box handlers for drag-to-select
+  const handleCanvasMouseDown = (e: React.MouseEvent) => {
+    // Only start selection if clicking directly on canvas (not on a component)
+    const target = e.target as HTMLElement;
+    const isCanvasBackground = target.hasAttribute('data-canvas') || target.classList.contains('canvas-background');
+
+    if (isCanvasBackground && isEditing) {
+      const rect = canvasRef.current?.getBoundingClientRect();
+      if (!rect) return;
+
+      setSelectionBox({
+        start: {
+          x: e.clientX - rect.left,
+          y: e.clientY - rect.top,
+        },
+        current: {
+          x: e.clientX - rect.left,
+          y: e.clientY - rect.top,
+        },
+      });
+    }
+  };
+
+  const handleCanvasMouseMove = (e: React.MouseEvent) => {
+    if (selectionBox && canvasRef.current) {
+      const rect = canvasRef.current.getBoundingClientRect();
+
+      setSelectionBox({
+        ...selectionBox,
+        current: {
+          x: e.clientX - rect.left,
+          y: e.clientY - rect.top,
+        },
+      });
+    }
+  };
+
+  const handleCanvasMouseUp = () => {
+    if (selectionBox) {
+      // Find components within selection box
+      const selectedIds = findComponentsInBox(selectionBox, canvasComponents);
+
+      if (selectedIds.length > 0) {
+        selectMultiple(selectedIds);
+      } else {
+        deselectAll();
+      }
+
+      setSelectionBox(null);
+    }
+  };
+
+  // Find components that intersect with selection box
+  const findComponentsInBox = (
+    box: { start: { x: number; y: number }; current: { x: number; y: number } },
+    components: CanvasComponentType[]
+  ): string[] => {
+    const boxLeft = Math.min(box.start.x, box.current.x);
+    const boxRight = Math.max(box.start.x, box.current.x);
+    const boxTop = Math.min(box.start.y, box.current.y);
+    const boxBottom = Math.max(box.start.y, box.current.y);
+
+    return components
+      .filter((comp) => {
+        const compLeft = comp.x;
+        const compRight = comp.x + comp.width;
+        const compTop = comp.y;
+        const compBottom = comp.y + comp.height;
+
+        // Check if selection box intersects component bounds
+        return !(
+          compRight < boxLeft ||
+          compLeft > boxRight ||
+          compBottom < boxTop ||
+          compTop > boxBottom
+        );
+      })
+      .map((comp) => comp.id);
+  };
+
   const isEditing = viewMode === 'edit';
 
   return (
@@ -138,6 +269,26 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
         isEditing={isEditing}
         zoom={zoom}
       >
+        {/* Canvas background with selection handlers */}
+        <div
+          ref={canvasRef}
+          data-canvas
+          className="canvas-background absolute inset-0"
+          onMouseDown={handleCanvasMouseDown}
+          onMouseMove={handleCanvasMouseMove}
+          onMouseUp={handleCanvasMouseUp}
+          onMouseLeave={() => setSelectionBox(null)} // Cancel selection if mouse leaves
+          style={{ zIndex: -1 }} // Behind all components
+        />
+
+        {/* Selection Box */}
+        {selectionBox && (
+          <SelectionBox
+            start={selectionBox.start}
+            current={selectionBox.current}
+          />
+        )}
+
         {/* Alignment Guides */}
         {isEditing && (
           <AlignmentGuides
@@ -162,8 +313,11 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
             component={canvasComp.component}
             zIndex={canvasComp.zIndex || 0}
             isEditing={isEditing}
-            isSelected={canvasComp.component.id === selectedComponentId}
+            isSelected={selectedComponentIds.has(canvasComp.id)}
+            isMultiSelect={selectedComponentIds.size > 1}
+            selectedComponentIds={selectedComponentIds}
             onPositionChange={handlePositionChange}
+            onGroupMove={moveGroup}
             onSizeChange={handleSizeChange}
             onRemove={handleRemove}
             onSelect={handleSelect}

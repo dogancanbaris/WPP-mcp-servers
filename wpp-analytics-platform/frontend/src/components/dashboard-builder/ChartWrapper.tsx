@@ -53,7 +53,7 @@ import { RectangleComponent } from './content/RectangleComponent';
 
 interface ChartWrapperProps {
   config: ComponentConfig;
-  onClick?: () => void;
+  onClick?: (event?: React.MouseEvent) => void;
   isSelected?: boolean;
   containerSize?: { width: number; height: number };
 }
@@ -328,7 +328,7 @@ export const ChartWrapper: React.FC<ChartWrapperProps> = ({
 
   return (
     <div
-      onClick={onClick}
+      onClick={(e) => onClick?.(e)}
       className="relative w-full h-full"
       role="button"
       tabIndex={0}

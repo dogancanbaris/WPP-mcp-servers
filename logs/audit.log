@@ -2616,5 +2616,61 @@
     "result": "failure",
     "details": {},
     "errorMessage": "OAuth token required for Google Search Console API access"
+  },
+  {
+    "timestamp": "2025-10-31T17:58:30.857Z",
+    "user": "user",
+    "action": "list_properties",
+    "property": "system",
+    "operationType": "read",
+    "result": "failure",
+    "details": {},
+    "errorMessage": "OAuth token required for Google Search Console API access"
+  },
+  {
+    "timestamp": "2025-10-31T18:01:07.396Z",
+    "user": "user",
+    "action": "list_properties",
+    "property": "system",
+    "operationType": "read",
+    "result": "failure",
+    "details": {},
+    "errorMessage": "OAuth token required for Google Search Console API access"
+  },
+  {
+    "timestamp": "2025-10-31T18:04:05.186Z",
+    "user": "user",
+    "action": "list_properties",
+    "property": "system",
+    "operationType": "read",
+    "result": "failure",
+    "details": {},
+    "errorMessage": "OAuth token required for Google Search Console API access"
+  },
+  {
+    "timestamp": "2025-10-31T18:05:57.727Z",
+    "user": "user",
+    "action": "list_properties",
+    "property": "system",
+    "operationType": "read",
+    "result": "success",
+    "details": {
+      "totalProperties": 9,
+      "discoveredProperties": 9
+    }
+  },
+  {
+    "timestamp": "2025-10-31T18:06:46.766Z",
+    "user": "user",
+    "action": "query_search_analytics",
+    "property": "sc-domain:keepersdigital.com",
+    "operationType": "read",
+    "result": "success",
+    "details": {
+      "startDate": "2025-10-01",
+      "endDate": "2025-10-31",
+      "rowsReturned": 578,
+      "dimensions": "query"
+    }
   }
 ]

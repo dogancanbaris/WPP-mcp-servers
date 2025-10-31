@@ -14,14 +14,10 @@ import * as fs from 'fs';
 const logger = getLogger('oauth-client-factory');
 
 // OAuth configuration constants (SECURITY: Load from environment, never hardcode)
-const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
-const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || '';
+// NOTE: These are functions to ensure we get env vars AFTER dotenv loads (lazy evaluation)
+const getClientId = () => process.env.GOOGLE_CLIENT_ID || '';
+const getClientSecret = () => process.env.GOOGLE_CLIENT_SECRET || '';
 const TOKENS_PATH = process.env.GSC_TOKENS_PATH || '/home/dogancanbaris/projects/MCP Servers/config/gsc-tokens.json';
-
-// Validate credentials are loaded
-if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
-  logger.warn('OAuth credentials not loaded from environment - token refresh may fail');
-}
 
 /**
  * Create OAuth2Client from access token
@@ -54,8 +50,8 @@ export function createGoogleAdsClient(refreshToken: string, developerToken: stri
   }
 
   const client = new GoogleAdsApi({
-    client_id: process.env.GOOGLE_CLIENT_ID || '',
-    client_secret: process.env.GOOGLE_CLIENT_SECRET || '',
+    client_id: getClientId(),
+    client_secret: getClientSecret(),
     developer_token: developerToken,
   });
 
@@ -171,8 +167,8 @@ export async function autoRefreshToken(): Promise<string | null> {
 
       // Create OAuth2 client
       const oauth2Client = new google.auth.OAuth2(
-        GOOGLE_CLIENT_ID,
-        GOOGLE_CLIENT_SECRET,
+        getClientId(),
+        getClientSecret(),
         'http://localhost:6000/callback'
       );
 

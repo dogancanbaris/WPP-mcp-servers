@@ -29,7 +29,8 @@ interface ConflictData {
 interface DashboardStore {
   // State
   config: DashboardConfig;
-  selectedComponentId?: string;
+  selectedComponentId?: string; // Kept for backward compatibility (first in selectedComponentIds)
+  selectedComponentIds: Set<string>; // NEW - Multi-select support
   history: DashboardConfig[];
   historyIndex: number;
   zoom: number;
@@ -102,7 +103,9 @@ interface DashboardStore {
   updateComponent: (componentId: string, updates: Partial<ComponentConfig>) => void;
   duplicateComponent: (componentId: string) => void;
   moveComponent: (componentId: string, targetColumnId: string) => void;
-  selectComponent: (componentId?: string) => void;
+  selectComponent: (componentId?: string, addToSelection?: boolean) => void;
+  selectMultiple: (componentIds: string[]) => void;
+  deselectAll: () => void;
 
   // Style & lock actions
   styleClipboard?: Partial<ComponentConfig> | null;
@@ -119,6 +122,7 @@ interface DashboardStore {
   convertToRowColumn: () => void;
   bringToFront: (canvasId: string) => void;
   sendToBack: (canvasId: string) => void;
+  moveGroup: (componentIds: Set<string>, deltaX: number, deltaY: number) => void;
 
   // Actions - History
   undo: () => void;
@@ -243,6 +247,7 @@ export const useDashboardStore = create<DashboardStore>()(
       // Initial State
       config: deepClone(initialDashboard),
       selectedComponentId: undefined,
+      selectedComponentIds: new Set<string>(), // NEW - Multi-select
       history: [deepClone(initialDashboard)],
       historyIndex: 0,
       zoom: 100,
@@ -1302,8 +1307,53 @@ export const useDashboardStore = create<DashboardStore>()(
         }
       },
 
-      selectComponent: (componentId?: string) => {
-        set({ selectedComponentId: componentId });
+      selectComponent: (componentId?: string, addToSelection: boolean = false) => {
+        const state = get();
+
+        if (!componentId) {
+          // Deselect all
+          set({
+            selectedComponentId: undefined,
+            selectedComponentIds: new Set<string>()
+          });
+          return;
+        }
+
+        if (addToSelection) {
+          // Toggle component in selection (Shift+click behavior)
+          const newSelection = new Set(state.selectedComponentIds);
+          if (newSelection.has(componentId)) {
+            newSelection.delete(componentId);
+          } else {
+            newSelection.add(componentId);
+          }
+
+          set({
+            selectedComponentIds: newSelection,
+            selectedComponentId: newSelection.size > 0 ? Array.from(newSelection)[0] : undefined
+          });
+        } else {
+          // Replace selection with single component
+          set({
+            selectedComponentId: componentId,
+            selectedComponentIds: new Set([componentId])
+          });
+        }
+      },
+
+      selectMultiple: (componentIds: string[]) => {
+        const newSelection = new Set(componentIds);
+        set({
+          selectedComponentIds: newSelection,
+          selectedComponentId: newSelection.size > 0 ? Array.from(newSelection)[0] : undefined
+        });
+      },
+
+      deselectAll: () => {
+        set({
+          selectedComponentId: undefined,
+          selectedComponentIds: new Set<string>()
+        });
       },
 
       // History Actions
@@ -1714,6 +1764,49 @@ export const useDashboardStore = create<DashboardStore>()(
         get().autoSave();
       },
 
+      moveGroup: (componentIds: Set<string>, deltaX: number, deltaY: number) => {
+        const state = get();
+        const currentPageId = state.currentPageId;
+
+        if (!state.config.pages || !currentPageId) return;
+
+        const currentPage = state.config.pages.find(p => p.id === currentPageId);
+        if (!currentPage?.components) return;
+
+        // Check if any component is locked
+        const hasLockedComponent = currentPage.components.some(comp =>
+          componentIds.has(comp.id) && comp.component.locked
+        );
+
+        if (hasLockedComponent) return; // Don't move if any component is locked
+
+        get().addToHistory();
+
+        set({
+          config: {
+            ...state.config,
+            pages: state.config.pages.map(page =>
+              page.id === currentPageId
+                ? {
+                    ...page,
+                    components: page.components!.map(comp =>
+                      componentIds.has(comp.id)
+                        ? {
+                            ...comp,
+                            x: comp.x + deltaX,
+                            y: comp.y + deltaY,
+                          }
+                        : comp
+                    )
+                  }
+                : page
+            )
+          }
+        });
+
+        get().autoSave();
+      },
+
       // Reset
       reset: () => {
         const emptyDashboard = createEmptyDashboard();
@@ -1731,6 +1824,7 @@ export const useDashboardStore = create<DashboardStore>()(
         set({
           config: emptyDashboard,
           selectedComponentId: undefined,
+          selectedComponentIds: new Set<string>(), // NEW
           history: [emptyDashboard],
           historyIndex: 0,
           zoom: 100,

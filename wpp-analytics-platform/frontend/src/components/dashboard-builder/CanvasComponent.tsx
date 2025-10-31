@@ -27,14 +27,20 @@ interface CanvasComponentProps {
   isEditing?: boolean;
   /** Whether component is selected */
   isSelected?: boolean;
+  /** Whether this is part of a multi-select group */
+  isMultiSelect?: boolean;
   /** Callback when position changes */
   onPositionChange: (id: string, x: number, y: number) => void;
+  /** Callback for group move */
+  onGroupMove?: (componentIds: Set<string>, deltaX: number, deltaY: number) => void;
+  /** All selected component IDs for group operations */
+  selectedComponentIds?: Set<string>;
   /** Callback when size changes */
   onSizeChange: (id: string, width: number, height: number, x: number, y: number) => void;
   /** Callback when component is removed */
   onRemove: (id: string) => void;
   /** Callback when component is selected */
-  onSelect: (id: string) => void;
+  onSelect: (id: string, event?: React.MouseEvent) => void;
   /** Callback when lock state changes */
   onToggleLock?: (id: string) => void;
   /** Callback when z-index changes */
@@ -91,7 +97,10 @@ const CanvasComponentInner: React.FC<CanvasComponentProps> = ({
   zIndex = 0,
   isEditing = true,
   isSelected = false,
+  isMultiSelect = false,
   onPositionChange,
+  onGroupMove,
+  selectedComponentIds,
   onSizeChange,
   onRemove,
   onSelect,
@@ -100,6 +109,8 @@ const CanvasComponentInner: React.FC<CanvasComponentProps> = ({
   onSendToBack,
   onDragStart,
 }) => {
+  // Track initial position for group drag delta calculation
+  const dragStartPos = React.useRef({ x: position.x, y: position.y });
   const isLocked = component.locked || false;
 
   // Enable drag and resize only in edit mode and when not locked
@@ -131,14 +142,28 @@ const CanvasComponentInner: React.FC<CanvasComponentProps> = ({
   );
 
   const handleDragStart = useCallback(() => {
+    // Store initial position for delta calculation
+    dragStartPos.current = { x: position.x, y: position.y };
+
     if (onDragStart) {
       onDragStart(id);
     }
-  }, [id, onDragStart]);
+  }, [id, position.x, position.y, onDragStart]);
 
   const handleDragStop = useCallback((_e: any, d: { x: number; y: number }) => {
-    onPositionChange(id, d.x, d.y);
-  }, [id, onPositionChange]);
+    // Check if this component is part of a multi-select group
+    if (isMultiSelect && selectedComponentIds && selectedComponentIds.has(id) && selectedComponentIds.size > 1 && onGroupMove) {
+      // Calculate delta from start position
+      const deltaX = d.x - dragStartPos.current.x;
+      const deltaY = d.y - dragStartPos.current.y;
+
+      // Move entire group
+      onGroupMove(selectedComponentIds, deltaX, deltaY);
+    } else {
+      // Single component move
+      onPositionChange(id, d.x, d.y);
+    }
+  }, [id, isMultiSelect, selectedComponentIds, onGroupMove, onPositionChange]);
 
   // Live resize preview - updates during resize for immediate feedback
   const handleResize = useCallback((
@@ -208,7 +233,7 @@ const CanvasComponentInner: React.FC<CanvasComponentProps> = ({
       )}
       onClick={(e) => {
         e.stopPropagation();
-        onSelect(id);
+        onSelect(id, e); // Pass event for shift-click detection
       }}
     >
       {/* Drag Handle */}
@@ -230,7 +255,7 @@ const CanvasComponentInner: React.FC<CanvasComponentProps> = ({
       <div className="w-full h-full overflow-hidden">
         <ChartWrapper
           config={component}
-          onClick={() => onSelect(id)}
+          onClick={(e) => onSelect(id, e)}
           isSelected={isSelected}
           containerSize={{ width: position.width, height: position.height }}
         />
@@ -340,6 +365,13 @@ const CanvasComponentInner: React.FC<CanvasComponentProps> = ({
       {isEditing && !isLocked && (
         <div className="absolute bottom-2 right-2 px-2 py-1 rounded bg-gray-900/80 text-white text-xs opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
           {Math.round(position.width)} × {Math.round(position.height)}
+        </div>
+      )}
+
+      {/* Multi-Select Indicator */}
+      {isMultiSelect && isSelected && selectedComponentIds && selectedComponentIds.size > 1 && (
+        <div className="absolute top-2 left-2 px-2 py-1 rounded bg-blue-500 text-white text-xs font-medium shadow-md">
+          {selectedComponentIds.size} selected
         </div>
       )}
     </Rnd>
