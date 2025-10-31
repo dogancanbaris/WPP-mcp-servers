@@ -16,9 +16,12 @@ import ReactECharts from 'echarts-for-react';
 import { Loader2 } from 'lucide-react';
 import { ComponentConfig } from '@/types/dashboard-builder';
 import { DASHBOARD_THEME } from '@/lib/themes/dashboard-theme';
+import { formatChartLabel } from '@/lib/utils/label-formatter';
 import { useCascadedFilters } from '@/hooks/useCascadedFilters';
 import { usePageData } from '@/hooks/usePageData';
 import { useCurrentPageId } from '@/store/dashboardStore';
+import { getChartDefaults, resolveSortField } from '@/lib/defaults/chart-defaults';
+import { formatChartLabel } from '@/lib/utils/label-formatter';
 
 export interface SunburstChartProps extends Partial<ComponentConfig> {
   /** Hierarchy levels (dimensions) */
@@ -40,8 +43,18 @@ export const SunburstChart: React.FC<SunburstChartProps> = (props) => {
     hierarchyDimensions = dimensions,
     chartHeight = '600px',
     style,
+    // Professional defaults (optional overrides)
+    sortBy,
+    sortDirection,
+    limit,
     ...rest
   } = props;
+
+  // Apply professional defaults
+  const defaults = getChartDefaults('sunburst');
+  const finalSortBy = sortBy || resolveSortField(defaults.sortBy, metrics, dimensions?.[0]);
+  const finalSortDirection = sortDirection || defaults.sortDirection;
+  const finalLimit = limit !== undefined ? limit : defaults.limit;
 
   const currentPageId = useCurrentPageId();
   const firstMetric = metrics[0];
@@ -63,6 +76,10 @@ export const SunburstChart: React.FC<SunburstChartProps> = (props) => {
     dimensions: hierarchyDimensions,
     filters: cascadedFilters,
     enabled: !!dataset_id && metrics.length > 0 && hierarchyDimensions.length > 0 && !!currentPageId,
+    chartType: 'sunburst',
+    sortBy: finalSortBy,
+    sortDirection: finalSortDirection,
+    limit: finalLimit,
   });
 
   // Styling

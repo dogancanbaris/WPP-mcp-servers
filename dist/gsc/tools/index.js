@@ -44,7 +44,7 @@ export const allTools = [
     ...bigQueryTools,
     // SERP API operations (1 tool)
     ...serpTools,
-    // WPP Analytics Platform dashboard tools (4 tools: create_dashboard, update_dashboard_layout, list_dashboard_templates, create_dashboard_from_platform)
+    // WPP Analytics Platform tools (3 tools: push_platform_data_to_bigquery, create_dashboard_from_table, analyze_gsc_data_for_insights)
     ...allWppAnalyticsTools,
 ];
 export const readTools = [

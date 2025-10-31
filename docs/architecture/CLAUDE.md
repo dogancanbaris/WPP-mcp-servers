@@ -28,10 +28,10 @@ An enterprise-grade MCP server that:
 ## Current Status: PRODUCTION READY ✅
 
 **Version:** 2.0 (Expanded)
-**Last Updated:** October 19, 2025
+**Last Updated:** October 30, 2025
 **Status:** 100% Complete - Phase 1 & 2
 **Compilation:** ✅ 0 Errors
-**Total Tools:** 58 across 7 APIs
+**Total Tools:** 65 across 7 APIs
 **Production Ready:** YES
 
 ---
@@ -461,7 +461,7 @@ mcp-servers/
 │   │   ├── config.ts, audit.ts, approval.ts
 │   │   └── tools/
 │   │       ├── properties.ts, analytics.ts, sitemaps.ts, url-inspection.ts
-│   │       └── index.ts                # Aggregates all 58 tools from all APIs
+│   │       └── index.ts                # Aggregates all 65 tools from all APIs
 │   │
 │   ├── crux/                           # Chrome UX Report
 │   │   ├── client.ts                   # CrUX HTTP client (API key auth)
@@ -780,8 +780,8 @@ For Claude Desktop (`.mcp.json` or config):
 
 ### Technical Excellence
 - [x] 0 compilation errors (TypeScript strict mode)
-- [x] 58 tools across 7 APIs
-- [x] 9-layer safety system operational
+- [x] 65 tools across 7 APIs
+- [x] OAuth 2.0 per-request authentication operational
 - [x] All WRITE operations protected
 - [x] Comprehensive test suite (23 tests)
 - [x] Production-ready code quality
@@ -912,10 +912,10 @@ For Claude Desktop (`.mcp.json` or config):
 **Current Phase:** Phase 2 Complete ✅
 **Next Phase:** BI Platform Testing
 **Production Ready:** YES ✅
-**Total Tools:** 58
+**Total Tools:** 65
 **APIs Integrated:** 7
 **Compilation Errors:** 0
-**Safety Features:** 9/9 operational
+**Safety Features:** OAuth 2.0 operational
 
 ---
 

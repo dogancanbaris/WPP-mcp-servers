@@ -6,6 +6,21 @@
 
 ---
 
+> **⚠️ IMPORTANT UPDATE - RECOMMENDED INTEGRATION APPROACH:**
+>
+> This document describes the **two-layer authorization architecture** (account approval workflow).
+>
+> For **web UI integration with native tool mounting** (recommended technical approach), see:
+> **📖 `docs/architecture/MCP-WEB-UI-COMPLETE-GUIDE.md`**
+>
+> **What each document covers:**
+> - **THIS DOCUMENT (OMA-MCP-INTEGRATION.md):** Account authorization, approval workflows, security architecture
+> - **MCP-WEB-UI-COMPLETE-GUIDE.md:** Technical integration (MCP SDK, OAuth metadata, native tool access)
+>
+> **Read both for complete understanding!**
+
+---
+
 ## ARCHITECTURE OVERVIEW
 
 ### The Problem:
@@ -201,32 +216,63 @@ OMA AI Assistant (Claude/GPT):
 ```
 
 **OMA → MCP Communication:**
+
+**Option A: Native MCP SDK (Recommended)**
+```typescript
+// MCP SDK handles all HTTP communication automatically
+const result = await mcpClient.callTool({
+  name: 'get_campaign_performance',
+  arguments: {
+    customerId: '1234567890', // Client A
+    startDate: '2024-10-01',
+    endDate: '2024-10-17'
+  }
+});
+
+// SDK automatically:
+// - Adds Authorization: Bearer {oauth_token} header
+// - Manages session ID
+// - Handles token refresh
+// - Retries on 401
+
+// See: MCP-WEB-UI-COMPLETE-GUIDE.md for complete implementation
+```
+
+**Option B: Manual HTTP API (Legacy/Reference)**
 ```
 OMA Backend sends HTTPS request:
 
-POST https://mcp.wpp.com/execute-tool
+POST https://mcp.wpp.com/mcp
 Headers:
-  Authorization: Bearer {cognito_jwt_token}
-    (JWT contains: userId, agency, role, exp)
-  X-Google-OAuth-Token: {john_doe_google_oauth_refresh_token}
-    (John's Google OAuth token for API access)
-  X-OMA-Request-ID: req_tracking_12345
+  Authorization: Bearer {user_google_access_token}
+    (User's Google OAuth access token)
+  X-Google-Refresh-Token: {user_google_refresh_token}
+    (For Google Ads API only)
+  Mcp-Session-Id: {session_id}
   Content-Type: application/json
 
 Body:
 {
-  "tool": "get_campaign_performance",
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "tools/call",
   "params": {
-    "customerId": "1234567890", // Client A
-    "startDate": "2024-10-01",
-    "endDate": "2024-10-17"
-  },
-  "userId": "john.doe@wpp.com",
-  "approvedAccounts": {
-    "encrypted": "{encrypted_json_of_approved_accounts}",
-    "signature": "{signature_for_verification}"
+    "name": "get_campaign_performance",
+    "arguments": {
+      "customerId": "1234567890",
+      "startDate": "2024-10-01",
+      "endDate": "2024-10-17"
+    }
   }
 }
+
+Note: Manual HTTP requires:
+- Session management
+- OAuth token injection
+- Error handling
+- Retry logic
+
+Recommended: Use MCP SDK instead
 ```
 
 **MCP Server Processing:**
@@ -290,9 +336,65 @@ Body:
 
 ---
 
+## OAUTH INTEGRATION: TWO APPROACHES
+
+### Recommended: MCP SDK with Native Tool Access
+
+**Use MCP TypeScript SDK for web UI integration:**
+
+```typescript
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
+
+// Create MCP client in browser
+const mcpClient = new Client({ name: 'OMA-WebUI', version: '1.0.0' });
+const transport = new StreamableHTTPClientTransport(new URL('https://mcp.wpp.com/mcp'));
+await mcpClient.connect(transport);
+
+// ✅ Tools natively available to agents (like CLI)
+const tools = await mcpClient.listTools();
+
+// Agent calls tools directly
+const result = await mcpClient.callTool({
+  name: 'query_search_analytics',
+  arguments: { ... }
+});
+```
+
+**OAuth Flow:**
+1. MCP server advertises OAuth metadata via RFC 9728
+2. OMA client automatically discovers scopes and endpoints
+3. OMA redirects practitioner to authorization
+4. Tokens managed automatically by SDK
+5. Dynamic scope updates (no code changes)
+
+**📖 Complete Guide:** See `MCP-WEB-UI-COMPLETE-GUIDE.md` for full implementation with OAuth metadata endpoints, PKCE flow, and production code.
+
+### Alternative: Manual HTTP API (Legacy)
+
+OMA handles complete OAuth flow independently and makes manual HTTP requests.
+
+**See sections below for manual HTTP API details** (legacy reference).
+
+---
+
 ## OMA PLATFORM REQUIREMENTS
 
 ### What OMA Must Build:
+
+**0. MCP SDK Integration (Foundation - Recommended)**
+```
+Install MCP SDK:
+npm install @modelcontextprotocol/sdk
+
+Create MCP Client Service:
+- Streamable HTTP transport to MCP server
+- OAuth handler with PKCE (automatic via SDK)
+- Token refresh management
+- Native tool calling (no manual HTTP)
+
+See: MCP-WEB-UI-COMPLETE-GUIDE.md for complete implementation
+```
 
 **1. User Google OAuth Management**
 ```
@@ -302,6 +404,10 @@ Feature: Google Account Connection
 - Storage: Encrypted tokens in OMA database
 - Refresh: Automatic token refresh before expiry
 - Per user: Each WPP practitioner has their own tokens
+
+Implementation Options:
+A) Via MCP SDK (automatic OAuth discovery)
+B) Manual OAuth flow (if not using SDK)
 ```
 
 **2. Account Access Request UI**
@@ -411,6 +517,12 @@ Flow:
 
 ## API CONTRACT: OMA ↔ MCP
 
+> **📝 Note:** When using MCP SDK (recommended), most of this low-level API contract
+> is handled automatically by the SDK. The sections below describe the manual HTTP API
+> for reference and legacy integrations.
+>
+> **For SDK-based integration:** See `MCP-WEB-UI-COMPLETE-GUIDE.md`
+
 ### Authentication Between Systems:
 
 **OMA Authenticates to MCP:**
@@ -449,9 +561,14 @@ MCP validates:
 
 ### API Specification:
 
-**POST /mcp/execute-tool**
+> **💡 Tip:** Using MCP SDK? You don't need to manually construct these requests.
+> The SDK handles JSON-RPC formatting, session management, and headers automatically.
+>
+> **See:** `MCP-WEB-UI-COMPLETE-GUIDE.md` for SDK usage examples
 
-**Request:**
+**POST /mcp** (MCP Standard Endpoint)
+
+**Request (Manual HTTP API):**
 ```json
 {
   "tool": "update_budget",
@@ -864,6 +981,23 @@ Cost:
 
 ---
 
+## INTEGRATION APPROACHES SUMMARY
+
+### Quick Decision Matrix
+
+| Aspect | MCP SDK (Recommended) | Manual HTTP API (Legacy) |
+|--------|----------------------|--------------------------|
+| **Complexity** | Low (SDK handles everything) | High (manual session, OAuth, JSON-RPC) |
+| **Tool Access** | Native (like CLI) | Manual HTTP requests |
+| **OAuth Discovery** | Automatic (RFC 9728) | Manual configuration |
+| **Scope Updates** | Dynamic (no code changes) | Requires code updates |
+| **Maintenance** | Easy (SDK updates) | Complex (manual updates) |
+| **Best For** | New integrations, web UIs | Legacy systems, special cases |
+
+**📖 Recommendation:** Use MCP SDK for all new web UI integrations. See `MCP-WEB-UI-COMPLETE-GUIDE.md`
+
+---
+
 ## DEPLOYMENT STEPS
 
 ### Prerequisites:
@@ -949,7 +1083,7 @@ curl https://mcp.wpp.com/health
 curl -H "Authorization: Bearer {jwt}" \
      -H "X-OMA-API-Key: {api_key}" \
      https://mcp.wpp.com/tools/list
-# Should return: 31 tools
+# Should return: 65 tools
 ```
 
 ---
@@ -1129,3 +1263,46 @@ jobs:
 **ROI: $2M+/year savings** (breaks even in <2 months)
 
 This plan provides enterprise-grade security, scalability to 1000+ users, two-layer account authorization, and seamless OMA integration. Ready to build!
+
+---
+
+## 📚 RELATED DOCUMENTATION
+
+### Integration Guides
+- **🌐 Web UI Integration (START HERE):** `MCP-WEB-UI-COMPLETE-GUIDE.md`
+  - Native tool mounting with MCP SDK
+  - OAuth metadata discovery (RFC 9728)
+  - Complete code examples for browser integration
+  - Production-ready implementation guide
+
+- **🔧 HTTP Server Setup:** `../../MCP-HTTP-SERVER-GUIDE.md`
+  - Server configuration and deployment
+  - OAuth discovery endpoints
+  - Testing and troubleshooting
+
+### OAuth & Security
+- **🔐 OAuth Implementation:** `../oauth/OMA-INTEGRATION-SPEC.md`
+  - OAuth 2.0 per-request architecture
+  - Token management and refresh
+  - Headers and authentication
+
+- **🔐 OAuth README:** `../oauth/README.md`
+  - OAuth documentation index
+  - Token solution details
+  - Migration guides
+
+### Deployment & Operations
+- **☁️ AWS Deployment:** `AWS-DEPLOYMENT-GUIDE.md`
+  - Infrastructure setup with CDK
+  - ECS Fargate configuration
+  - Production deployment steps
+
+- **🔧 Developer Guide:** `../guides/DEVELOPER-GUIDE.md`
+  - Safety system integration
+  - Tool development guidelines
+  - Testing procedures
+
+### Quick Start
+1. **OMA Developers:** Read `MCP-WEB-UI-COMPLETE-GUIDE.md` first
+2. **Security Team:** Read this document (OMA-MCP-INTEGRATION.md) for architecture
+3. **DevOps Team:** Read `AWS-DEPLOYMENT-GUIDE.md` for deployment

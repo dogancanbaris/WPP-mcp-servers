@@ -8,6 +8,29 @@
 
 ---
 
+## ⚠️ CRITICAL - PORT MANAGEMENT RULES (NEVER CHANGE THESE!)
+
+**FIXED PORT ASSIGNMENTS:**
+- **Port 3000** → Reporting Platform Frontend (Next.js)
+  - Required for OAuth callbacks
+  - Platform URL: http://localhost:3000
+
+- **Port 3001** → MCP HTTP Server
+  - HTTP transport for MCP tools
+  - Admin API endpoint
+
+**If a port shows "in use":**
+1. Check what's running: `lsof -i :3000` or `lsof -i :3001`
+2. Kill the conflicting process
+3. Run: `bash restart-dev-servers.sh` (restarts both services on correct ports)
+4. Verify: `bash check-services.sh`
+
+**NEVER allow Next.js to auto-increment to port 3001** - it breaks the MCP server!
+
+📖 **Complete port documentation:** [.claude/PORT_MANAGEMENT.md](./.claude/PORT_MANAGEMENT.md)
+
+---
+
 ## 📖 IMPORTANT: Complete Project Blueprint Available
 
 **🎯 For complete technical specifications, architecture details, and all platform integration decisions, see:**
@@ -43,8 +66,8 @@
 | **MCP Server** | ✅ Production | TypeScript + Node.js | 65+ tools across 7 Google APIs |
 | **OAuth System** | ✅ Production | Per-request OAuth 2.0 | 100% user credentials, auto-refresh |
 | **BigQuery Lake** | 🚧 Phase 4.7 | Shared tables + workspace_id | On-demand pull + daily refresh |
-| **Frontend Platform** | ✅ 95% Complete | Next.js 15 + React 19 | 33 charts (ALL migrated with filters) |
-| **Dashboard Tools** | ✅ Production | 5 MCP tools | Create, Read, Update, List, Search |
+| **Frontend Platform** | ✅ 95% Complete | Next.js 15 + React 19 | 32 chart types (ALL migrated with filters) |
+| **Dashboard Tools** | ✅ Production | 9 MCP tools | Create, Read, Update, List, Delete, Analyze, Push Data |
 
 **Current Priority:** #1 CRITICAL - Phase 4.7 (BigQuery Data Lake)
 
@@ -628,7 +651,7 @@ Cold: 25+ months (GCS Archive, 95% cheaper, export monthly)
 - **ECharts 5.6** (primary): Line, bar, pie, funnel, gauge, heatmap, radar, sankey, scatter, treemap, waterfall, bubble, combo, boxplot, bullet, calendar, candlestick, graph, parallel, pictorial, sunburst, theme_river, timeline, tree, stacked (24 types)
 - **Recharts 3.3** (secondary): Area, composed, pivot_table (9 types)
 
-**Total:** 33 chart types (ALL migrated with global filter support)
+**Total:** 32 chart types (ALL migrated with global filter support)
 
 **State Management:**
 - Zustand: Dashboard state, filter state
@@ -638,8 +661,9 @@ Cold: 25+ months (GCS Archive, 95% cheaper, export monthly)
 **File Structure:**
 - `/src/app/` - Next.js pages (dashboard viewer, builder, auth)
 - `/src/components/dashboard-builder/` - Builder UI
-  - `/charts/` - 33 chart components (ALL migrated Oct 27)
-  - `/controls/` - Date filters, dimension filters, measure filters
+  - `/charts/` - 32 chart components (ALL migrated Oct 27)
+  - `/controls/` - 12 control components (filters, dimension controls)
+  - `/content/` - 6 content components (title, text, etc.)
   - `/dialogs/` - Settings, export, share modals
 - `/src/lib/` - Data fetching, BigQuery client, Supabase client
 - `/src/store/` - Zustand stores (dashboardStore, filterStore)
@@ -868,8 +892,8 @@ const results = await queryBigQuery(userOAuthToken);
 
 | File | Purpose |
 |------|---------|
-| `wpp-analytics-platform/README.md` | Platform overview, 33 chart types |
-| `wpp-analytics-platform/frontend/src/components/dashboard-builder/charts/` | All 33 chart components |
+| `wpp-analytics-platform/README.md` | Platform overview, 32 chart types + 12 controls |
+| `wpp-analytics-platform/frontend/src/components/dashboard-builder/charts/` | All 32 chart components |
 | `wpp-analytics-platform/frontend/src/store/filterStore.ts` | Global filter logic |
 | `wpp-analytics-platform/frontend/src/hooks/useGlobalFilters.ts` | Filter application |
 
@@ -894,8 +918,8 @@ const results = await queryBigQuery(userOAuthToken);
   - `list-templates.tool.ts` - Pre-built templates
 
 **Frontend Charts:**
-- `/wpp-analytics-platform/frontend/src/components/dashboard-builder/charts/` - 33 chart types
-- All use: `useGlobalFilters()` hook for filter subscription
+- `/wpp-analytics-platform/frontend/src/components/dashboard-builder/charts/` - 32 chart types
+- All use: `useCascadedFilters()` hook for multi-level filter support
 - All query: `/api/datasets/[id]/query` endpoint
 
 ---
@@ -988,8 +1012,8 @@ const results = await queryBigQuery(userOAuthToken);
 - Modular architecture (21 files refactored Oct 27)
 
 **Frontend Platform:**
-- 33 chart types (100% migrated with filters)
-- 5 dashboard MCP tools
+- 32 chart types + 12 controls (100% migrated with filters)
+- 9 dashboard MCP tools
 - 3 global filter types (date, dimension, measure)
 - Live data (queries execute at open time)
 
@@ -1039,7 +1063,7 @@ const results = await queryBigQuery(userOAuthToken);
 
 **MCP Server** (src/):
 - TypeScript + Node.js
-- 31 MCP tools across 7 Google APIs
+- 65 tools across 7 Google APIs
 - OAuth 2.0 authentication (oauth-client-factory.ts)
 - Express HTTP wrapper for OMA integration
 
@@ -1048,7 +1072,7 @@ const results = await queryBigQuery(userOAuthToken);
 - ECharts 5.5 (primary) + Recharts 3.3 (secondary)
 - Supabase (PostgreSQL + RLS multi-tenant)
 - BigQuery (central data hub)
-- 34 chart types (24 need migration)
+- 32 chart types + 12 controls (ALL migrated with filter support)
 - Drag-and-drop dashboard builder
 
 ---
@@ -1061,7 +1085,7 @@ const results = await queryBigQuery(userOAuthToken);
 - **WORKFLOW.md** - How Claude + Sub-Agents + Skills + Linear work together
 
 **Technical:**
-- **wpp-analytics-platform/README.md** - Platform features, 34 chart types
+- **wpp-analytics-platform/README.md** - Platform features, 32 chart types + 12 controls
 - **DATA-LAYER-ARCHITECTURE.md** - BigQuery → Dataset → API → Frontend flow
 
 ---
@@ -1178,7 +1202,7 @@ cd wpp-analytics-platform/frontend && npm run dev
 - MCP server (65+ tools, directory structure)
 - All 14 marketing platforms (detailed integration)
 - BigQuery shared table architecture
-- Reporting platform (33 charts, tech stack)
+- Reporting platform (32 chart types + 12 controls, tech stack)
 - Supabase database schemas
 
 **Part 4: Connection Bridges (400 lines)**

@@ -22,27 +22,34 @@ export const pushPlatformDataToBigQueryTool = {
 **Purpose:**
 First step in dashboard creation - gets platform data into BigQuery for analysis.
 
+**IMPORTANT:** By default, uses SHARED TABLE architecture for multi-dashboard support.
+This enables multiple dashboards to use the same data source, reducing storage costs.
+
 **What it does:**
 1. Pulls data from platform (GSC, Google Ads, or GA4) using OAuth
 2. Transforms to BigQuery schema with NULL dimension logic
-3. Creates BigQuery table if it doesn't exist
-4. Inserts all rows
+3. Inserts to SHARED TABLE (default) or creates per-dashboard table
+4. Inserts all rows with workspace_id for data isolation
 5. Returns table reference for dashboard creation
 
 **Parameters:**
-- platform: Platform to pull from ("gsc", "google_ads", "analytics")
-- property: Property ID (GSC domain, Ads customer ID, or GA4 property)
-- dateRange: [startDate, endDate] in YYYY-MM-DD format
-- dimensions: Array of dimensions to pull (e.g., ["date", "query", "page", "device", "country"])
-- tableName: (Optional) BigQuery table name (auto-generated if not provided)
+- platform: Platform to pull from ("gsc", "google_ads", "analytics") [REQUIRED]
+- property: Property ID (GSC domain, Ads customer ID, or GA4 property) [REQUIRED]
+- dateRange: [startDate, endDate] in YYYY-MM-DD format [REQUIRED]
+- dimensions: Array of dimensions to pull (e.g., ["date", "query", "page", "device", "country"]) [REQUIRED]
+- workspaceId: Workspace UUID for data isolation [REQUIRED]
+- useSharedTable: Use shared table architecture (default: TRUE)
+- tableName: (Optional) BigQuery table name (auto-generated if not provided, ignored if useSharedTable=true)
 
 **Example Usage:**
 \`\`\`json
 {
   "platform": "gsc",
   "property": "sc-domain:themindfulsteward.com",
-  "dateRange": ["2025-07-25", "2025-10-23"],
-  "dimensions": ["date", "query", "page", "device", "country"]
+  "dateRange": ["2024-06-25", "2025-10-29"],
+  "dimensions": ["date", "query", "page", "device", "country"],
+  "workspaceId": "945907d8-7e88-45c4-8fde-9db35d5f5ce2",
+  "useSharedTable": true
 }
 \`\`\`
 
@@ -50,15 +57,24 @@ First step in dashboard creation - gets platform data into BigQuery for analysis
 \`\`\`json
 {
   "success": true,
-  "table": "mcp-servers-475317.wpp_marketing.gsc_themindfulsteward_com_1729757890",
-  "rows_inserted": 117,
+  "table": "mcp-servers-475317.wpp_marketing.gsc_performance_shared",
+  "tableName": "gsc_performance_shared",
+  "rows_inserted": 58349,
   "dimensions_pulled": 5,
-  "platform": "gsc"
+  "platform": "gsc",
+  "property": "sc-domain:themindfulsteward.com",
+  "dateRange": ["2024-06-25", "2025-10-29"]
 }
 \`\`\`
 
 **Workflow:**
-After calling this tool, use the returned table name to create a dashboard with \`create_dashboard\` tool.`,
+After calling this tool, use the returned table name to create a dashboard with \`create_dashboard\` tool.
+
+**Shared Table Architecture:**
+- Shared tables enable multiple dashboards to use the same data source
+- Data is isolated by workspace_id column
+- Reduces BigQuery storage costs significantly
+- Default behavior (useSharedTable: true)`,
 
   inputSchema: {
     type: 'object' as const,
@@ -88,20 +104,21 @@ After calling this tool, use the returned table name to create a dashboard with 
         type: 'string',
         description: 'Optional BigQuery table name (auto-generated if not provided)'
       },
-      useSharedTable: {
-        type: 'boolean',
-        description: 'Use shared table architecture (insert to gsc_performance_shared with workspace_id)'
-      },
       workspaceId: {
         type: 'string',
-        description: 'Workspace ID (required if useSharedTable=true)'
+        description: 'Workspace ID (REQUIRED for data isolation)'
+      },
+      useSharedTable: {
+        type: 'boolean',
+        description: 'Use shared table architecture (default: true)',
+        default: true
       },
       __oauthToken: {
         type: 'string',
         description: 'OAuth token (auto-loaded if not provided)'
       }
     },
-    required: ['platform', 'property', 'dateRange', 'dimensions']
+    required: ['platform', 'property', 'dateRange', 'dimensions', 'workspaceId']
   },
 
   async handler(input: any) {
@@ -149,11 +166,12 @@ After calling this tool, use the returned table name to create a dashboard with 
           };
       }
 
-      // STEP 2: Determine table strategy
+      // STEP 2: Determine table strategy (default to shared table)
       let tableName: string;
       let fullTableRef: string;
+      const useSharedTable = input.useSharedTable !== false; // Default to true
 
-      if (input.useSharedTable) {
+      if (useSharedTable) {
         // Shared table architecture
         if (!input.workspaceId) {
           return {
@@ -271,9 +289,11 @@ function chunkDateRange(
 }
 
 /**
- * Pull a single chunk of data from Google Search Console
+ * Pull data for a date range with automatic pagination
+ * Uses startRow parameter to retrieve all data beyond 25K row limit
+ * Implements Google's recommended pagination strategy from official docs
  */
-async function pullGSCChunk(
+async function pullGSCChunkWithPagination(
   property: string,
   chunk: { start: string; end: string },
   dimensions: string[],
@@ -281,23 +301,56 @@ async function pullGSCChunk(
   chunkIndex: number,
   totalChunks: number
 ): Promise<any[]> {
-  logger.info(`[GSC] Pulling chunk ${chunkIndex}/${totalChunks}: ${chunk.start} to ${chunk.end}`);
+  logger.info(`[GSC] Pulling chunk ${chunkIndex}/${totalChunks}: ${chunk.start} to ${chunk.end} (with pagination)`);
 
-  const response = await webmasters.searchanalytics.query({
-    siteUrl: property,
-    requestBody: {
-      startDate: chunk.start,
-      endDate: chunk.end,
-      dimensions: dimensions,
-      rowLimit: 25000
+  const allRows: any[] = [];
+  let startRow = 0;
+  const rowLimit = 25000;
+  let pageNum = 1;
+
+  // Pagination loop - continue until API returns 0 rows
+  while (true) {
+    logger.info(`[GSC] Chunk ${chunkIndex}, Page ${pageNum}: fetching rows ${startRow} to ${startRow + rowLimit - 1}`);
+
+    const response = await webmasters.searchanalytics.query({
+      siteUrl: property,
+      requestBody: {
+        startDate: chunk.start,
+        endDate: chunk.end,
+        dimensions: dimensions,
+        startRow: startRow,      // Pagination parameter
+        rowLimit: rowLimit
+      }
+    });
+
+    const rows = response.data.rows || [];
+
+    if (rows.length === 0) {
+      logger.info(`[GSC] Chunk ${chunkIndex}: Complete! Total rows: ${allRows.length} (${pageNum - 1} pages)`);
+      break;
     }
-  });
 
-  const rows = response.data.rows || [];
-  logger.info(`[GSC] Chunk ${chunkIndex} retrieved ${rows.length} rows`);
+    allRows.push(...rows);
+    logger.info(`[GSC] Chunk ${chunkIndex}, Page ${pageNum}: Retrieved ${rows.length} rows (cumulative: ${allRows.length})`);
 
-  return rows;
+    startRow += rowLimit;
+    pageNum++;
+
+    // Rate limiting: 2 seconds between pagination requests
+    if (rows.length === rowLimit) {
+      await new Promise(resolve => setTimeout(resolve, 2000));
+    }
+
+    // Safety limit: prevent infinite loops
+    if (pageNum > 200) {
+      logger.warn(`[GSC] Chunk ${chunkIndex}: Exceeded 200 pages (5M rows). Stopping pagination.`);
+      break;
+    }
+  }
+
+  return allRows;
 }
+
 
 /**
  * Transform GSC rows to BigQuery schema
@@ -346,14 +399,27 @@ async function pullGSCData(
   const chunks = chunkDateRange(dateRange[0], dateRange[1], 30);
   logger.info(`[GSC] Splitting ${dateRange[0]} to ${dateRange[1]} into ${chunks.length} chunks`);
 
-  // STEP 2: Fetch all chunks in parallel
-  logger.info(`[GSC] Pulling ${chunks.length} chunks in parallel with dimensions: ${dimensions.join(', ')}`);
+  // STEP 2: Fetch all chunks with pagination (sequential for quota safety)
+  logger.info(`[GSC] Pulling ${chunks.length} chunks sequentially with pagination. Dimensions: ${dimensions.join(', ')}`);
 
-  const chunkResults = await Promise.all(
-    chunks.map((chunk, index) =>
-      pullGSCChunk(property, chunk, dimensions, webmasters, index + 1, chunks.length)
-    )
-  );
+  const chunkResults: any[][] = [];
+  for (let i = 0; i < chunks.length; i++) {
+    const chunk = chunks[i];
+    const rows = await pullGSCChunkWithPagination(
+      property,
+      chunk,
+      dimensions,
+      webmasters,
+      i + 1,
+      chunks.length
+    );
+    chunkResults.push(rows);
+
+    // Rate limiting between chunks
+    if (i < chunks.length - 1) {
+      await new Promise(resolve => setTimeout(resolve, 3000));
+    }
+  }
 
   // STEP 3: Flatten results
   const allRows = chunkResults.flat();
@@ -367,33 +433,39 @@ async function pullGSCData(
 }
 
 /**
- * Create BigQuery table with schema
+ * Create BigQuery table with partitioning and clustering
+ *
+ * COST OPTIMIZATION: All tables are created with:
+ * - PARTITION BY date (reduces scan from GB to MB)
+ * - CLUSTER BY platform-specific fields (block pruning)
+ * - require_partition_filter = TRUE (prevents full scans)
+ *
+ * This reduces query costs by 95%+ compared to non-partitioned tables.
  */
 async function createBigQueryTable(tableName: string, platform: string): Promise<void> {
   const { BigQuery } = await import('@google-cloud/bigquery');
+  const { getPlatformSchema, getTableCreationOptions } = await import('../../shared/bigquery-table-config.js');
+
   const bigquery = new BigQuery({
     projectId: 'mcp-servers-475317',
     keyFilename: '/home/dogancanbaris/projects/MCP Servers/mcp-servers-475317-adc00dc800cc.json'
   });
 
-  // Define schema based on platform
-  const schema = platform === 'gsc'
-    ? [
-        { name: 'date', type: 'DATE', mode: 'NULLABLE' },
-        { name: 'query', type: 'STRING', mode: 'NULLABLE' },
-        { name: 'page', type: 'STRING', mode: 'NULLABLE' },
-        { name: 'device', type: 'STRING', mode: 'NULLABLE' },
-        { name: 'country', type: 'STRING', mode: 'NULLABLE' },
-        { name: 'clicks', type: 'INTEGER', mode: 'NULLABLE' },
-        { name: 'impressions', type: 'INTEGER', mode: 'NULLABLE' },
-        { name: 'ctr', type: 'FLOAT', mode: 'NULLABLE' },
-        { name: 'position', type: 'FLOAT', mode: 'NULLABLE' }
-      ]
-    : []; // TODO: Add schemas for other platforms
+  // Get platform-specific schema
+  const schema = getPlatformSchema(platform);
+
+  // Get partitioning and clustering configuration
+  const tableOptions = getTableCreationOptions(platform, schema);
 
   try {
-    await bigquery.dataset('wpp_marketing').createTable(tableName, { schema });
-    logger.info(`[BigQuery] Created table: wpp_marketing.${tableName}`);
+    await bigquery.dataset('wpp_marketing').createTable(tableName, tableOptions);
+
+    logger.info(`[BigQuery] Created PARTITIONED table: wpp_marketing.${tableName}`, {
+      partition_by: 'date',
+      cluster_by: tableOptions.clustering.fields,
+      require_partition_filter: tableOptions.timePartitioning.requirePartitionFilter,
+      cost_optimized: true
+    });
   } catch (error: any) {
     // Table might already exist, that's ok
     if (error.code === 409) {

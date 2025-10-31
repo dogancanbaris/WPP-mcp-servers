@@ -35,7 +35,19 @@ export const PagePanel: React.FC = () => {
   );
 
   const [availableFields, setAvailableFields] = useState<Field[]>([]);
-  const dimensionFields = useMemo(() => availableFields.filter(f => f.type === 'dimension'), [availableFields]);
+  // Dimensions de-duplicated by name to avoid duplicate React keys and confusing options
+  const dimensionFields = useMemo(() => {
+    const dims = availableFields.filter(f => f.type === 'dimension');
+    const seen = new Set<string>();
+    const unique: Field[] = [];
+    for (const f of dims) {
+      const key = (f.name || f.id).toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      unique.push(f);
+    }
+    return unique;
+  }, [availableFields]);
 
   useEffect(() => {
     let mounted = true;
@@ -115,7 +127,7 @@ export const PagePanel: React.FC = () => {
                       <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Select field" /></SelectTrigger>
                       <SelectContent>
                         {dimensionFields.map(d => (
-                          <SelectItem key={d.id} value={d.name}>{d.name}</SelectItem>
+                          <SelectItem key={`dim-${d.name}`} value={d.name}>{d.name}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>

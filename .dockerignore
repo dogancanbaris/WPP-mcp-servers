@@ -1,0 +1,53 @@
+# Node
+node_modules
+npm-debug.log
+
+# TypeScript
+*.tsbuildinfo
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Tests
+**/*.test.ts
+**/*.test.js
+**/__tests__
+coverage
+
+# Documentation
+docs
+*.md
+!README.md
+
+# Build artifacts (we build in Docker)
+dist
+
+# Logs
+logs
+*.log
+audit.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Frontend (not needed for MCP server)
+wpp-analytics-platform/frontend
+
+# Credentials
+.google-credentials
+tokens.json

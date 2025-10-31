@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { useDashboardStore } from '@/store/dashboardStore';
 import { MenuButton } from './MenuButton';
 import { ToolbarSection } from './ToolbarButton';
@@ -24,11 +25,13 @@ import {
   TOOLBAR_RIGHT,
 } from './toolbar-definitions';
 import { VersionHistory } from '../VersionHistory';
-import { GlobalFilters } from '../GlobalFilters';
 import { ThemeEditor } from '../ThemeEditor';
 import { LayoutPicker } from '../canvas/LayoutPicker';
 import { ComponentPicker } from '../dialogs/ComponentPicker';
 import { ShareDialog } from '../dialogs/ShareDialog';
+import dynamic from 'next/dynamic';
+const DataSourcesDialog = dynamic(() => import('../dialogs/DataSourcesDialog'), { ssr: false });
+const BlendDataDialog = dynamic(() => import('../dialogs/BlendDataDialog'), { ssr: false });
 import { KeyboardShortcutsDialog } from '../KeyboardShortcutsDialog';
 import { ReportIssueDialog } from '../dialogs/ReportIssueDialog';
 import { FeedbackDialog } from '../dialogs/FeedbackDialog';
@@ -37,9 +40,13 @@ import { InsertTextDialog } from '../dialogs/InsertTextDialog';
 import { InsertImageDialog } from '../dialogs/InsertImageDialog';
 import { InsertShapeDialog } from '../dialogs/InsertShapeDialog';
 import { InsertEmbedDialog } from '../dialogs/InsertEmbedDialog';
+import { InsertControlDialog } from '../dialogs/InsertControlDialog';
 import { NewDashboardDialog } from '../dialogs/NewDashboardDialog';
+const DashboardSettingsDialog = dynamic(
+  () => import('../dialogs/DashboardSettingsDialog').then((m) => m.DashboardSettingsDialog),
+  { ssr: false }
+);
 import { useKeyboardShortcuts } from '@/hooks/use-keyboard-shortcuts';
-import { useFilterStore } from '@/store/filterStore';
 import { useViewActions } from '../actions/view-actions';
 import { useEditActions } from '../actions/edit-actions';
 import { useFileActions } from '../actions/file-actions';
@@ -66,6 +73,13 @@ export const EditorTopbar: React.FC<EditorTopbarProps> = ({ dashboardId }) => {
   const canUndo = useDashboardStore((s) => s.canUndo);
   const canRedo = useDashboardStore((s) => s.canRedo);
   const currentPageId = useDashboardStore((s) => s.currentPageId);
+  const selectedComponentId = useDashboardStore((s) => s.selectedComponentId);
+  const setSidebar = useDashboardStore((s) => s.setSidebar);
+  const copyStyle = useDashboardStore((s) => s.copyStyle);
+  const pasteStyle = useDashboardStore((s) => s.pasteStyle);
+  const toggleLock = useDashboardStore((s) => s.toggleLock);
+  const pauseUpdates = useDashboardStore((s) => s.pauseUpdates);
+  const setPauseUpdates = useDashboardStore((s) => s.setPauseUpdates);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [titleValue, setTitleValue] = useState(config.title);
 
@@ -77,14 +91,15 @@ export const EditorTopbar: React.FC<EditorTopbarProps> = ({ dashboardId }) => {
   const [isComponentPickerOpen, setIsComponentPickerOpen] = useState(false);
   const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
   const [isKeyboardShortcutsOpen, setIsKeyboardShortcutsOpen] = useState(false);
+  const [isDataSourcesOpen, setIsDataSourcesOpen] = useState(false);
+  const [isBlendDialogOpen, setIsBlendDialogOpen] = useState(false);
+  const [isDashboardSettingsOpen, setIsDashboardSettingsOpen] = useState(false);
 
   // Help menu dialog states
   const [isReportIssueOpen, setIsReportIssueOpen] = useState(false);
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
   const [isChangelogOpen, setIsChangelogOpen] = useState(false);
 
-  // Global filters store
-  const { isFilterBarVisible, toggleFilterBar } = useFilterStore();
 
   // Action hooks - Pass callback to open new dashboard dialog
   const fileActions = useFileActions(() => setIsNewDashboardOpen(true));
@@ -106,7 +121,6 @@ export const EditorTopbar: React.FC<EditorTopbarProps> = ({ dashboardId }) => {
     onSelectAll: editActions.onSelectAll,
     onDeselectAll: editActions.onDeselectAll,
     onAddChart: () => setIsComponentPickerOpen(true),
-    onToggleFilters: () => toggleFilterBar(),
   });
 
   const handleTitleBlur = () => {
@@ -235,12 +249,12 @@ export const EditorTopbar: React.FC<EditorTopbarProps> = ({ dashboardId }) => {
         case 'add-data':
           return {
             ...item,
-            action: () => console.log('Add data source - data source manager coming soon'),
+            action: () => setIsDataSourcesOpen(true),
           };
         case 'blend':
           return {
             ...item,
-            action: () => console.log('Blend data - data blending coming soon'),
+            action: () => setIsBlendDialogOpen(true),
           };
       }
     }
@@ -314,11 +328,66 @@ export const EditorTopbar: React.FC<EditorTopbarProps> = ({ dashboardId }) => {
             };
           }
           return item;
+        case 'more-tools':
+          if ('type' in item && item.type === 'dropdown') {
+            return {
+              ...item,
+              items: item.items.map((dropdownItem) => {
+                if ('label' in dropdownItem) {
+                  if (dropdownItem.label === 'Copy style') {
+                    return {
+                      ...dropdownItem,
+                      action: () => {
+                        if (!selectedComponentId) return toast.error('No component selected');
+                        copyStyle(selectedComponentId);
+                        toast.success('Style copied');
+                      },
+                    };
+                  }
+                  if (dropdownItem.label === 'Paste style') {
+                    return {
+                      ...dropdownItem,
+                      action: () => {
+                        if (!selectedComponentId) return toast.error('No component selected');
+                        pasteStyle(selectedComponentId);
+                        toast.success('Style pasted');
+                      },
+                    };
+                  }
+                  if (dropdownItem.label === 'Lock position') {
+                    return {
+                      ...dropdownItem,
+                      action: () => {
+                        if (!selectedComponentId) return toast.error('No component selected');
+                        toggleLock(selectedComponentId);
+                        toast.success('Component locked');
+                      },
+                    };
+                  }
+                  if (dropdownItem.label === 'Unlock position') {
+                    return {
+                      ...dropdownItem,
+                      action: () => {
+                        if (!selectedComponentId) return toast.error('No component selected');
+                        toggleLock(selectedComponentId);
+                        toast.success('Component unlocked');
+                      },
+                    };
+                  }
+                }
+                return dropdownItem;
+              }),
+            };
+          }
+          return item;
         case 'filters':
           return {
             ...item,
-            action: () => toggleFilterBar(),
-            active: isFilterBarVisible,
+            action: () => {
+              // Focus filters tab; prefer component if selected, else page
+              if (selectedComponentId) setSidebar('component', 'filters');
+              else setSidebar('page', 'filters');
+            },
           };
         case 'theme':
           return {
@@ -401,19 +470,27 @@ export const EditorTopbar: React.FC<EditorTopbarProps> = ({ dashboardId }) => {
             return {
               ...item,
               items: item.items.map((menuItem) => {
-                if ('label' in menuItem && menuItem.label === 'Refresh data') {
-                  return {
-                    ...menuItem,
-                    action: async () => {
-                      toast.info('Refreshing data...');
-                      const result = await refreshAllDashboardData();
-                      if (result.success) {
-                        toast.success('Data refreshed from BigQuery');
-                      } else {
-                        toast.error('Failed to refresh data');
-                      }
-                    },
-                  };
+                if ('label' in menuItem) {
+                  if (menuItem.label === 'Refresh data') {
+                    return {
+                      ...menuItem,
+                      action: async () => {
+                        toast.info('Refreshing data...');
+                        const result = await refreshAllDashboardData();
+                        if (result.success) {
+                          toast.success('Data refreshed from BigQuery');
+                        } else {
+                          toast.error('Failed to refresh data');
+                        }
+                      },
+                    };
+                  }
+                  if (menuItem.label === 'Report settings') {
+                    return { ...menuItem, action: () => setIsDashboardSettingsOpen(true) };
+                  }
+                  if (menuItem.label === 'Print') {
+                    return { ...menuItem, action: () => window.print() };
+                  }
                 }
                 return menuItem;
               }),
@@ -425,11 +502,19 @@ export const EditorTopbar: React.FC<EditorTopbarProps> = ({ dashboardId }) => {
             return {
               ...item,
               items: item.items.map((menuItem) => {
-                if ('label' in menuItem && menuItem.label === 'Keyboard shortcuts') {
-                  return {
-                    ...menuItem,
-                    action: () => setIsKeyboardShortcutsOpen(true),
-                  };
+                if ('label' in menuItem) {
+                  if (menuItem.label === 'Keyboard shortcuts') {
+                    return {
+                      ...menuItem,
+                      action: () => setIsKeyboardShortcutsOpen(true),
+                    };
+                  }
+                  if (menuItem.label === 'Report issue') {
+                    return {
+                      ...menuItem,
+                      action: () => setIsReportIssueOpen(true),
+                    };
+                  }
                 }
                 return menuItem;
               }),
@@ -439,7 +524,8 @@ export const EditorTopbar: React.FC<EditorTopbarProps> = ({ dashboardId }) => {
         case 'pause-updates':
           return {
             ...item,
-            action: () => console.log('Pause auto-refresh - coming soon'),
+            label: pauseUpdates ? 'Resume updates' : 'Pause updates',
+            action: () => setPauseUpdates(!pauseUpdates),
           };
       }
     }
@@ -450,7 +536,7 @@ export const EditorTopbar: React.FC<EditorTopbarProps> = ({ dashboardId }) => {
     <div className="topbar flex flex-col w-full shrink-0 z-50">
       {/* ROW 1: MENU BAR - Professional Spacing */}
       <div className="topbar-row-1 flex items-center px-4 lg:px-6 gap-2 bg-white border-b">
-        <div className="flex items-center shrink-0">
+        <Link href="/dashboard" className="flex items-center shrink-0 hover:opacity-80 transition-opacity">
           <Image
             src="/wpp-logo.svg"
             alt="WPP Analytics"
@@ -459,7 +545,7 @@ export const EditorTopbar: React.FC<EditorTopbarProps> = ({ dashboardId }) => {
             className="h-7 w-auto object-contain"
             priority
           />
-        </div>
+        </Link>
 
         <Separator orientation="vertical" className="mx-2 h-4" />
 
@@ -567,6 +653,16 @@ export const EditorTopbar: React.FC<EditorTopbarProps> = ({ dashboardId }) => {
         dashboardTitle={config.title}
       />
 
+      <DataSourcesDialog
+        open={isDataSourcesOpen}
+        onClose={() => setIsDataSourcesOpen(false)}
+      />
+
+      <BlendDataDialog
+        open={isBlendDialogOpen}
+        onClose={() => setIsBlendDialogOpen(false)}
+      />
+
       <KeyboardShortcutsDialog
         open={isKeyboardShortcutsOpen}
         onOpenChange={setIsKeyboardShortcutsOpen}
@@ -616,6 +712,21 @@ export const EditorTopbar: React.FC<EditorTopbarProps> = ({ dashboardId }) => {
         open={insertActions.contentDialogState.open && insertActions.contentDialogState.contentType === 'embed'}
         onClose={insertActions.closeContentDialog}
         onInsert={insertActions.handleContentInsert}
+      />
+
+      <InsertControlDialog
+        open={insertActions.controlDialogState.open}
+        controlType={insertActions.controlDialogState.controlType}
+        onClose={() => insertActions.setControlDialogState({ open: false, controlType: '' })}
+        onInsert={insertActions.handleControlInsert}
+      />
+
+      {/* Report settings */}
+      <DashboardSettingsDialog
+        open={isDashboardSettingsOpen}
+        onClose={() => setIsDashboardSettingsOpen(false)}
+        dashboardId={dashboardId}
+        onSave={() => setIsDashboardSettingsOpen(false)}
       />
     </div>
   );

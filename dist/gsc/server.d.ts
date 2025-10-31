@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 /**
- * Google Search Console MCP Server
+ * GSC MCP Server - Main Entry Point
  *
- * This is the main entry point for the MCP server that provides tools
- * for interacting with Google Search Console API.
+ * Routes to HTTP or Stdio transport based on MCP_TRANSPORT environment variable.
+ * Default: HTTP (for external agent connections)
  */
 export {};
 //# sourceMappingURL=server.d.ts.map

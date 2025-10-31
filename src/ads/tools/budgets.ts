@@ -8,8 +8,10 @@ import { getLogger } from '../../shared/logger.js';
 import { getApprovalEnforcer, DryRunResultBuilder } from '../../shared/approval-enforcer.js';
 import { extractRefreshToken } from '../../shared/oauth-client-factory.js';
 import { createGoogleAdsClientFromRefreshToken } from '../client.js';
+import { getAuditLogger } from '../../gsc/audit.js';
 
 const logger = getLogger('ads.tools.budgets');
+const audit = getAuditLogger();
 
 /**
  * Create budget
@@ -157,6 +159,14 @@ export const createBudgetTool = {
         }
       );
 
+      // AUDIT: Log successful budget creation
+      await audit.logWriteOperation('user', 'create_budget', customerId, {
+        budgetId: result,
+        budgetName: name,
+        dailyAmount: dailyAmountDollars,
+        monthlyEstimate: dailyAmountDollars * 30.4,
+      });
+
       return {
         success: true,
         data: {
@@ -170,6 +180,13 @@ export const createBudgetTool = {
       };
     } catch (error) {
       logger.error('Failed to create budget', error as Error);
+
+      // AUDIT: Log failed budget creation
+      await audit.logFailedOperation('user', 'create_budget', input.customerId, (error as Error).message, {
+        budgetName: input.name,
+        attemptedAmount: input.dailyAmountDollars,
+      });
+
       throw error;
     }
   },
@@ -391,6 +408,17 @@ Before calling this tool, you MUST:
         }
       );
 
+      // AUDIT: Log successful budget update
+      await audit.logWriteOperation('user', 'update_budget', customerId, {
+        budgetId,
+        previousAmount: microsToAmount(currentAmountMicros),
+        newAmount: microsToAmount(newAmountMicros),
+        dailyDifference: difference,
+        monthlyImpact: difference * 30.4,
+        percentageChange: percentChange + '%',
+        budgetName: currentBudget?.campaign_budget?.name || 'Unknown',
+      });
+
       return {
         success: true,
         data: {
@@ -407,6 +435,13 @@ Before calling this tool, you MUST:
       };
     } catch (error) {
       logger.error('Failed to update budget', error as Error);
+
+      // AUDIT: Log failed budget update
+      await audit.logFailedOperation('user', 'update_budget', input.customerId, (error as Error).message, {
+        budgetId: input.budgetId,
+        attemptedAmount: input.newDailyAmountDollars,
+      });
+
       throw error;
     }
   },

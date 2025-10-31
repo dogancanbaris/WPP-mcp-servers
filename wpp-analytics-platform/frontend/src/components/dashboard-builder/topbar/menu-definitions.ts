@@ -358,14 +358,37 @@ export const getInsertMenuItems = (insertActions: {
     icon: BarChart3,
     shortcut: 'Ctrl+M',
     submenu: [
+      // Basic Charts
       { label: 'Time Series', action: () => insertActions.onInsertChart('time_series') },
       { label: 'Bar Chart', action: () => insertActions.onInsertChart('bar_chart') },
+      { label: 'Horizontal Bar', action: () => insertActions.onInsertChart('horizontal_bar') },
       { label: 'Line Chart', action: () => insertActions.onInsertChart('line_chart') },
       { label: 'Pie Chart', action: () => insertActions.onInsertChart('pie_chart') },
+      { label: 'Donut Chart', action: () => insertActions.onInsertChart('donut_chart') },
+      { label: 'Area Chart', action: () => insertActions.onInsertChart('area_chart') },
+      { type: 'separator' },
+      // Stacked & Hierarchical
+      { label: 'Stacked Bar', action: () => insertActions.onInsertChart('stacked_bar') },
+      { label: 'Stacked Column', action: () => insertActions.onInsertChart('stacked_column') },
+      { label: 'Treemap', action: () => insertActions.onInsertChart('treemap') },
+      { label: 'Sunburst', action: () => insertActions.onInsertChart('sunburst') },
+      { type: 'separator' },
+      // Data Display
       { label: 'Table', action: () => insertActions.onInsertChart('table') },
       { label: 'Scorecard', action: () => insertActions.onInsertChart('scorecard') },
       { type: 'separator' },
-      { label: 'More charts...', action: () => insertActions.onInsertChart() },
+      // Advanced
+      { label: 'Heatmap', action: () => insertActions.onInsertChart('heatmap') },
+      { label: 'Scatter Plot', action: () => insertActions.onInsertChart('scatter_chart') },
+      { label: 'Bubble Chart', action: () => insertActions.onInsertChart('bubble_chart') },
+      { label: 'Waterfall', action: () => insertActions.onInsertChart('waterfall') },
+      { type: 'separator' },
+      // Specialized
+      { label: 'Funnel', action: () => insertActions.onInsertChart('funnel_chart') },
+      { label: 'Sankey', action: () => insertActions.onInsertChart('sankey') },
+      { label: 'Word Cloud', action: () => insertActions.onInsertChart('word_cloud') },
+      { type: 'separator' },
+      { label: 'All charts...', action: () => insertActions.onInsertChart() },
     ],
   },
   {

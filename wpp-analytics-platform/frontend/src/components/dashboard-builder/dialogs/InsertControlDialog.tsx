@@ -140,7 +140,7 @@ export const InsertControlDialog: React.FC<InsertControlDialogProps> = ({
 
   // Date Range Control State
   const [dateConfig, setDateConfig] = useState({
-    defaultRange: 'last30days',
+    defaultRange: 'last30Days',
     allowCustom: true,
     dateFormat: 'MM/DD/YYYY',
     showPresets: true,
@@ -439,9 +439,9 @@ export const InsertControlDialog: React.FC<InsertControlDialogProps> = ({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="last7days">Last 7 days</SelectItem>
-                      <SelectItem value="last30days">Last 30 days</SelectItem>
-                      <SelectItem value="last90days">Last 90 days</SelectItem>
+                      <SelectItem value="last7Days">Last 7 days</SelectItem>
+                      <SelectItem value="last30Days">Last 30 days</SelectItem>
+                      <SelectItem value="last90Days">Last 90 days</SelectItem>
                       <SelectItem value="thisMonth">This month</SelectItem>
                       <SelectItem value="custom">Custom</SelectItem>
                       <SelectItem value="allTime">All time</SelectItem>

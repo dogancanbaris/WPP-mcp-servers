@@ -2,9 +2,9 @@
  * ComponentFilterAccordion Component
  *
  * Accordion panel in the SettingsSidebar that allows configuring component-level filter overrides.
- * Components can opt out of global/page filters or define their own custom filters.
+ * Components can opt out of page filters or define their own custom filters.
  *
- * Filter Hierarchy: Global → Page → Component
+ * Filter Hierarchy: Page → Component
  * This component manages the "Component" level (highest priority).
  */
 
@@ -38,9 +38,8 @@ interface ComponentFilterAccordionProps {
  * Component-level filter configuration accordion
  *
  * Allows users to:
- * - Opt out of global filters (useGlobalFilters = false)
  * - Opt out of page filters (usePageFilters = false)
- * - Define component-specific filters that override all parent filters
+ * - Define component-specific filters that override page filters
  *
  * @example
  * // In SettingsSidebar when a component is selected
@@ -56,7 +55,6 @@ export function ComponentFilterAccordion({
   const hasComponentFilters =
     componentConfig.componentFilters &&
     componentConfig.componentFilters.length > 0;
-  const usesGlobalFilters = componentConfig.useGlobalFilters !== false;
   const usesPageFilters = componentConfig.usePageFilters !== false;
 
   /**
@@ -114,20 +112,6 @@ export function ComponentFilterAccordion({
         </AccordionTrigger>
         <AccordionContent>
           <div className="space-y-4 pt-2">
-            {/* Global Filters Toggle */}
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="use-global-filters"
-                checked={usesGlobalFilters}
-                onCheckedChange={(checked) =>
-                  onUpdate({ useGlobalFilters: checked as boolean })
-                }
-              />
-              <Label htmlFor="use-global-filters" className="text-sm cursor-pointer">
-                Use Global Filters
-              </Label>
-            </div>
-
             {/* Page Filters Toggle */}
             <div className="flex items-center space-x-2">
               <Checkbox
@@ -231,7 +215,7 @@ export function ComponentFilterAccordion({
             {/* Help Text */}
             <div className="text-xs text-muted-foreground space-y-1 pt-2 border-t">
               <p className="font-medium">Filter Priority:</p>
-              <p>Component filters override page and global filters</p>
+              <p>Component filters override page filters</p>
               <p>Unchecking options will ignore those filter levels</p>
             </div>
           </div>

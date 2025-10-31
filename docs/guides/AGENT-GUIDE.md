@@ -25,7 +25,7 @@ You (the AI agent) have access to **58 production-ready MCP tools** across 11 mo
 | **SERP** | 1 | Google search results |
 | **WPP Analytics** | 2 | Dashboard CRUD via frontend platform |
 
-**Total:** 58 tools covering complete digital marketing intelligence platform.
+**Total:** 65 tools covering complete digital marketing intelligence platform.
 
 ---
 

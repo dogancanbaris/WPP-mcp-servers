@@ -62,7 +62,6 @@ export const FiltersTab: React.FC<FiltersTabProps> = ({
   availableDimensions = ['date', 'device', 'country', 'campaign', 'keyword'],
   availableMetrics = ['clicks', 'impressions', 'ctr', 'conversions', 'cost'],
 }) => {
-  const [useGlobal, setUseGlobal] = useState<boolean>(config.useGlobalFilters ?? true);
   const [usePage, setUsePage] = useState<boolean>(config.usePageFilters ?? true);
   // Initialize from config or defaults
   const [dimensionFilters, setDimensionFilters] = useState<DimensionFilter[]>(
@@ -175,14 +174,9 @@ export const FiltersTab: React.FC<FiltersTabProps> = ({
       });
     });
 
-    // Cascade toggles
-    const useGlobal = config.useGlobalFilters ?? true;
-    const usePage = config.usePageFilters ?? true;
-
     // Update component config: prefer componentFilters for clarity
     const updates: Partial<ComponentConfig> = {
       componentFilters: filters,
-      useGlobalFilters: useGlobal,
       usePageFilters: usePage,
     };
 
@@ -218,10 +212,6 @@ export const FiltersTab: React.FC<FiltersTabProps> = ({
       <Card>
         <CardContent className="pt-4">
           <div className="flex items-center justify-between py-2">
-            <div className="text-sm">Use global filters</div>
-            <Switch checked={useGlobal} onCheckedChange={(v) => setUseGlobal(!!v)} />
-          </div>
-          <div className="flex items-center justify-between py-2 border-t">
             <div className="text-sm">Use page filters</div>
             <Switch checked={usePage} onCheckedChange={(v) => setUsePage(!!v)} />
           </div>
@@ -529,7 +519,7 @@ export const FiltersTab: React.FC<FiltersTabProps> = ({
         <Button
           onClick={() => {
             // Ensure toggles stored when applying
-            onUpdate({ useGlobalFilters: useGlobal, usePageFilters: usePage });
+            onUpdate({ usePageFilters: usePage });
             applyFilters();
           }}
           className="w-full bg-primary text-primary-foreground hover:bg-primary/90"

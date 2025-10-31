@@ -3,8 +3,8 @@
 import React from 'react';
 import {
   BarChart3, LineChart, PieChart, AreaChart, ScatterChart,
-  Activity, Radar, Filter, Table, Hash, Gauge, TreePine,
-  Clock, MousePointer, Network, Workflow, Type, Calendar
+  Activity, Filter, Table, Hash, TreePine,
+  Clock, MousePointer, Workflow, Type
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ComponentType, ComponentConfig } from '@/types/dashboard-builder';
@@ -25,20 +25,15 @@ const componentIcons: Partial<Record<ComponentType, React.ReactNode>> = {
   'area_chart': <AreaChart className="w-8 h-8" />,
   'scatter_chart': <ScatterChart className="w-8 h-8" />,
   'bubble_chart': <Workflow className="w-8 h-8" />,
-  'combo_chart': <BarChart3 className="w-8 h-8" />,
   // Heatmaps
   'heatmap': <Activity className="w-8 h-8" />,
-  'calendar_heatmap': <Calendar className="w-8 h-8" />,
   // Advanced
-  'radar': <Radar className="w-8 h-8" />,
   'funnel': <Filter className="w-8 h-8" />,
   'table': <Table className="w-8 h-8" />,
   'scorecard': <Hash className="w-8 h-8" />,
-  'gauge': <Gauge className="w-8 h-8" />,
   'treemap': <TreePine className="w-8 h-8" />,
   'sunburst': <TreePine className="w-8 h-8" />,
   'time_series': <Clock className="w-8 h-8" />,
-  'graph': <Network className="w-8 h-8" />,
   'title': <Type className="w-8 h-8" />,
 };
 
@@ -52,20 +47,15 @@ const componentLabels: Partial<Record<ComponentType, string>> = {
   'area_chart': 'Area Chart',
   'scatter_chart': 'Scatter Chart',
   'bubble_chart': 'Bubble Chart',
-  'combo_chart': 'Combo Chart',
   // Heatmaps
   'heatmap': 'Heatmap',
-  'calendar_heatmap': 'Calendar Heatmap',
   // Advanced
-  'radar': 'Radar Chart',
   'funnel': 'Funnel Chart',
   'table': 'Table',
   'scorecard': 'Scorecard',
-  'gauge': 'Gauge Chart',
   'treemap': 'Treemap',
   'sunburst': 'Sunburst',
   'time_series': 'Time Series',
-  'graph': 'Network Graph',
   'title': 'Title',
 };
 

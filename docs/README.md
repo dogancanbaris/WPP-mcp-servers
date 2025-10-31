@@ -29,7 +29,7 @@ Dashboard builder, visualization engine, and analytics interface.
 - **[COMPLETE-GUIDE.md](./reporting-platform/COMPLETE-GUIDE.md)** - User guide with 5+ use cases
 
 **Quick Links:**
-- 13 chart types (scorecard, line, bar, pie, table, treemap, sankey, heatmap, gauge, scatter, funnel, radar)
+- 32 chart types + 12 controls (ECharts + Recharts visualization libraries)
 - 9 backend API endpoints
 - Dashboard builder walkthrough
 - Sharing and export capabilities
@@ -46,7 +46,7 @@ Technical implementation guides and architecture references.
 - **[DEVELOPER-GUIDE.md](./guides/DEVELOPER-GUIDE.md)** - Complete technical reference
 
 **Quick Links:**
-- 31 MCP tools across 7 Google APIs
+- 65 MCP tools across 7 Google APIs
 - API integration patterns
 - Data transformation examples
 - Testing and deployment
@@ -81,7 +81,7 @@ Browser automation and debugging in WSL2 environments.
 1. Start: [Developer Guide](./guides/DEVELOPER-GUIDE.md)
 2. Understand architecture and tool inventory
 3. Review OAuth authentication setup
-4. Study the 31 available tools
+4. Study the 65 available tools
 5. Follow deployment guides
 
 ### I'm an Architect - I Want to Understand the System
@@ -102,56 +102,71 @@ Browser automation and debugging in WSL2 environments.
 
 ### Technology Stack
 - **Backend**: Node.js + TypeScript + MCP Protocol
-- **Frontend**: Next.js 15 + React 19 + Recharts
+- **Frontend**: Next.js 15 + React 19 + ECharts/Recharts
 - **Database**: Supabase PostgreSQL + BigQuery
 - **Authentication**: Google OAuth 2.0
-- **Charts**: 13 visualization types
+- **Charts**: 32 chart types + 12 controls
 
 ### Key Features
-✅ **31 MCP Tools** across 7 Google APIs
+✅ **65 MCP Tools** across 7 Google APIs
 ✅ **OAuth 2.0** authentication (100%)
 ✅ **Multi-tenant** architecture with RLS
-✅ **13 chart types** for data visualization
+✅ **32 chart types + 12 controls** for data visualization
 ✅ **9-layer safety system** with approvals
 ✅ **Dashboard sharing** and export (PDF/Excel)
 ✅ **Real-time data** via Google APIs
 ✅ **Custom dashboards** drag-and-drop builder
 
-### 31 Available Tools
+### 65 Available Tools
 
-**Google Search Console (11 tools)**
+**Google Search Console (8 tools)**
 - Query analytics (clicks, impressions, CTR, position)
 - Property management
 - URL inspection & indexing
 - Sitemap management
-- Core Web Vitals
 
-**Google Ads (14 tools)**
+**Google Ads (25 tools)**
 - Campaign management (create, pause, enable)
 - Budget optimization
 - Keyword management & forecasts
 - Bid strategy configuration
 - Conversion tracking
+- Audience targeting
+- Asset management
 - Comprehensive reporting
 
-**Google Analytics (5 tools)**
+**Google Analytics (11 tools)**
 - Custom report builder
 - Real-time tracking
 - Account/property management
 - Data stream configuration
 - Custom dimensions & metrics
+- Conversion event tracking
 
-**BigQuery (2 tools)**
+**CrUX/Core Web Vitals (5 tools)**
+- Performance monitoring
+- Core Web Vitals metrics
+- Historical trends
+- Form factor comparison
+
+**BigQuery (3 tools)**
 - SQL query execution
-- Table management
+- Dataset management
+- Table operations
 
 **Business Profile (3 tools)**
 - Location management
 - Business insights
-- Review management
+- Updates management
 
-**Other (Including SERP Search, Core Web Vitals)**
-- Specialized analysis tools
+**WPP Analytics Platform (9 tools)**
+- Dashboard creation and management
+- Data ingestion from platforms
+- Template library
+- Analytics and insights
+
+**SERP API (1 tool)**
+- Unlimited Google search results
 
 ---
 
@@ -212,15 +227,15 @@ Browser automation and debugging in WSL2 environments.
 
 ### MCP (Model Context Protocol)
 - Standard protocol for AI-LLM tool integration
-- 31 tools available to Claude and other LLMs
+- 65 tools available to Claude and other LLMs
 - Natural language queries supported
 - Example: "Show me top 10 keywords from last week"
 
-### Cube.js Semantic Layer
-- Data aggregation and pre-computation
-- Intelligent metric definitions
-- Automatic formatting (percentages, currency)
-- Query optimization and caching
+### BigQuery Direct Architecture
+- No semantic layer - direct BigQuery queries
+- 24-hour intelligent caching
+- Automatic metric formatting (percentages, currency)
+- Query optimization via BigQuery engine
 
 ### BigQuery Data Warehouse
 - Central hub for all marketing data
@@ -317,7 +332,7 @@ docs/
 
 - **Total Pages**: 2,000+ lines
 - **Sections**: 5 major topics
-- **Tools Documented**: 31 MCP tools
+- **Tools Documented**: 65 MCP tools
 - **Use Cases**: 6+ detailed workflows
 - **Code Examples**: 50+ snippets
 - **Troubleshooting Items**: 15+ common issues
@@ -334,6 +349,6 @@ docs/
 
 ---
 
-**Platform Version**: 1.0 Production Ready
-**Last Updated**: October 25, 2025
-**Status**: ✅ Complete Documentation | 📊 31 Tools | 🎨 13 Charts
+**Platform Version**: 2.0 Production Ready
+**Last Updated**: October 30, 2025
+**Status**: ✅ Complete Documentation | 📊 65 Tools | 🎨 32 Charts

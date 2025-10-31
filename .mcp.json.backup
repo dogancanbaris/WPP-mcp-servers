@@ -1,0 +1,33 @@
+{
+  "$schema": "https://github.com/anthropics/claude-code/blob/main/mcp.schema.json",
+  "mcpServers": {
+    "wpp-digital-marketing": {
+      "comment": "WPP Digital Marketing MCP - Stdio mode (local CLI usage)",
+      "command": "node",
+      "args": [
+        "/home/dogancanbaris/projects/MCP Servers/dist/gsc/server.js"
+      ],
+      "env": {
+        "MCP_TRANSPORT": "stdio"
+      }
+    },
+    "wpp-digital-marketing-http-example": {
+      "comment": "EXAMPLE: HTTP mode connection (for external server). NOTE: Claude Code CLI may not support HTTP transport yet - this is for reference.",
+      "disabled": true,
+      "url": "http://localhost:3000/mcp",
+      "transport": "streamable-http",
+      "headers": {
+        "Authorization": "Bearer ${GOOGLE_OAUTH_TOKEN}",
+        "X-Dev-Bypass": "true"
+      }
+    },
+    "chrome-devtools": {
+      "command": "/root/.nvm/versions/node/v22.20.0/bin/npx",
+      "args": [
+        "-y",
+        "chrome-devtools-mcp@latest",
+        "--browser-url=http://127.0.0.1:9222"
+      ]
+    }
+  }
+}

@@ -53,7 +53,7 @@ TIME: 30 seconds
 - Automatic data discovery (finds all properties practitioner can access)
 - Intelligent data pulling (16 months for GSC, full history for Ads/GA4)
 - Background data sync (daily refresh without user request)
-- Dashboard assembly (33 chart types, intelligent defaults)
+- Dashboard assembly (32 chart types + 12 controls, intelligent defaults)
 
 **For WPP:**
 - Zero per-user provisioning
@@ -2556,7 +2556,7 @@ wpp-analytics-platform/frontend/src/
 ├── components/
 │   ├── dashboard-builder/
 │   │   ├── DashboardCanvas.tsx     # Drag/drop container
-│   │   ├── charts/                 # 33 chart components
+│   │   ├── charts/                 # 32 chart components
 │   │   │   ├── Scorecard.tsx
 │   │   │   ├── TimeSeriesChart.tsx
 │   │   │   ├── BarChart.tsx
@@ -2603,7 +2603,7 @@ wpp-analytics-platform/frontend/src/
 
 ### **Chart Component Pattern (Dataset Architecture)**
 
-**ALL 33 charts follow this pattern:**
+**ALL 32 charts follow this pattern:**
 ```typescript
 'use client';
 
@@ -6073,8 +6073,8 @@ async function refreshPlatformDaily(platform, property, workspaceId, oauthToken)
 - ✅ All tools load Supabase from ENV (production-ready)
 
 **4. Reporting Platform (95% Complete)**
-- ✅ 33 chart types (all migrated to dataset architecture)
-- ✅ Global filters (date, dimension, measure)
+- ✅ 32 chart types + 12 controls (all migrated to dataset architecture)
+- ✅ Multi-level filters (global → page → component cascade)
 - ✅ Dashboard builder (drag/drop)
 - ✅ Dataset-based architecture
 - ✅ Caching layer (24-hour TTL)
@@ -6341,7 +6341,7 @@ async function refreshPlatformDaily(platform, property, workspaceId, oauthToken)
 │   ├── frontend/                     ← Next.js app
 │   │   ├── src/
 │   │   │   ├── app/                  ← Pages & API routes
-│   │   │   ├── components/           ← 33 chart components
+│   │   │   ├── components/           ← 32 chart + 12 control + 6 content components
 │   │   │   ├── lib/                  ← Utilities
 │   │   │   ├── hooks/                ← React hooks
 │   │   │   └── store/                ← Zustand stores

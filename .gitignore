@@ -5,6 +5,11 @@ node_modules
 !tsconfig.json
 !package.json
 !package-lock.json
+# SECURITY: Explicitly exclude service account keys and credentials
+*-key.json
+*-credentials.json
+service-account*.json
+*-adc*.json
 *.log
 logs/
 venv/
@@ -12,6 +17,14 @@ venv_*/
 __pycache__/
 *.pyc
 .pytest_cache/
+# Investigation and temp scripts (keep local only)
+investigate-*.py
+check-*.py
+migrate-single-table-*.py
+verify-*.py
+delete-*.py
+test-*.py
+analyze-*.py
 dist/wpp-analytics/
 dist/shared/oauth-client-factory*
 *.xlsx

@@ -1,10 +1,10 @@
 /**
  * Filter Cascade Utilities
  *
- * Implements a 3-level filter hierarchy: Global Filters → Page Filters → Component Filters
+ * Implements a 2-level filter hierarchy: Page Filters → Component Filters
  * Each level can override the parent level with proper priority logic.
  *
- * Priority Order: Component > Page > Global
+ * Priority Order: Component > Page
  *
  * @module filter-cascade
  */
@@ -17,12 +17,6 @@ import type { FilterConfig, ComponentConfig } from '@/types/dashboard-builder';
  */
 export interface ComponentConfigWithFilters extends ComponentConfig {
   /**
-   * Whether this component should use global filters
-   * Default: true (inherits global filters)
-   */
-  useGlobalFilters?: boolean;
-
-  /**
    * Whether this component should use page-level filters
    * Default: true (inherits page filters)
    */
@@ -30,49 +24,36 @@ export interface ComponentConfigWithFilters extends ComponentConfig {
 
   /**
    * Component-specific filters that override all parent filters
-   * When set, these REPLACE all global and page filters
+   * When set, these REPLACE all page filters
    */
   componentFilters?: FilterConfig[];
 }
 
 /**
- * Merges filters from 3 levels (global → page → component) with proper override logic
+ * Merges filters from 2 levels (page → component) with proper override logic
  *
  * Strategy: REPLACE, not MERGE
- * - If page has filters, they REPLACE global filters
- * - If component has filters, they REPLACE all parent filters
+ * - If component has filters, they REPLACE all page filters
  * - Components can opt out of filters entirely
  *
- * Priority: Component > Page > Global
+ * Priority: Component > Page
  *
- * @param globalFilters - Dashboard-level filters (apply to all components by default)
- * @param pageFilters - Page-level filters (override global for this page)
+ * @param pageFilters - Page-level filters (apply to all components by default)
  * @param componentConfig - Component configuration with opt-out flags
  * @returns Merged filter array for this specific component
  *
  * @example
- * // Scenario 1: Global filters only
+ * // Scenario 1: Page filters only
  * const filters = getMergedFilters(
  *   [{ field: 'date', operator: 'last_n_days', values: ['30'] }],
- *   undefined,
  *   undefined
  * );
  * // Result: [{ field: 'date', operator: 'last_n_days', values: ['30'] }]
  *
  * @example
- * // Scenario 2: Page overrides global
+ * // Scenario 2: Component overrides page
  * const filters = getMergedFilters(
  *   [{ field: 'date', operator: 'last_n_days', values: ['30'] }],
- *   [{ field: 'date', operator: 'last_n_days', values: ['7'] }],
- *   undefined
- * );
- * // Result: [{ field: 'date', operator: 'last_n_days', values: ['7'] }]
- *
- * @example
- * // Scenario 3: Component overrides all
- * const filters = getMergedFilters(
- *   [{ field: 'date', operator: 'last_n_days', values: ['30'] }],
- *   [{ field: 'date', operator: 'last_n_days', values: ['7'] }],
  *   {
  *     id: 'comp1',
  *     type: 'scorecard',
@@ -82,42 +63,36 @@ export interface ComponentConfigWithFilters extends ComponentConfig {
  * // Result: [{ field: 'date', operator: 'all_time', values: [] }]
  *
  * @example
- * // Scenario 4: Component opts out of all filters
+ * // Scenario 3: Component opts out of all filters
  * const filters = getMergedFilters(
  *   [{ field: 'date', operator: 'last_n_days', values: ['30'] }],
- *   [{ field: 'date', operator: 'last_n_days', values: ['7'] }],
  *   {
  *     id: 'comp1',
  *     type: 'scorecard',
- *     useGlobalFilters: false,
  *     usePageFilters: false
  *   }
  * );
  * // Result: []
  */
 export function getMergedFilters(
-  globalFilters: FilterConfig[],
   pageFilters: FilterConfig[] | undefined,
   componentConfig?: ComponentConfigWithFilters
 ): FilterConfig[] {
-  const useGlobal = componentConfig?.useGlobalFilters !== false; // default true
   const usePage = componentConfig?.usePageFilters !== false; // default true
 
   let filters: FilterConfig[] = [];
 
-  // Apply page vs global with REPLACE strategy, honoring toggles
+  // Apply page filters with REPLACE strategy, honoring toggles
   if (usePage && pageFilters && pageFilters.length > 0) {
     filters = pageFilters;
-  } else if (useGlobal) {
-    filters = globalFilters;
   } else {
     filters = [];
   }
 
   // Component-level overrides
   if (componentConfig) {
-    // If both toggles are off and no component filters, result is empty
-    if (!useGlobal && !usePage && (!componentConfig.componentFilters || componentConfig.componentFilters.length === 0)) {
+    // If page is disabled and no component filters, result is empty
+    if (!usePage && (!componentConfig.componentFilters || componentConfig.componentFilters.length === 0)) {
       return [];
     }
 
@@ -134,7 +109,6 @@ export function getMergedFilters(
  * Determines where the active filters are originating from
  * Useful for UI indicators to show users which level is controlling filters
  *
- * @param globalFilters - Dashboard-level filters
  * @param pageFilters - Page-level filters
  * @param componentConfig - Component configuration
  * @returns Filter source identifier for UI display
@@ -142,7 +116,6 @@ export function getMergedFilters(
  * @example
  * // Component has its own filters
  * getFilterSource(
- *   [{ field: 'date', operator: 'last_n_days', values: ['30'] }],
  *   undefined,
  *   { id: 'c1', type: 'scorecard', componentFilters: [{ field: 'country', operator: 'equals', values: ['US'] }] }
  * );
@@ -151,36 +124,23 @@ export function getMergedFilters(
  * @example
  * // Page filters active
  * getFilterSource(
- *   [{ field: 'date', operator: 'last_n_days', values: ['30'] }],
  *   [{ field: 'date', operator: 'last_n_days', values: ['7'] }],
  *   { id: 'c1', type: 'scorecard' }
  * );
  * // Returns: 'page'
  *
  * @example
- * // Global filters active
- * getFilterSource(
- *   [{ field: 'date', operator: 'last_n_days', values: ['30'] }],
- *   undefined,
- *   { id: 'c1', type: 'scorecard' }
- * );
- * // Returns: 'global'
- *
- * @example
  * // Component opted out
  * getFilterSource(
  *   [{ field: 'date', operator: 'last_n_days', values: ['30'] }],
- *   undefined,
- *   { id: 'c1', type: 'scorecard', useGlobalFilters: false, usePageFilters: false }
+ *   { id: 'c1', type: 'scorecard', usePageFilters: false }
  * );
  * // Returns: 'none'
  */
 export function getFilterSource(
-  globalFilters: FilterConfig[],
   pageFilters: FilterConfig[] | undefined,
   componentConfig?: ComponentConfigWithFilters
-): 'global' | 'page' | 'component' | 'none' | 'mixed' {
-  const useGlobal = componentConfig?.useGlobalFilters !== false; // default true
+): 'page' | 'component' | 'none' {
   const usePage = componentConfig?.usePageFilters !== false; // default true
 
   // Component overrides
@@ -188,16 +148,12 @@ export function getFilterSource(
     return 'component';
   }
 
-  if (!useGlobal && !usePage) {
+  if (!usePage) {
     return 'none';
   }
 
-  if (usePage && pageFilters && pageFilters.length > 0) {
+  if (pageFilters && pageFilters.length > 0) {
     return 'page';
-  }
-
-  if (useGlobal && globalFilters.length > 0) {
-    return 'global';
   }
 
   return 'none';
@@ -262,7 +218,6 @@ export function mergeFilterArrays(
  * Checks if a component is using any filters at all
  * Useful for conditional rendering of filter indicators
  *
- * @param globalFilters - Dashboard-level filters
  * @param pageFilters - Page-level filters
  * @param componentConfig - Component configuration
  * @returns true if component has active filters, false otherwise
@@ -270,7 +225,6 @@ export function mergeFilterArrays(
  * @example
  * hasActiveFilters(
  *   [{ field: 'date', operator: 'last_n_days', values: ['30'] }],
- *   undefined,
  *   undefined
  * );
  * // Returns: true
@@ -278,17 +232,15 @@ export function mergeFilterArrays(
  * @example
  * hasActiveFilters(
  *   [{ field: 'date', operator: 'last_n_days', values: ['30'] }],
- *   undefined,
- *   { id: 'c1', type: 'scorecard', useGlobalFilters: false, usePageFilters: false }
+ *   { id: 'c1', type: 'scorecard', usePageFilters: false }
  * );
  * // Returns: false
  */
 export function hasActiveFilters(
-  globalFilters: FilterConfig[],
   pageFilters: FilterConfig[] | undefined,
   componentConfig?: ComponentConfigWithFilters
 ): boolean {
-  const mergedFilters = getMergedFilters(globalFilters, pageFilters, componentConfig);
+  const mergedFilters = getMergedFilters(pageFilters, componentConfig);
   return mergedFilters.length > 0;
 }
 
@@ -300,22 +252,20 @@ export function hasActiveFilters(
  * @returns Human-readable description
  *
  * @example
- * getFilterSourceDescription('global');
- * // Returns: 'Using dashboard-wide filters'
+ * getFilterSourceDescription('page');
+ * // Returns: 'Using page-level filters'
  *
  * @example
  * getFilterSourceDescription('component');
  * // Returns: 'Using component-specific filters'
  */
 export function getFilterSourceDescription(
-  source: 'global' | 'page' | 'component' | 'none' | 'mixed'
+  source: 'page' | 'component' | 'none'
 ): string {
   const descriptions: Record<typeof source, string> = {
-    global: 'Using dashboard-wide filters',
     page: 'Using page-level filters',
     component: 'Using component-specific filters',
-    none: 'No filters applied',
-    mixed: 'Using mixed filter sources'
+    none: 'No filters applied'
   };
 
   return descriptions[source];

@@ -66,7 +66,7 @@ Next: Phase 4.2 (UI), Phase 4.3 (Charts)
 ```
 
 **mcp-tools-reference responds** (Haiku, 1s):
-- Lists all 31 MCP tools by API
+- Lists all 65 MCP tools by API
 - Shows parameters + usage examples
 - No execution, just documentation
 

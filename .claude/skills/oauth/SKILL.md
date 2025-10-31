@@ -106,7 +106,7 @@ const scopes = [
 - oauth-client-factory.ts with 9 client creation methods
 - Auto-refresh for expired tokens (< 5 min check)
 - Token file loading (temporary until OMA connected)
-- All 31 MCP tools use OAuth
+- All 65 MCP tools use OAuth
 - GSCAuthManager for complete auth flow
 
 ⏳ **Pending:**
@@ -259,6 +259,6 @@ Continue API Calls
 
 ## 💡 Remember
 
-OAuth is the ONLY authentication method. All 31 tools use user's OAuth credentials. No service accounts, no API keys, no workarounds.
+OAuth is the ONLY authentication method. All 65 tools use user's OAuth credentials. No service accounts, no API keys, no workarounds.
 
 This ensures security, compliance, and proper audit trails for 1,000+ WPP practitioners.

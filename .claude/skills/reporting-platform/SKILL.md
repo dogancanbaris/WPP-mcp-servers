@@ -1,6 +1,6 @@
 ---
 name: reporting-platform
-description: Dashboard creation, visualization, and BigQuery data flows with 13 chart types and 9 API endpoints. Use when creating dashboards, selecting charts, querying BigQuery, or integrating reporting features. Triggers: "create dashboard", "bigquery data", "chart types", "reporting api", "visualize", "charts", "dashboards"
+description: Dashboard creation, visualization, and BigQuery data flows with 32 chart types + 12 controls and 9 API endpoints. Use when creating dashboards, selecting charts, querying BigQuery, or integrating reporting features. Triggers: "create dashboard", "bigquery data", "chart types", "reporting api", "visualize", "charts", "dashboards"
 ---
 
 # Reporting Platform Skill - Dashboard Creation & Analytics Visualization
@@ -20,7 +20,7 @@ Use this skill when:
 
 **Frontend:** wpp-analytics-platform/frontend/
 - Next.js 15 + React 19 + TypeScript
-- Recharts for all visualizations (NOT Cube.js)
+- ECharts 5.5 + Recharts 3.3 for visualizations
 - Shadcn/ui components + Tailwind CSS
 - Dark mode, export, sharing capabilities
 - Drag-and-drop dashboard builder
@@ -28,23 +28,27 @@ Use this skill when:
 
 **Backend API:** wpp-analytics-platform/frontend/src/app/api/
 - 9 endpoints for dashboard management and data queries
-- BigQuery integration for unified data source
+- BigQuery integration for unified data source (NO semantic layer)
 - OAuth-authenticated requests (user's credentials)
 
-**Data Flow:**
+**Data Flow (Direct BigQuery Architecture):**
 ```
 Platform Data (GSC, Ads, Analytics)
   ↓
 BigQuery (central hub for blending)
   ↓
-Backend API (calculates metrics, aggregates)
+Backend API (/api/datasets/[id]/query)
   ↓
-Frontend Recharts (13 chart types)
+Charts query BigQuery directly (with 24hr cache)
   ↓
-Dashboard Display
+Dashboard Display (32 chart types + 12 controls)
 ```
 
-## 📊 13 Chart Types Available
+## 📊 32 Chart Types Available
+
+### **Basic Charts (13 types - Most Common)**
+
+The platform supports 13 fundamental chart types for 90% of use cases:
 
 ### 1. **Scorecard** - Single Metric Display
 **Best for:** KPIs, totals, key numbers
@@ -203,6 +207,40 @@ Dashboard Display
   "metrics": ["ctr", "conversion_rate", "roas"]
 }
 ```
+
+### **Advanced Charts (19 additional types)**
+
+For specialized visualizations, the platform also supports:
+- **BubbleChart** - 3-dimensional scatter (X, Y, size)
+- **ComboChart** - Mixed chart types (line + bar)
+- **StackedBarChart** - Stacked categories
+- **StackedColumnChart** - Vertical stacks
+- **WaterfallChart** - Cumulative changes
+- **BoxplotChart** - Statistical distributions
+- **BulletChart** - Goal vs actual
+- **CandlestickChart** - Financial data
+- **CalendarHeatmap** - Year-round patterns
+- **GeoMapChart** - Geographic data
+- **SunburstChart** - Hierarchical pie
+- **ThemeRiverChart** - Flowing trends
+- **TreeChart** - Hierarchical structure
+- **TimelineChart** - Event timeline
+- **GraphChart** - Network relationships
+- **ParallelChart** - Multi-dimensional comparison
+- **PictorialBarChart** - Visual bar charts
+- **PivotTableChart** - Interactive pivot table
+
+**Total:** 32 chart types
+
+### **12 Control Components (Filters & Interactivity)**
+
+- **date_range_filter** - Date selection with comparison mode
+- **list_filter** - Multi-select filtering
+- **checkbox_filter** - Boolean toggles
+- **slider_filter** - Numeric range
+- **dimension_control** - Dynamic dimension switching
+- **input_box_filter** - Text search
+- Plus 6 more specialized controls
 
 ## 🔌 9 Backend API Endpoints
 
@@ -476,7 +514,7 @@ All dashboard operations use OAuth 2.0:
 
 ## ✨ Features
 
-✅ **13 Chart Types** - Comprehensive visualization
+✅ **32 Chart Types + 12 Controls** - Comprehensive visualization
 ✅ **Drag-and-drop Builder** - No coding needed
 ✅ **BigQuery Integration** - Access all data
 ✅ **Export Options** - PDF, Excel, PNG

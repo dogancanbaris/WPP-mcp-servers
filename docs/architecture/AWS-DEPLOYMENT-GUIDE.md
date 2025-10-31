@@ -788,7 +788,7 @@ curl -H "Authorization: Bearer {jwt_token}" \
      -H "X-OMA-API-Key: {oma_api_key}" \
      https://mcp.wpp.com/mcp/tools/list
 
-# Expected: {"tools": [...31 tools...]}
+# Expected: {"tools": [...65 tools...]}
 
 # 4. Test account authorization (with mock approved accounts)
 # 5. Test safety limits (try >500% budget change)

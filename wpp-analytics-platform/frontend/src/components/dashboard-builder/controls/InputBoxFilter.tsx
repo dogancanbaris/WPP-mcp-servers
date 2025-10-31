@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Search, X } from 'lucide-react';
+import { usePageLevelControl } from '@/hooks/usePageLevelControl';
 
 export type InputBoxOperator = 'contains' | 'equals' | 'startsWith' | 'endsWith';
 
@@ -78,6 +79,11 @@ export interface InputBoxFilterProps {
    * Callback when input is cleared
    */
   onClear?: () => void;
+
+  /**
+   * Optional unique ID for the control (for page-level filter tracking)
+   */
+  id?: string;
 }
 
 const operatorLabels: Record<InputBoxOperator, string> = {
@@ -134,7 +140,11 @@ export const InputBoxFilter: React.FC<InputBoxFilterProps> = ({
   showClear = true,
   minChars = 0,
   onClear,
+  id,
 }) => {
+  // Use page-level control hook for filter emission
+  const { emitFilter, clearFilter } = usePageLevelControl(id || field);
+
   const [inputValue, setInputValue] = useState(value);
   const [currentOperator, setCurrentOperator] = useState<InputBoxOperator>(operator);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -167,6 +177,17 @@ export const InputBoxFilter: React.FC<InputBoxFilterProps> = ({
     // Set new timer
     debounceTimerRef.current = setTimeout(() => {
       onChange(inputValue, currentOperator);
+
+      // Emit page-level filter
+      if (inputValue.trim()) {
+        emitFilter({
+          field,
+          operator: currentOperator,
+          values: [inputValue],
+        });
+      } else {
+        clearFilter();
+      }
     }, debounceMs);
 
     // Cleanup
@@ -175,7 +196,7 @@ export const InputBoxFilter: React.FC<InputBoxFilterProps> = ({
         clearTimeout(debounceTimerRef.current);
       }
     };
-  }, [inputValue, currentOperator, onChange, debounceMs, minChars]);
+  }, [inputValue, currentOperator, onChange, debounceMs, minChars, field, emitFilter, clearFilter]);
 
   // Close dropdown when clicking outside
   useEffect(() => {

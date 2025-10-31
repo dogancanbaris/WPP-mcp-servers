@@ -5,9 +5,8 @@ import { ChartSetup } from './setup/ChartSetup';
 import { ChartStyle } from './style/ChartStyle';
 import { FiltersTab } from './filters/FiltersTab';
 import { ComponentConfig } from '@/types/dashboard-builder';
-import { GlobalPanel } from './global/GlobalPanel';
 import { PagePanel } from './page/PagePanel';
-import { useCurrentPageId, usePages } from '@/store/dashboardStore';
+import { useCurrentPageId, usePages, useDashboardStore } from '@/store/dashboardStore';
 
 interface SettingsSidebarProps {
   selectedComponent?: ComponentConfig;
@@ -22,8 +21,11 @@ export const SettingsSidebar: React.FC<SettingsSidebarProps> = ({
   const currentPageId = useCurrentPageId();
   const pages = usePages();
   const currentPage = useMemo(() => pages?.find(p => p.id === currentPageId), [pages, currentPageId]);
+  const sidebarScope = useDashboardStore((s) => s.sidebarScope);
+  const sidebarActiveTab = useDashboardStore((s) => s.sidebarActiveTab);
 
-  const [scope, setScope] = useState<'global'|'page'|'component'>(selectedComponent ? 'component' : 'page');
+  const [scope, setScope] = useState<'page'|'component'>(selectedComponent ? 'component' : 'page');
+  const [activeTab, setActiveTab] = useState<'setup'|'style'|'filters'>('setup');
 
   // Auto-switch based on selection changes
   useEffect(() => {
@@ -39,6 +41,23 @@ export const SettingsSidebar: React.FC<SettingsSidebarProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPageId]);
 
+  // Respond to programmatic sidebar focus requests (e.g., from topbar Filters button)
+  useEffect(() => {
+    // Update scope if requested by store
+    if (sidebarScope) {
+      // Only switch to component if there's a selected component
+      if (sidebarScope === 'component' && selectedComponent) setScope('component');
+      if (sidebarScope === 'page') setScope('page');
+    }
+  }, [sidebarScope, selectedComponent]);
+
+  useEffect(() => {
+    // Only applies to component scope
+    if (scope === 'component' && sidebarActiveTab) {
+      setActiveTab(sidebarActiveTab);
+    }
+  }, [sidebarActiveTab, scope]);
+
   // Format component type for display (e.g., "bar-chart" -> "Bar Chart")
   const formattedType = selectedComponent?.type
     ? selectedComponent.type.split('-').map(w => w.charAt(0).toUpperCase()+w.slice(1)).join(' ')
@@ -48,8 +67,7 @@ export const SettingsSidebar: React.FC<SettingsSidebarProps> = ({
     <div className="w-80 border-l bg-surface dashboard-sidebar overflow-y-auto h-full fade-in">
       {/* Scope Selector */}
       <div className="p-3 border-b bg-background">
-        <div className="grid grid-cols-3 gap-1 text-xs">
-          <Button variant={scope==='global'?'default':'outline'} size="sm" onClick={()=>setScope('global')}>Global</Button>
+        <div className="grid grid-cols-2 gap-1 text-xs">
           <Button variant={scope==='page'?'default':'outline'} size="sm" onClick={()=>setScope('page')}>
             Page{currentPage ? `: ${currentPage.name}`:''}
           </Button>
@@ -60,11 +78,10 @@ export const SettingsSidebar: React.FC<SettingsSidebarProps> = ({
       </div>
 
       {/* Scope Panels */}
-      {scope === 'global' && <GlobalPanel />}
       {scope === 'page' && <PagePanel />}
       {scope === 'component' && selectedComponent && (
         <div className="p-4">
-          <Tabs defaultValue="setup" className="w-full">
+          <Tabs value={activeTab} onValueChange={(v)=> setActiveTab(v as any)} className="w-full">
             <TabsList className="grid w-full grid-cols-3 bg-muted/50 transition-colors">
               <TabsTrigger value="setup" className="transition-all text-xs">Setup</TabsTrigger>
               <TabsTrigger value="style" className="transition-all text-xs">Style</TabsTrigger>

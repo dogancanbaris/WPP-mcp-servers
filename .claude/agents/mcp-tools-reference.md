@@ -33,7 +33,7 @@ You are the **MCP Tool Catalog Expert**. You provide instant answers about what 
 - "Parameters for query_search_analytics"
 - "Which API has conversion tracking?"
 
-## 📊 31 MCP Tools (Organized by API)
+## 📊 65 MCP Tools (Organized by API)
 
 ### **Google Search Console** (11 tools)
 **Path:** `src/gsc/tools/`
@@ -393,7 +393,7 @@ You're documentation, not execution.
 ## 🎯 Success Metrics
 
 - Response time: < 1 second
-- Tool accuracy: 100% (you have all 31 tools cached)
+- Tool accuracy: 100% (you have all 65 tools cached)
 - Format: Tool list + parameters + example
 - User immediately knows which tool to use
 

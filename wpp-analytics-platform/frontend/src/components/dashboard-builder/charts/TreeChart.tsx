@@ -16,9 +16,12 @@ import ReactECharts from 'echarts-for-react';
 import { Loader2 } from 'lucide-react';
 import { ComponentConfig } from '@/types/dashboard-builder';
 import { DASHBOARD_THEME } from '@/lib/themes/dashboard-theme';
+import { formatChartLabel } from '@/lib/utils/label-formatter';
 import { useCascadedFilters } from '@/hooks/useCascadedFilters';
 import { usePageData } from '@/hooks/usePageData';
 import { useCurrentPageId } from '@/store/dashboardStore';
+import { getChartDefaults, resolveSortField } from '@/lib/defaults/chart-defaults';
+import { formatChartLabel } from '@/lib/utils/label-formatter';
 
 export interface TreeChartProps extends Partial<ComponentConfig> {
   /** Hierarchy dimensions (parent -> child) */
@@ -48,6 +51,10 @@ export const TreeChart: React.FC<TreeChartProps> = (props) => {
     orient = 'LR',
     chartHeight = '600px',
     style,
+    // Professional defaults (optional overrides)
+    sortBy,
+    sortDirection,
+    limit,
     ...rest
   } = props;
 
@@ -56,6 +63,12 @@ export const TreeChart: React.FC<TreeChartProps> = (props) => {
 
   // Use hierarchyDimensions if provided, otherwise fall back to dimensions
   const effectiveDimensions = hierarchyDimensions.length > 0 ? hierarchyDimensions : dimensions;
+
+  // Apply professional defaults
+  const defaults = getChartDefaults('tree');
+  const finalSortBy = sortBy || resolveSortField(defaults.sortBy, metrics, effectiveDimensions[0] || 'name');
+  const finalSortDirection = sortDirection || defaults.sortDirection;
+  const finalLimit = limit !== undefined ? limit : defaults.limit;
 
   // Use cascaded filters (Global → Page → Component)
   const { filters: cascadedFilters } = useCascadedFilters({
@@ -74,6 +87,10 @@ export const TreeChart: React.FC<TreeChartProps> = (props) => {
     dimensions: effectiveDimensions,
     filters: cascadedFilters,
     enabled: !!dataset_id && !!currentPageId && effectiveDimensions.length > 0,
+    chartType: 'tree',
+    sortBy: finalSortBy,
+    sortDirection: finalSortDirection,
+    limit: finalLimit,
   });
 
   // Styling

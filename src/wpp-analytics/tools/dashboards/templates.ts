@@ -20,6 +20,7 @@ export const DASHBOARD_TEMPLATES: DashboardTemplate[] = [
             id: 'col-title',
             width: '3/4',
             component: {
+              id: 'title-seo',
               type: 'title',
               title: 'SEO Performance Overview',
             },
@@ -28,7 +29,8 @@ export const DASHBOARD_TEMPLATES: DashboardTemplate[] = [
             id: 'col-date-filter',
             width: '1/4',
             component: {
-              type: 'date_filter',
+              id: 'comp-1',
+              type: 'date_range_filter',
             },
           },
         ],
@@ -40,6 +42,7 @@ export const DASHBOARD_TEMPLATES: DashboardTemplate[] = [
             id: 'col-clicks',
             width: '1/4',
             component: {
+              id: 'comp-2',
               type: 'scorecard',
               title: 'Total Clicks',
               metrics: ['clicks'],
@@ -49,6 +52,7 @@ export const DASHBOARD_TEMPLATES: DashboardTemplate[] = [
             id: 'col-impressions',
             width: '1/4',
             component: {
+              id: 'comp-3',
               type: 'scorecard',
               title: 'Total Impressions',
               metrics: ['impressions'],
@@ -58,6 +62,7 @@ export const DASHBOARD_TEMPLATES: DashboardTemplate[] = [
             id: 'col-ctr',
             width: '1/4',
             component: {
+              id: 'comp-4',
               type: 'scorecard',
               title: 'Average CTR',
               metrics: ['ctr'],
@@ -67,6 +72,7 @@ export const DASHBOARD_TEMPLATES: DashboardTemplate[] = [
             id: 'col-position',
             width: '1/4',
             component: {
+              id: 'comp-5',
               type: 'scorecard',
               title: 'Average Position',
               metrics: ['position'],
@@ -81,6 +87,7 @@ export const DASHBOARD_TEMPLATES: DashboardTemplate[] = [
             id: 'col-trend',
             width: '1/1',
             component: {
+              id: 'comp-6',
               type: 'time_series',
               title: 'Performance Trend',
               dimension: 'date',
@@ -100,6 +107,7 @@ export const DASHBOARD_TEMPLATES: DashboardTemplate[] = [
             id: 'col-pages',
             width: '1/2',
             component: {
+              id: 'comp-7',
               type: 'bar_chart',
               title: 'Top Pages by Clicks',
               dimension: 'page',
@@ -113,6 +121,7 @@ export const DASHBOARD_TEMPLATES: DashboardTemplate[] = [
             id: 'col-queries',
             width: '1/2',
             component: {
+              id: 'comp-8',
               type: 'bar_chart',
               title: 'Top Queries by Impressions',
               dimension: 'query',
@@ -139,6 +148,7 @@ export const DASHBOARD_TEMPLATES: DashboardTemplate[] = [
             id: 'col-title',
             width: '3/4',
             component: {
+              id: 'comp-9',
               type: 'title',
               title: 'Campaign Performance Dashboard',
             },
@@ -147,7 +157,8 @@ export const DASHBOARD_TEMPLATES: DashboardTemplate[] = [
             id: 'col-date-filter',
             width: '1/4',
             component: {
-              type: 'date_filter',
+              id: 'comp-10',
+              type: 'date_range_filter',
             },
           },
         ],
@@ -159,6 +170,7 @@ export const DASHBOARD_TEMPLATES: DashboardTemplate[] = [
             id: 'col-spend',
             width: '1/3',
             component: {
+              id: 'comp-11',
               type: 'scorecard',
               title: 'Total Spend',
               metrics: ['cost'],
@@ -168,6 +180,7 @@ export const DASHBOARD_TEMPLATES: DashboardTemplate[] = [
             id: 'col-conversions',
             width: '1/3',
             component: {
+              id: 'comp-12',
               type: 'scorecard',
               title: 'Conversions',
               metrics: ['conversions'],
@@ -177,6 +190,7 @@ export const DASHBOARD_TEMPLATES: DashboardTemplate[] = [
             id: 'col-roas',
             width: '1/3',
             component: {
+              id: 'comp-13',
               type: 'scorecard',
               title: 'ROAS',
               metrics: ['roas'],
@@ -191,6 +205,7 @@ export const DASHBOARD_TEMPLATES: DashboardTemplate[] = [
             id: 'col-clicks',
             width: '1/3',
             component: {
+              id: 'comp-14',
               type: 'scorecard',
               title: 'Total Clicks',
               metrics: ['clicks'],
@@ -200,6 +215,7 @@ export const DASHBOARD_TEMPLATES: DashboardTemplate[] = [
             id: 'col-ctr',
             width: '1/3',
             component: {
+              id: 'comp-15',
               type: 'scorecard',
               title: 'Click-Through Rate',
               metrics: ['ctr'],
@@ -209,6 +225,7 @@ export const DASHBOARD_TEMPLATES: DashboardTemplate[] = [
             id: 'col-cpc',
             width: '1/3',
             component: {
+              id: 'comp-16',
               type: 'scorecard',
               title: 'Cost per Click',
               metrics: ['cpc'],
@@ -223,6 +240,7 @@ export const DASHBOARD_TEMPLATES: DashboardTemplate[] = [
             id: 'col-spend-trend',
             width: '1/2',
             component: {
+              id: 'comp-17',
               type: 'area_chart',
               title: 'Daily Spend Trend',
               dimension: 'date',
@@ -233,6 +251,7 @@ export const DASHBOARD_TEMPLATES: DashboardTemplate[] = [
             id: 'col-conversions-trend',
             width: '1/2',
             component: {
+              id: 'comp-18',
               type: 'area_chart',
               title: 'Daily Conversions',
               dimension: 'date',
@@ -248,6 +267,7 @@ export const DASHBOARD_TEMPLATES: DashboardTemplate[] = [
             id: 'col-campaigns',
             width: '1/1',
             component: {
+              id: 'comp-19',
               type: 'table',
               title: 'Campaign Breakdown',
               dimension: 'campaign_name',
@@ -271,6 +291,7 @@ export const DASHBOARD_TEMPLATES: DashboardTemplate[] = [
             id: 'col-title',
             width: '3/4',
             component: {
+              id: 'comp-20',
               type: 'title',
               title: 'Website Analytics Overview',
             },
@@ -279,7 +300,8 @@ export const DASHBOARD_TEMPLATES: DashboardTemplate[] = [
             id: 'col-date-filter',
             width: '1/4',
             component: {
-              type: 'date_filter',
+              id: 'comp-21',
+              type: 'date_range_filter',
             },
           },
         ],
@@ -291,6 +313,7 @@ export const DASHBOARD_TEMPLATES: DashboardTemplate[] = [
             id: 'col-users',
             width: '1/4',
             component: {
+              id: 'comp-22',
               type: 'scorecard',
               title: 'Total Users',
               metrics: ['users'],
@@ -300,6 +323,7 @@ export const DASHBOARD_TEMPLATES: DashboardTemplate[] = [
             id: 'col-sessions',
             width: '1/4',
             component: {
+              id: 'comp-23',
               type: 'scorecard',
               title: 'Sessions',
               metrics: ['sessions'],
@@ -309,7 +333,8 @@ export const DASHBOARD_TEMPLATES: DashboardTemplate[] = [
             id: 'col-bounce-rate',
             width: '1/4',
             component: {
-              type: 'gauge',
+              id: 'comp-24',
+              type: 'scorecard',
               title: 'Bounce Rate',
               metrics: ['bounce_rate'],
             },
@@ -318,6 +343,7 @@ export const DASHBOARD_TEMPLATES: DashboardTemplate[] = [
             id: 'col-avg-duration',
             width: '1/4',
             component: {
+              id: 'comp-25',
               type: 'scorecard',
               title: 'Avg. Session Duration',
               metrics: ['avg_session_duration'],
@@ -332,6 +358,7 @@ export const DASHBOARD_TEMPLATES: DashboardTemplate[] = [
             id: 'col-traffic-trend',
             width: '2/3',
             component: {
+              id: 'comp-26',
               type: 'area_chart',
               title: 'Traffic Trend',
               dimension: 'date',
@@ -342,6 +369,7 @@ export const DASHBOARD_TEMPLATES: DashboardTemplate[] = [
             id: 'col-traffic-sources',
             width: '1/3',
             component: {
+              id: 'comp-27',
               type: 'pie_chart',
               title: 'Traffic Sources',
               dimension: 'source',
@@ -357,6 +385,7 @@ export const DASHBOARD_TEMPLATES: DashboardTemplate[] = [
             id: 'col-top-pages',
             width: '1/2',
             component: {
+              id: 'comp-28',
               type: 'bar_chart',
               title: 'Top Landing Pages',
               dimension: 'landing_page',
@@ -370,6 +399,7 @@ export const DASHBOARD_TEMPLATES: DashboardTemplate[] = [
             id: 'col-devices',
             width: '1/2',
             component: {
+              id: 'comp-29',
               type: 'pie_chart',
               title: 'Device Distribution',
               dimension: 'device_category',
@@ -393,6 +423,7 @@ export const DASHBOARD_TEMPLATES: DashboardTemplate[] = [
             id: 'col-title',
             width: '3/4',
             component: {
+              id: 'comp-30',
               type: 'title',
               title: 'New Dashboard',
             },
@@ -401,7 +432,8 @@ export const DASHBOARD_TEMPLATES: DashboardTemplate[] = [
             id: 'col-date-filter',
             width: '1/4',
             component: {
-              type: 'date_filter',
+              id: 'comp-31',
+              type: 'date_range_filter',
             },
           },
         ],

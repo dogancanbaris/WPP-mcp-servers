@@ -7,6 +7,11 @@ description: Create and manage Linear issues with systematic format (what to do 
 
 **Keywords that trigger this skill:** "create issue", "update ticket", "linear format", "track work", "document in linear", "linear issue", "create linear"
 
+> **⚠️ STATUS NOTE:**
+> Linear is not currently integrated as an MCP tool in this server.
+> This skill provides the formatting guidelines and best practices for when Linear IS integrated.
+> The systematic format described here can be used for any issue tracking (Linear, GitHub, etc.).
+
 ## 🎯 When to Use This
 
 Use this skill when:
@@ -174,7 +179,7 @@ We need to organize documentation
 - [2025-10-25] Documentation completed
 
 ## 🎯 Outcome
-OAuth client factory implemented and tested. All 31 MCP tools now use centralized OAuth with auto-refresh.
+OAuth client factory implemented and tested. All 65 MCP tools now use centralized OAuth with auto-refresh.
 ```
 
 Then change status to **Done**

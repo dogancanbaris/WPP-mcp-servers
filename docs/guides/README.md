@@ -6,7 +6,7 @@ Complete guides and reference documentation for developers and practitioners.
 
 ### [AGENT-GUIDE.md](./AGENT-GUIDE.md)
 Comprehensive guide for AI agents using MCP tools:
-- 58 tools organized by platform
+- 65 tools organized by platform
 - Common workflows (5+ detailed examples)
 - Safety system and approval workflows
 - Tool reference with examples
@@ -23,7 +23,7 @@ Quick start guide for practitioners and developers:
 ### [DEVELOPER-GUIDE.md](./DEVELOPER-GUIDE.md)
 Comprehensive technical implementation guide:
 - MCP server architecture overview
-- All 31 tools organized by platform:
+- All 65 tools organized by platform:
   - 11 Google Search Console tools
   - 14 Google Ads tools
   - 5 Google Analytics tools
@@ -173,7 +173,7 @@ Comprehensive technical implementation guide:
 
 ## ✅ Deployment Checklist
 
-- [ ] All 31 tools tested with real API data
+- [ ] All 65 tools tested with real API data
 - [ ] OAuth token refresh working correctly
 - [ ] Safety system approval flows validated
 - [ ] Supabase RLS policies configured

@@ -28,13 +28,14 @@ Build a **fully agentic analytics platform** where both AI agents and practition
 - ✅ 9 API endpoints for dashboards, datasets, metadata, queries
 - ✅ Intelligent caching system for BigQuery queries
 
-**MCP Tools (31 total across 7 Google APIs):**
-- ✅ Search Console: 11 tools (analytics, indexing, CWV, sitemaps)
-- ✅ Google Ads: 14 tools (campaigns, budgets, keywords, conversions)
-- ✅ Analytics (GA4): 5 tools (properties, reports, realtime)
-- ✅ BigQuery: 2 tools (datasets, queries)
+**MCP Tools (65 total across 7 Google APIs):**
+- ✅ Search Console: 8 tools (analytics, indexing, CWV, sitemaps, properties)
+- ✅ Google Ads: 25 tools (campaigns, budgets, keywords, conversions, audiences, assets)
+- ✅ Analytics (GA4): 11 tools (properties, reports, realtime, custom dimensions, conversions)
+- ✅ BigQuery: 3 tools (datasets, queries)
 - ✅ Business Profile: 3 tools (locations, updates)
-- ✅ Reporting Platform: 4 tools (dashboards, data push, templates, insights)
+- ✅ CrUX/Core Web Vitals: 5 tools (performance monitoring)
+- ✅ WPP Analytics Platform: 9 tools (dashboards, data push, templates, insights, delete, update)
 - ✅ SERP Search: 1 tool (unlimited Google results, no API limits)
 
 **Frontend Foundation:**
@@ -54,18 +55,14 @@ Build a **fully agentic analytics platform** where both AI agents and practition
   - ❌ Filters tab incomplete
 - 🚧 **Drag-and-drop Builder** - EXISTS, needs comprehensive testing
 
-**Chart Components (57 total):**
-- ✅ 4 Migrated to new architecture:
-  - Scorecard.tsx
-  - TimeSeriesChart.tsx
-  - TableChart.tsx
-  - PieChart.tsx
-- ❌ **53 Unmigrated Charts** (many are placeholders "Chart not yet migrated"):
-  - AreaChart, BarChart, LineChart, FunnelChart, GaugeChart
-  - HeatmapChart, RadarChart, SankeyChart, ScatterChart
-  - TreemapChart, WaterfallChart, BubbleChart
-  - ComboChart, PolarChart, RadialBarChart
-  - And 38+ more variants/specialized charts
+**Chart Components (32 total):**
+- ✅ **ALL 32 Charts Migrated** to multi-page architecture (Oct 25-27, 2025):
+  - Basic charts: Scorecard, TimeSeriesChart, TableChart, PieChart, BarChart, LineChart, AreaChart
+  - Advanced charts: FunnelChart, GaugeChart, HeatmapChart, RadarChart, SankeyChart, ScatterChart
+  - Specialized: TreemapChart, WaterfallChart, BubbleChart, ComboChart, and 15+ more
+- ✅ **12 Control Components** (filters, dimension controls)
+- ✅ **6 Content Components** (title, text, shapes)
+- ✅ ALL charts support cascaded filters (global → page → component)
 
 ### ❌ **Missing Critical Features**
 
@@ -95,9 +92,10 @@ Build a **fully agentic analytics platform** where both AI agents and practition
 - ✅ Agent knowledge 100% accurate (no Cube.js references)
 
 **Documentation Files:**
-- ✅ `wpp-analytics-platform/README.md` - Updated (34 chart types, 9 API endpoints, ECharts + Recharts)
+- ✅ `wpp-analytics-platform/README.md` - Updated (32 chart types + 12 controls, 9 API endpoints, ECharts + Recharts)
 - ✅ `DATA-LAYER-ARCHITECTURE.md` - Created (305 lines, complete technical reference)
-- ✅ `claude.md` - Created (87 lines, entry point)
+- ✅ `claude.md` - Created (1,200+ lines, comprehensive entry point)
+- ✅ `MCP-WEB-UI-COMPLETE-GUIDE.md` - Created (web UI integration with native tool mounting)
 - ✅ `ROADMAP.md` - Created (613 lines, Phase 4.1-4.8)
 - ✅ `WORKFLOW.md` - Created (412 lines, agent usage guide)
 - ✅ `LINEAR_TICKETS_MCP47_TO_MCP75.md` - Created (1,364 lines, all tickets)
@@ -451,9 +449,9 @@ Build a **fully agentic analytics platform** where both AI agents and practition
 **Goal:** Comprehensive testing and production deployment.
 
 #### 4.8.1 - Local Testing
-- [ ] Test all 57 chart components
+- [ ] Test all 32 chart components + 12 controls
 - [ ] Test all 9 API endpoints
-- [ ] Test all 31 MCP tools
+- [ ] Test all 65 MCP tools
 - [ ] Test agent workflows (create/edit dashboards via MCP)
 - [ ] Test practitioner workflows (UI-based editing)
 - [ ] Test multi-tenant isolation

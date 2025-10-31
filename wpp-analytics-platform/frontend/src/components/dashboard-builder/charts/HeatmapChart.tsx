@@ -14,18 +14,23 @@ import { ComponentConfig } from '@/types/dashboard-builder';
 import { useCascadedFilters } from '@/hooks/useCascadedFilters';
 import { usePageData } from '@/hooks/usePageData';
 import { useCurrentPageId } from '@/store/dashboardStore';
+import { getChartDefaults, resolveSortField } from '@/lib/defaults/chart-defaults';
+import { formatChartLabel } from '@/lib/utils/label-formatter';
 
 export interface HeatmapChartProps extends Partial<ComponentConfig> {
   xAxisDimension?: string;
   yAxisDimension?: string;
   colorRange?: string[];
+  sortBy?: string;
+  sortDirection?: 'ASC' | 'DESC';
+  limit?: number;
 }
 
 export const HeatmapChart: React.FC<HeatmapChartProps> = (props) => {
   const {
     id: componentId,
     dataset_id,
-    dimension = null,
+    dimension,
     metrics = [],
     dateRange,
 
@@ -47,15 +52,25 @@ export const HeatmapChart: React.FC<HeatmapChartProps> = (props) => {
     borderRadius = 8,
     padding = 16,
 
-    // Heatmap specific
-    xAxisDimension = 'date',
-    yAxisDimension = 'category',
+    // Heatmap specific (use secondaryDimension from props)
+    secondaryDimension,
+    xAxisDimension = dimension,
+    yAxisDimension = secondaryDimension,
     colorRange = ['#50a3ba', '#eac736', '#d94e5d'],
+    sortBy,
+    sortDirection,
+    limit,
 
     ...rest
   } = props;
 
   const currentPageId = useCurrentPageId();
+
+  // Apply professional defaults
+  const defaults = getChartDefaults('heatmap');
+  const finalSortBy = sortBy || resolveSortField(defaults.sortBy, metrics, xAxisDimension || undefined);
+  const finalSortDirection = sortDirection || defaults.sortDirection;
+  const finalLimit = limit !== undefined ? limit : defaults.limit;
 
   // Use cascaded filters (Global → Page → Component)
   const { filters: cascadedFilters } = useCascadedFilters({
@@ -74,6 +89,10 @@ export const HeatmapChart: React.FC<HeatmapChartProps> = (props) => {
     dimensions: [xAxisDimension, yAxisDimension].filter(Boolean),
     filters: cascadedFilters,
     enabled: !!dataset_id && metrics.length > 0 && !!xAxisDimension && !!yAxisDimension && !!currentPageId,
+    chartType: 'heatmap',
+    sortBy: finalSortBy,
+    sortDirection: finalSortDirection,
+    limit: finalLimit !== null ? finalLimit : undefined,
   });
 
   const containerStyle: React.CSSProperties = {
@@ -111,9 +130,12 @@ export const HeatmapChart: React.FC<HeatmapChartProps> = (props) => {
     );
   }
 
-  const chartData = data?.data || [];
+  // Extract comparison data
+  const currentData = data?.data?.current || data?.data || [];
+  const comparisonData = data?.data?.comparison || [];
+  const hasComparison = comparisonData.length > 0;
 
-  if (chartData.length === 0) {
+  if (currentData.length === 0) {
     return (
       <div style={containerStyle} className="flex items-center justify-center min-h-[400px]">
         <p className="text-sm text-muted-foreground">No data available</p>
@@ -122,18 +144,34 @@ export const HeatmapChart: React.FC<HeatmapChartProps> = (props) => {
   }
 
   // Extract unique x and y axis values
-  const xAxisData = Array.from(new Set(chartData.map((row: any) => row[xAxisDimension])));
-  const yAxisData = Array.from(new Set(chartData.map((row: any) => row[yAxisDimension])));
+  const xAxisData = Array.from(new Set(currentData.map((row: any) => row[xAxisDimension])));
+  const yAxisData = Array.from(new Set(currentData.map((row: any) => row[yAxisDimension])));
 
   // Transform to heatmap format: [xIndex, yIndex, value]
-  const heatmapData = chartData.map((row: any) => [
+  const heatmapData = currentData.map((row: any) => [
     xAxisData.indexOf(row[xAxisDimension]),
     yAxisData.indexOf(row[yAxisDimension]),
     Number(row[metrics[0]]) || 0
   ]);
 
+  // Calculate delta heatmap if comparison data available
+  const deltaHeatmapData = hasComparison
+    ? currentData.map((row: any, index: number) => {
+        const currentValue = Number(row[metrics[0]]) || 0;
+        const compValue = Number(comparisonData[index]?.[metrics[0]]) || 0;
+        const delta = currentValue - compValue;
+        return [
+          xAxisData.indexOf(row[xAxisDimension]),
+          yAxisData.indexOf(row[yAxisDimension]),
+          delta
+        ];
+      })
+    : [];
+
   // Find min/max for visual scale
-  const values = heatmapData.map((item: any) => item[2]);
+  const values = hasComparison
+    ? deltaHeatmapData.map((item: any) => item[2])
+    : heatmapData.map((item: any) => item[2]);
   const minValue = Math.min(...values);
   const maxValue = Math.max(...values);
 
@@ -193,11 +231,14 @@ export const HeatmapChart: React.FC<HeatmapChartProps> = (props) => {
     series: [
       {
         type: 'heatmap',
-        data: heatmapData,
+        data: hasComparison ? deltaHeatmapData : heatmapData,
         label: {
           show: true,
           fontSize: 10,
-          color: '#000'
+          color: '#000',
+          formatter: hasComparison
+            ? (params: any) => (params.value[2] > 0 ? '+' : '') + params.value[2].toFixed(0)
+            : undefined
         },
         emphasis: {
           itemStyle: {

@@ -25,9 +25,11 @@ import {
 } from 'recharts';
 import { ComponentConfig } from '@/types/dashboard-builder';
 import { DASHBOARD_THEME } from '@/lib/themes/dashboard-theme';
+import { formatChartLabel } from '@/lib/utils/label-formatter';
 import { useCascadedFilters } from '@/hooks/useCascadedFilters';
 import { usePageData } from '@/hooks/usePageData';
 import { useCurrentPageId } from '@/store/dashboardStore';
+import { getChartDefaults, resolveSortField } from '@/lib/defaults/chart-defaults';
 
 export interface BubbleChartProps extends Partial<ComponentConfig> {
   xAxisField?: string;
@@ -54,6 +56,12 @@ export const BubbleChart: React.FC<BubbleChartProps> = (props) => {
     ...rest
   } = props;
 
+  // Apply professional defaults
+  const defaults = getChartDefaults('bubble_chart');
+  const finalSortBy = props.sortBy || resolveSortField(defaults.sortBy, metrics, dimensions[0]);
+  const finalSortDirection = props.sortDirection || defaults.sortDirection;
+  const finalLimit = props.limit !== undefined ? props.limit : defaults.limit;
+
   const currentPageId = useCurrentPageId();
 
   // Use cascaded filters (Global → Page → Component)
@@ -73,6 +81,10 @@ export const BubbleChart: React.FC<BubbleChartProps> = (props) => {
     dimensions,
     filters: cascadedFilters,
     enabled: !!dataset_id && metrics.length >= 2 && !!currentPageId,
+    chartType: 'bubble_chart',
+    sortBy: finalSortBy,
+    sortDirection: finalSortDirection,
+    limit: finalLimit,
   });
 
   // Container styling
@@ -106,8 +118,13 @@ export const BubbleChart: React.FC<BubbleChartProps> = (props) => {
     );
   }
 
+  // Extract comparison data
+  const currentData = data?.data?.current || data?.data || [];
+  const comparisonData = data?.data?.comparison || [];
+  const hasComparison = comparisonData.length > 0;
+
   // No data state
-  if (!data?.data || data.data.length === 0) {
+  if (currentData.length === 0) {
     return (
       <div style={containerStyle} className="flex items-center justify-center">
         <p className="text-sm text-muted-foreground">No data available</p>
@@ -116,15 +133,26 @@ export const BubbleChart: React.FC<BubbleChartProps> = (props) => {
   }
 
   // Transform data for bubble chart
-  const bubbleData = data.data.map((row: any, index: number) => ({
+  const bubbleData = currentData.map((row: any, index: number) => ({
     x: parseFloat(row[xAxisField]) || 0,
     y: parseFloat(row[yAxisField]) || 0,
     z: sizeField ? parseFloat(row[sizeField]) || 100 : 100,
     name: categoryField ? row[categoryField] : `Bubble ${index + 1}`
   }));
 
+  // Transform comparison data if available
+  const comparisonBubbleData = hasComparison
+    ? comparisonData.map((row: any, index: number) => ({
+        x: parseFloat(row[xAxisField]) || 0,
+        y: parseFloat(row[yAxisField]) || 0,
+        z: sizeField ? parseFloat(row[sizeField]) || 100 : 100,
+        name: categoryField ? row[categoryField] : `Bubble ${index + 1}`
+      }))
+    : [];
+
   // Calculate size range for Z-axis
-  const zValues = bubbleData.map(d => d.z);
+  const allBubbles = [...bubbleData, ...comparisonBubbleData];
+  const zValues = allBubbles.map(d => d.z);
   const minZ = Math.min(...zValues);
   const maxZ = Math.max(...zValues);
   const zRange = [minZ || 100, maxZ || 1000];
@@ -157,22 +185,22 @@ export const BubbleChart: React.FC<BubbleChartProps> = (props) => {
           <XAxis
             type="number"
             dataKey="x"
-            name={xAxisField}
+            name={formatChartLabel(xAxisField)}
             stroke={theme.axisColor}
-            label={{ value: xAxisField, position: 'insideBottom', offset: -5 }}
+            label={{ value: formatChartLabel(xAxisField), position: 'insideBottom', offset: -5 }}
           />
           <YAxis
             type="number"
             dataKey="y"
-            name={yAxisField}
+            name={formatChartLabel(yAxisField)}
             stroke={theme.axisColor}
-            label={{ value: yAxisField, angle: -90, position: 'insideLeft' }}
+            label={{ value: formatChartLabel(yAxisField), angle: -90, position: 'insideLeft' }}
           />
           <ZAxis
             type="number"
             dataKey="z"
             range={zRange}
-            name={sizeField || 'Size'}
+            name={formatChartLabel(sizeField || 'Size')}
           />
           <Tooltip
             cursor={{ strokeDasharray: '3 3' }}
@@ -182,18 +210,32 @@ export const BubbleChart: React.FC<BubbleChartProps> = (props) => {
               borderRadius: '4px'
             }}
             formatter={(value: any, name: string) => {
-              if (name === 'x') return [value, xAxisField];
-              if (name === 'y') return [value, yAxisField];
-              if (name === 'z') return [value, sizeField || 'Size'];
-              return [value, name];
+              if (name === 'x') return [value, formatChartLabel(xAxisField)];
+              if (name === 'y') return [value, formatChartLabel(yAxisField)];
+              if (name === 'z') return [value, formatChartLabel(sizeField || 'Size')];
+              return [value, formatChartLabel(name)];
             }}
           />
-          <Legend />
-          <Scatter name={title} data={bubbleData} fill={DASHBOARD_THEME.colors.wppBlue}>
+          <Legend formatter={(value) => formatChartLabel(value)} />
+          {/* Current period bubbles */}
+          <Scatter name="Current" data={bubbleData} fill={DASHBOARD_THEME.colors.wppBlue}>
             {bubbleData.map((entry: any, index: number) => (
               <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
             ))}
           </Scatter>
+
+          {/* Comparison period bubbles (semi-transparent) */}
+          {hasComparison && (
+            <Scatter name="Previous" data={comparisonBubbleData} fill={DASHBOARD_THEME.colors.wppGreen}>
+              {comparisonBubbleData.map((entry: any, index: number) => (
+                <Cell
+                  key={`comp-cell-${index}`}
+                  fill={colors[index % colors.length]}
+                  fillOpacity={0.4}
+                />
+              ))}
+            </Scatter>
+          )}
         </ScatterChart>
       </ResponsiveContainer>
     </div>

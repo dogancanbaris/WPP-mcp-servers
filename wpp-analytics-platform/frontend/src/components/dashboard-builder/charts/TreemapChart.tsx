@@ -14,13 +14,19 @@ import { Loader2 } from 'lucide-react';
 import ReactECharts from 'echarts-for-react';
 import { ComponentConfig } from '@/types/dashboard-builder';
 import { DASHBOARD_THEME } from '@/lib/themes/dashboard-theme';
+import { formatChartLabel } from '@/lib/utils/label-formatter';
 import { useCascadedFilters } from '@/hooks/useCascadedFilters';
 import { usePageData } from '@/hooks/usePageData';
 import { useCurrentPageId } from '@/store/dashboardStore';
+import { getChartDefaults, resolveSortField } from '@/lib/defaults/chart-defaults';
+import { formatChartLabel } from '@/lib/utils/label-formatter';
 
 export interface TreemapChartProps extends Partial<ComponentConfig> {
   labelField?: string;
   valueField?: string;
+  sortBy?: string;
+  sortDirection?: 'ASC' | 'DESC';
+  limit?: number;
 }
 
 export const TreemapChart: React.FC<TreemapChartProps> = (props) => {
@@ -35,10 +41,19 @@ export const TreemapChart: React.FC<TreemapChartProps> = (props) => {
     showTitle = true,
     labelField = dimensions[0],
     valueField = metrics[0],
+    sortBy,
+    sortDirection,
+    limit,
     ...rest
   } = props;
 
   const currentPageId = useCurrentPageId();
+
+  // Apply professional defaults
+  const defaults = getChartDefaults('treemap');
+  const finalSortBy = sortBy || resolveSortField(defaults.sortBy, metrics, dimensions[0] || undefined);
+  const finalSortDirection = sortDirection || defaults.sortDirection;
+  const finalLimit = limit !== undefined ? limit : defaults.limit;
 
   // Use cascaded filters (Global → Page → Component)
   const { filters: cascadedFilters } = useCascadedFilters({
@@ -57,6 +72,10 @@ export const TreemapChart: React.FC<TreemapChartProps> = (props) => {
     dimensions,
     filters: cascadedFilters,
     enabled: !!dataset_id && metrics.length > 0 && dimensions.length > 0 && !!currentPageId,
+    chartType: 'treemap',
+    sortBy: finalSortBy,
+    sortDirection: finalSortDirection,
+    limit: finalLimit !== null ? finalLimit : undefined,
   });
 
   // Container styling
@@ -90,8 +109,13 @@ export const TreemapChart: React.FC<TreemapChartProps> = (props) => {
     );
   }
 
+  // Extract comparison data
+  const currentData = data?.data?.current || data?.data || [];
+  const comparisonData = data?.data?.comparison || [];
+  const hasComparison = comparisonData.length > 0;
+
   // No data state
-  if (!data?.data || data.data.length === 0) {
+  if (currentData.length === 0) {
     return (
       <div style={containerStyle} className="flex items-center justify-center">
         <p className="text-sm text-muted-foreground">No data available</p>
@@ -99,11 +123,20 @@ export const TreemapChart: React.FC<TreemapChartProps> = (props) => {
     );
   }
 
-  // Transform data for treemap
-  const treemapData = data.data.map((row: any) => ({
-    name: row[labelField] || 'Unknown',
-    value: parseFloat(row[valueField]) || 0
-  }));
+  // Transform data for treemap - show % change if comparison available
+  const treemapData = currentData.map((row: any, index: number) => {
+    const currentValue = parseFloat(row[valueField]) || 0;
+    const compValue = hasComparison ? parseFloat(comparisonData[index]?.[valueField]) || 0 : 0;
+    const percentChange = hasComparison && compValue > 0
+      ? ((currentValue - compValue) / compValue * 100).toFixed(1)
+      : null;
+
+    return {
+      name: row[labelField] || 'Unknown',
+      value: currentValue,
+      percentChange
+    };
+  });
 
   const option = {
     title: showTitle ? {
@@ -127,7 +160,14 @@ export const TreemapChart: React.FC<TreemapChartProps> = (props) => {
         data: treemapData,
         label: {
           show: true,
-          formatter: '{b}\n{c}',
+          formatter: (params: any) => {
+            const item = params.data;
+            if (item.percentChange !== null) {
+              const sign = parseFloat(item.percentChange) > 0 ? '+' : '';
+              return `${item.name}\n${item.value}\n(${sign}${item.percentChange}%)`;
+            }
+            return `${item.name}\n${item.value}`;
+          },
           color: '#fff',
           fontSize: 12
         },

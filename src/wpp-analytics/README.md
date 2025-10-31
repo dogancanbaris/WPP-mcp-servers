@@ -566,7 +566,7 @@ Row 3: 1x Summary chart (1/1)
 
 1. **Limit row count**: Max 8-10 rows per dashboard
 2. **Optimize queries**: Use pre-aggregated BigQuery tables
-3. **Cache results**: Enable BigQuery caching in Cube.js
+3. **Cache results**: BigQuery has built-in 24-hour caching
 4. **Lazy loading**: Components load as user scrolls
 5. **Mobile-friendly**: Test on mobile devices
 
@@ -583,9 +583,9 @@ Row 3: 1x Summary chart (1/1)
    ↓
 3. Frontend loads dashboard config
    ↓
-4. Components query Cube.js API
+4. Components query API endpoint (/api/datasets/[id]/query)
    ↓
-5. Cube.js queries BigQuery
+5. API queries BigQuery directly (with caching)
    ↓
 6. Results rendered in components
 ```
@@ -600,7 +600,7 @@ Row 3: 1x Summary chart (1/1)
 ### Real-time Updates
 
 - Dashboard config changes are immediate
-- Data refreshes based on Cube.js cache settings
+- Data refreshes based on BigQuery cache (24-hour default)
 - No page reload required for layout changes
 
 ---

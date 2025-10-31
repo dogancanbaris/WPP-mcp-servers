@@ -12,14 +12,19 @@ import ReactECharts from 'echarts-for-react';
 import { Loader2 } from 'lucide-react';
 import { ComponentConfig } from '@/types/dashboard-builder';
 import { standardizeDimensionValue } from '@/lib/utils/data-formatter';
+import { formatChartLabel } from '@/lib/utils/label-formatter';
 import { useCascadedFilters } from '@/hooks/useCascadedFilters';
 import { usePageData } from '@/hooks/usePageData';
 import { useCurrentPageId } from '@/store/dashboardStore';
+import { getChartDefaults, resolveSortField } from '@/lib/defaults/chart-defaults';
 
 export interface FunnelChartProps extends Partial<ComponentConfig> {
   funnelAlign?: 'left' | 'center' | 'right';
   funnelSort?: 'ascending' | 'descending' | 'none';
   gap?: number;
+  sortBy?: string;
+  sortDirection?: 'ASC' | 'DESC';
+  limit?: number;
 }
 
 export const FunnelChart: React.FC<FunnelChartProps> = ({
@@ -57,6 +62,9 @@ export const FunnelChart: React.FC<FunnelChartProps> = ({
   funnelAlign = 'center',
   funnelSort = 'descending',
   gap = 2,
+  sortBy,
+  sortDirection,
+  limit,
 
   ...rest
 }) => {
@@ -64,6 +72,12 @@ export const FunnelChart: React.FC<FunnelChartProps> = ({
 
   // Ensure dimensions array includes dimension prop
   const effectiveDimensions = dimension ? [dimension, ...dimensions.filter(d => d !== dimension)] : dimensions;
+
+  // Apply professional defaults
+  const defaults = getChartDefaults('funnel_chart');
+  const finalSortBy = sortBy || resolveSortField(defaults.sortBy, metrics, dimension || undefined);
+  const finalSortDirection = sortDirection || defaults.sortDirection;
+  const finalLimit = limit !== undefined ? limit : defaults.limit;
 
   // Use cascaded filters (Global → Page → Component)
   const { filters: cascadedFilters } = useCascadedFilters({
@@ -82,6 +96,10 @@ export const FunnelChart: React.FC<FunnelChartProps> = ({
     dimensions: effectiveDimensions,
     filters: cascadedFilters,
     enabled: !!dataset_id && metrics.length > 0 && !!currentPageId && (!!dimension || effectiveDimensions.length > 0),
+    chartType: 'funnel_chart',
+    sortBy: finalSortBy,
+    sortDirection: finalSortDirection,
+    limit: finalLimit !== null ? finalLimit : undefined,
   });
 
   const containerStyle: React.CSSProperties = {
@@ -119,9 +137,12 @@ export const FunnelChart: React.FC<FunnelChartProps> = ({
     );
   }
 
-  const chartData = data?.data || [];
+  // Extract comparison data
+  const currentData = data?.data?.current || data?.data || [];
+  const comparisonData = data?.data?.comparison || [];
+  const hasComparison = comparisonData.length > 0;
 
-  if (chartData.length === 0) {
+  if (currentData.length === 0) {
     return (
       <div style={containerStyle} className="flex items-center justify-center min-h-[300px]">
         <p className="text-sm text-muted-foreground">No data available</p>
@@ -130,11 +151,20 @@ export const FunnelChart: React.FC<FunnelChartProps> = ({
   }
 
   // Transform to ECharts funnel format with standardized names
-  const funnelData = chartData.map((row: any, idx: number) => ({
+  const funnelData = currentData.map((row: any, idx: number) => ({
     name: standardizeDimensionValue(row[dimension || ''], dimension || ''),
     value: Number(row[metrics[0]]),
     itemStyle: { color: chartColors[idx % chartColors.length] }
   }));
+
+  // For funnel charts with comparison, show % change in labels
+  const comparisonFunnelData = hasComparison
+    ? comparisonData.map((row: any, idx: number) => ({
+        name: standardizeDimensionValue(row[dimension || ''], dimension || ''),
+        value: Number(row[metrics[0]]),
+        itemStyle: { color: chartColors[idx % chartColors.length], opacity: 0.5 }
+      }))
+    : [];
 
   const option = {
     backgroundColor: 'transparent',
@@ -143,13 +173,80 @@ export const FunnelChart: React.FC<FunnelChartProps> = ({
       formatter: '{b}: {c} ({d}%)'
     },
     legend: {
+      formatter: (name: string) => formatChartLabel(name),
       show: showLegend,
       orient: 'vertical',
       left: 'left',
       top: 'center',
       textStyle: { color: '#666', fontSize: 11 }
     },
-    series: [
+    series: hasComparison ? [
+      // Current period funnel (left)
+      {
+        type: 'funnel',
+        left: '5%',
+        top: 40,
+        bottom: 40,
+        width: '40%',
+        min: 0,
+        max: 100,
+        minSize: '0%',
+        maxSize: '100%',
+        sort: funnelSort,
+        gap: gap,
+        label: {
+          show: true,
+          position: 'inside',
+          fontSize: 10,
+          color: '#fff',
+          formatter: '{b}: {c}'
+        },
+        labelLine: {
+          show: false
+        },
+        itemStyle: {
+          borderColor: '#fff',
+          borderWidth: 1
+        },
+        emphasis: {
+          label: {
+            fontSize: 11,
+            fontWeight: 'bold'
+          }
+        },
+        data: funnelData
+      },
+      // Comparison period funnel (right, semi-transparent)
+      {
+        type: 'funnel',
+        right: '5%',
+        top: 40,
+        bottom: 40,
+        width: '40%',
+        min: 0,
+        max: 100,
+        minSize: '0%',
+        maxSize: '100%',
+        sort: funnelSort,
+        gap: gap,
+        label: {
+          show: true,
+          position: 'inside',
+          fontSize: 10,
+          color: '#fff',
+          formatter: '{b}: {c}'
+        },
+        labelLine: {
+          show: false
+        },
+        itemStyle: {
+          borderColor: '#fff',
+          borderWidth: 1
+        },
+        data: comparisonFunnelData
+      }
+    ] : [
+      // Single funnel (no comparison)
       {
         type: 'funnel',
         left: showLegend ? '25%' : '10%',

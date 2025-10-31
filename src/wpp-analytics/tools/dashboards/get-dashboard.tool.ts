@@ -8,7 +8,7 @@ import { z } from 'zod';
 import { getLogger } from '../../../shared/logger.js';
 import { GetDashboardSchema } from './schemas.js';
 import { initSupabase, initSupabaseFromEnv } from './helpers.js';
-import type { RowConfig } from './types.js';
+import type { RowConfig, PageConfig } from './types.js';
 
 const logger = getLogger('wpp-analytics.dashboards.get');
 
@@ -54,46 +54,59 @@ for updates, or verify changes after modifications.
     "workspace_id": "workspace-uuid",
     "created_at": "2025-10-27T10:00:00.000Z",
     "updated_at": "2025-10-27T12:00:00.000Z",
-    "rows": [
+    "pages": [
       {
-        "id": "row-header",
-        "columns": [
+        "id": "page-1",
+        "name": "Overview",
+        "order": 0,
+        "filters": [],
+        "rows": [
           {
-            "id": "col-title",
-            "width": "3/4",
-            "component": {
-              "type": "title",
-              "title": "SEO Overview"
-            }
-          },
-          {
-            "id": "col-date-filter",
-            "width": "1/4",
-            "component": {
-              "type": "date_filter"
-            }
-          }
-        ]
-      },
-      {
-        "id": "row-scorecards",
-        "columns": [
-          {
-            "id": "col-clicks",
-            "width": "1/4",
-            "component": {
-              "type": "scorecard",
-              "title": "Clicks",
-              "metrics": ["clicks"]
-            }
+            "id": "row-header",
+            "columns": [
+              {
+                "id": "col-title",
+                "width": "3/4",
+                "component": {
+                  "type": "title",
+                  "title": "SEO Overview"
+                }
+              },
+              {
+                "id": "col-date-filter",
+                "width": "1/4",
+                "component": {
+                  "type": "date_range_filter"
+                }
+              }
+            ]
           }
         ]
       }
     ],
+    "rows": [],
+    "filters": {
+      "pages": [
+        {
+          "pageId": "page-1",
+          "pageName": "Overview",
+          "filters": []
+        }
+      ]
+    },
+    "theme": {
+      "primaryColor": "#2563eb",
+      "backgroundColor": "#ffffff",
+      "textColor": "#000000",
+      "borderColor": "#e5e7eb"
+    },
     "metadata": {
+      "page_count": 1,
       "row_count": 2,
       "component_count": 5,
-      "component_types": ["title", "date_filter", "scorecard"]
+      "has_multi_page": false,
+      "has_filters": false,
+      "component_types": ["title", "date_range_filter", "scorecard"]
     }
   }
 }
@@ -166,7 +179,53 @@ for updates, or verify changes after modifications.
       }
 
       const config = dashboard.config || {};
-      const rows = config.rows || [];
+      const pages = config.pages || [];
+      const legacyRows = config.rows || [];
+
+      // Calculate metadata across all pages
+      let totalRowCount = 0;
+      let totalComponentCount = 0;
+      const uniqueComponentTypes = new Set<string>();
+      let hasPageFilters = false;
+
+      pages.forEach((page: PageConfig) => {
+        if (page.rows) {
+          totalRowCount += page.rows.length;
+
+          page.rows.forEach((row: RowConfig) => {
+            row.columns.forEach(col => {
+              if (col.component) {
+                totalComponentCount++;
+                uniqueComponentTypes.add(col.component.type);
+              }
+            });
+          });
+        }
+
+        if (page.filters && page.filters.length > 0) {
+          hasPageFilters = true;
+        }
+      });
+
+      // If no pages, calculate from legacy rows
+      if (pages.length === 0 && legacyRows.length > 0) {
+        totalRowCount = legacyRows.length;
+        legacyRows.forEach((row: RowConfig) => {
+          row.columns.forEach(col => {
+            if (col.component) {
+              totalComponentCount++;
+              uniqueComponentTypes.add(col.component.type);
+            }
+          });
+        });
+      }
+
+      // Build filter structure from pages
+      const pageFilters = pages.map((page: PageConfig) => ({
+        pageId: page.id,
+        pageName: page.name,
+        filters: page.filters || [],
+      }));
 
       // Build response
       const response: any = {
@@ -176,36 +235,39 @@ for updates, or verify changes after modifications.
         workspace_id: dashboard.workspace_id,
         created_at: dashboard.created_at,
         updated_at: dashboard.updated_at,
-        rows,
+
+        // Return pages array (new multi-page structure)
+        pages,
+
+        // Legacy rows for backward compatibility
+        rows: legacyRows,
+
+        // Page-level filter information
+        filters: {
+          pages: pageFilters,
+        },
+
+        // Theme configuration
+        theme: config.theme,
       };
 
       // Add metadata if requested
       if (validated.includeMetadata) {
-        const componentCount = rows.reduce(
-          (sum: number, row: RowConfig) =>
-            sum + row.columns.filter(col => col.component).length,
-          0
-        );
-
-        const componentTypes = new Set<string>();
-        rows.forEach((row: RowConfig) => {
-          row.columns.forEach(col => {
-            if (col.component) {
-              componentTypes.add(col.component.type);
-            }
-          });
-        });
-
         response.metadata = {
-          row_count: rows.length,
-          component_count: componentCount,
-          component_types: Array.from(componentTypes),
+          page_count: pages.length,
+          row_count: totalRowCount,
+          component_count: totalComponentCount,
+          has_multi_page: pages.length > 1,
+          has_filters: hasPageFilters,
+          component_types: Array.from(uniqueComponentTypes),
         };
       }
 
       logger.info('Dashboard retrieved successfully', {
         dashboardId: validated.dashboard_id,
-        rowCount: rows.length,
+        pageCount: pages.length,
+        rowCount: totalRowCount,
+        componentCount: totalComponentCount,
       });
 
       return {

@@ -61,7 +61,7 @@ Critical for production deployment:
 
 - **[SAFETY-AUDIT.md](safety/SAFETY-AUDIT.md)** ⭐ **Must-read before production**
   - Complete risk analysis
-  - All 58 tools categorized by risk
+  - All 65 tools categorized by risk
   - 8 critical scenarios
   - What's protected vs gaps
 

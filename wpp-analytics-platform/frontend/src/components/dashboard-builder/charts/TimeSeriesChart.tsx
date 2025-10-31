@@ -7,18 +7,23 @@
  * Queries: GET /api/datasets/[id]/query with caching
  */
 
-import { useQuery } from '@tanstack/react-query';
 import ReactECharts from 'echarts-for-react';
 import { Loader2 } from 'lucide-react';
 import { ComponentConfig } from '@/types/dashboard-builder';
 import { formatMetricValue } from '@/lib/utils/metric-formatter';
 import { DASHBOARD_THEME } from '@/lib/themes/dashboard-theme';
-import { useGlobalFilters } from '@/hooks/useGlobalFilters';
 import { usePageData } from '@/hooks/usePageData';
 import { useCurrentPageId } from '@/store/dashboardStore';
 import { useCascadedFilters } from '@/hooks/useCascadedFilters';
+import { getChartDefaults, resolveSortField } from '@/lib/defaults/chart-defaults';
+import { formatChartLabel } from '@/lib/utils/label-formatter';
+import { addDays, format as formatDate, parseISO } from 'date-fns';
 
-export interface TimeSeriesChartProps extends Partial<ComponentConfig> {}
+export interface TimeSeriesChartProps extends Partial<ComponentConfig> {
+  sortBy?: string;
+  sortDirection?: 'ASC' | 'DESC';
+  limit?: number;
+}
 
 export const TimeSeriesChart: React.FC<TimeSeriesChartProps> = (props) => {
   // Apply global theme
@@ -28,16 +33,25 @@ export const TimeSeriesChart: React.FC<TimeSeriesChartProps> = (props) => {
   const {
     id: componentId,
     dataset_id,
-    dimension = 'date',
+    dimension,
     metrics = [],
     dateRange,
     title = 'Time Series Chart',
     showTitle = true,
     showLegend = true,
+    sortBy,
+    sortDirection,
+    limit,
     ...rest
   } = props;
 
   const currentPageId = useCurrentPageId();
+
+  // Apply professional defaults
+  const defaults = getChartDefaults('time_series');
+  const finalSortBy = sortBy || resolveSortField(defaults.sortBy, metrics, dimension || undefined);
+  const finalSortDirection = sortDirection || defaults.sortDirection;
+  const finalLimit = limit !== undefined ? limit : defaults.limit;
 
   // Use cascaded filters (Global → Page → Component)
   const { filters: cascadedFilters } = useCascadedFilters({
@@ -65,7 +79,25 @@ export const TimeSeriesChart: React.FC<TimeSeriesChartProps> = (props) => {
     dimensions: dimension ? [dimension] : undefined,
     filters: cascadedFilters,
     enabled: !!dataset_id && metrics.length > 0 && !!dimension && !!currentPageId,
+    fillGaps: true,
+    chartType: 'time_series',
+    sortBy: finalSortBy,
+    sortDirection: finalSortDirection,
+    limit: finalLimit !== null ? finalLimit : undefined,
   });
+
+  // Debug: inputs and fetch enablement
+  try {
+    console.log('[TimeSeriesChart:init]', {
+      componentId,
+      dataset_id,
+      metrics,
+      dimension,
+      currentPageId,
+      filtersCount: cascadedFilters.length,
+      enabled: !!dataset_id && metrics.length > 0 && !!dimension && !!currentPageId
+    });
+  } catch {}
 
   // Styling from global theme
   const containerStyle: React.CSSProperties = {
@@ -103,10 +135,150 @@ export const TimeSeriesChart: React.FC<TimeSeriesChartProps> = (props) => {
     );
   }
 
-  // Extract data
-  const chartData = data?.data || [];
+  // Extract data with comparison support
+  const currentData = data?.data?.current || data?.data || [];
+  const comparisonData = data?.data?.comparison || [];
 
-  if (chartData.length === 0) {
+  // Debug: response shape
+  try {
+    const shape = Array.isArray(data?.data) ? 'array' : (data?.data ? Object.keys(data?.data) : 'none');
+    console.log('[TimeSeriesChart:data]', {
+      shape,
+      rowCount: Array.isArray(currentData) ? currentData.length : 0,
+      cmpCount: Array.isArray(comparisonData) ? comparisonData.length : 0,
+      firstRow: currentData?.[0],
+    });
+  } catch {}
+
+  // Helper: build continuous date array from filters (if present)
+  const findDateFilter = () => {
+    // cascadedFilters come as { member, operator, values }
+    return cascadedFilters.find((f: any) => f.member === (dimension || 'date') && f.operator === 'inDateRange');
+  };
+
+  const buildDateArray = (startStr: string, endStr: string) => {
+    const out: string[] = [];
+    const start = parseISO(startStr);
+    const end = parseISO(endStr);
+    for (let d = start; d <= end; d = addDays(d, 1)) {
+      out.push(formatDate(d, 'yyyy-MM-dd'));
+    }
+    return out;
+  };
+
+  // Build aligned X axis based on selected date range (guarantees 1→end coverage)
+  let xAxisDates: string[] | null = null;
+  const dateFilter = findDateFilter();
+  if (dateFilter && dateFilter.values?.length >= 2) {
+    xAxisDates = buildDateArray(dateFilter.values[0], dateFilter.values[1]);
+  }
+
+  // Index data by date for alignment and zero-fill
+  const normalizeDateKey = (val: any): string | null => {
+    if (!val) return null;
+    if (typeof val === 'string') {
+      // Try to detect ISO date or yyyy-MM-dd; fallback to Date parsing
+      const parsed = parseISO(val);
+      if (!isNaN(parsed.getTime())) return formatDate(parsed, 'yyyy-MM-dd');
+      const asDate = new Date(val);
+      if (!isNaN(asDate.getTime())) return formatDate(asDate, 'yyyy-MM-dd');
+      return val; // as-is
+    }
+    if (val instanceof Date) {
+      if (!isNaN(val.getTime())) return formatDate(val, 'yyyy-MM-dd');
+      return null;
+    }
+    if (typeof val === 'object') {
+      // Common BigQuery / connector shapes
+      if (val && typeof (val as any).value === 'string') {
+        const parsed = parseISO((val as any).value);
+        if (!isNaN(parsed.getTime())) return formatDate(parsed, 'yyyy-MM-dd');
+      }
+      if (
+        (val as any).year !== undefined &&
+        (val as any).month !== undefined &&
+        (val as any).day !== undefined
+      ) {
+        const y = Number((val as any).year);
+        const m = Number((val as any).month);
+        const d = Number((val as any).day);
+        const dt = new Date(y, (m || 1) - 1, d || 1);
+        if (!isNaN(dt.getTime())) return formatDate(dt, 'yyyy-MM-dd');
+      }
+      // Last resort: try Date constructor on a numeric epoch
+      if (typeof (val as any).seconds === 'number') {
+        const dt = new Date((val as any).seconds * 1000);
+        if (!isNaN(dt.getTime())) return formatDate(dt, 'yyyy-MM-dd');
+      }
+    }
+    const asDate = new Date(val);
+    if (!isNaN(asDate.getTime())) return formatDate(asDate, 'yyyy-MM-dd');
+    return null;
+  };
+
+  const indexByDate = (rows: any[]) => {
+    const map = new Map<string, any>();
+    rows.forEach((row) => {
+      const keyRaw = row[dimension || 'date'];
+      const key = normalizeDateKey(keyRaw);
+      if (key) {
+        map.set(key, row);
+      }
+    });
+    return map;
+  };
+
+  // Robust metric getter: handle case differences and nested { value }
+  const getMetricValue = (row: any, metric: string): number => {
+    if (!row) return 0;
+    const candidates = [
+      row[metric],
+      row?.[metric?.toLowerCase?.()] ,
+      row?.[metric?.toUpperCase?.()],
+      row?.[metric]?.value,
+    ];
+    for (const c of candidates) {
+      const n = Number(c);
+      if (!Number.isNaN(n) && c !== undefined && c !== null) return n;
+    }
+    return 0;
+  };
+
+  let alignedCurrent: any[] = currentData;
+  let alignedComparison: any[] = comparisonData;
+
+  if (xAxisDates) {
+    const curMap = indexByDate(currentData);
+    const cmpMap = indexByDate(comparisonData);
+    try { console.log('[TimeSeriesChart:alignment]', { xAxisDates: xAxisDates.length, curKeys: curMap.size, cmpKeys: cmpMap.size }); } catch {}
+    alignedCurrent = xAxisDates.map((d) => {
+      const row = curMap.get(d);
+      if (row) return row;
+      const blank: any = { [dimension || 'date']: d };
+      metrics.forEach((m) => (blank[m] = 0));
+      return blank;
+    });
+    // If comparison present and comparison dates derivable from filter.comparisonValues, align similarly
+    if (dateFilter?.comparisonEnabled && dateFilter?.comparisonValues?.length >= 2) {
+      const cmpDates = buildDateArray(dateFilter.comparisonValues[0], dateFilter.comparisonValues[1]);
+      // Align previous period by index against current xAxisDates (overlay lines match positions)
+      alignedComparison = xAxisDates.map((_, idx) => {
+        const d = cmpDates[idx];
+        const row = d ? cmpMap.get(d) : undefined;
+        if (row) return row;
+        const blank: any = { [dimension || 'date']: d || '' };
+        metrics.forEach((m) => (blank[m] = 0));
+        return blank;
+      });
+    } else if (comparisonData.length > 0) {
+      // Fallback: use raw comparison data when filter metadata is unavailable but data exists
+      alignedComparison = comparisonData;
+    } else {
+      alignedComparison = [];
+    }
+  }
+
+  if (currentData.length === 0) {
     return (
       <div style={containerStyle} className="flex items-center justify-center min-h-[400px]">
         <p className="text-sm text-muted-foreground">No data available</p>
@@ -114,19 +286,58 @@ export const TimeSeriesChart: React.FC<TimeSeriesChartProps> = (props) => {
     );
   }
 
-  // Build ECharts series
-  const series = metrics.map((metric, index) => ({
-    name: metric.charAt(0).toUpperCase() + metric.slice(1),
-    type: 'line',
-    smooth: true,
-    data: chartData.map((row: any) => row[metric]),
-    itemStyle: { color: chartColors[index % chartColors.length] },
-    lineStyle: { width: 2 }
-  }));
+  // Build ECharts series with comparison
+  const series: any[] = [];
 
   // Determine if we need dual Y-axis (when metrics have vastly different scales)
   const useDualAxis = metrics.length === 2 &&
-    (metrics.includes('clicks') && metrics.includes('impressions')); // Clicks vs Impressions need dual axis
+    (metrics.includes('clicks') && metrics.includes('impressions'));
+
+  // Helper to assign axis index per metric for both current and comparison series
+  const getAxisIndex = (metric: string) => {
+    if (!useDualAxis) return undefined;
+    const idx = metrics.indexOf(metric);
+    if (idx < 0) return 0;
+    return idx > 0 ? 1 : 0; // clamp to 0 or 1
+  };
+
+  // Current period series
+  metrics.forEach((metric, index) => {
+    const s: any = {
+      name: metric.charAt(0).toUpperCase() + metric.slice(1),
+      type: 'line',
+      smooth: true,
+      data: (xAxisDates ? alignedCurrent : currentData).map((row: any) => getMetricValue(row, metric)),
+      lineStyle: { width: 2 },
+      itemStyle: { color: chartColors[index % chartColors.length] },
+    };
+    const axisIdx = getAxisIndex(metric);
+    if (axisIdx !== undefined) s.yAxisIndex = axisIdx;
+    series.push(s);
+  });
+
+  // Comparison period series (dashed lines)
+  if ((xAxisDates ? alignedComparison : comparisonData).length > 0) {
+    metrics.forEach((metric, index) => {
+      const s: any = {
+        name: `${metric.charAt(0).toUpperCase() + metric.slice(1)} (Previous)`,
+        type: 'line',
+        smooth: true,
+        data: (xAxisDates ? alignedComparison : comparisonData).map((row: any) => getMetricValue(row, metric)),
+        lineStyle: {
+          width: 2,
+          type: 'dashed',
+        },
+        itemStyle: {
+          color: chartColors[index % chartColors.length],
+          opacity: 0.7,
+        },
+      };
+      const axisIdx = getAxisIndex(metric);
+      if (axisIdx !== undefined) s.yAxisIndex = axisIdx;
+      series.push(s);
+    });
+  }
 
   // ECharts option
   const option = {
@@ -160,7 +371,7 @@ export const TimeSeriesChart: React.FC<TimeSeriesChartProps> = (props) => {
     },
     xAxis: {
       type: 'category',
-      data: chartData.map((row: any) => row[dimension]),
+      data: (xAxisDates ? xAxisDates : currentData.map((row: any) => row[dimension])),
       boundaryGap: false,
       axisLine: { lineStyle: { color: '#e0e0e0', width: 1 } },
       axisLabel: { color: '#666', fontSize: 11 }
@@ -188,11 +399,13 @@ export const TimeSeriesChart: React.FC<TimeSeriesChartProps> = (props) => {
       axisLabel: { color: '#666', fontSize: 11 },
       splitLine: { lineStyle: { color: '#f5f5f5', type: 'dashed' } }
     },
-    series: useDualAxis ? series.map((s, idx) => ({
-      ...s,
-      yAxisIndex: idx // First metric on left axis, second on right axis
-    })) : series
+    series
   };
+
+  try {
+    const sample = series.map((s) => ({ name: s.name, data: s.data?.slice?.(0, 10) }));
+    console.log('[TimeSeriesChart:series]', { seriesCount: series.length, names: series.map(s => s.name), sample });
+  } catch {}
 
   return (
     <div style={containerStyle}>

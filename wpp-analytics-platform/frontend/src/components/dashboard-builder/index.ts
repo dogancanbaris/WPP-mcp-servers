@@ -9,7 +9,7 @@ export { Column } from './Column';
 
 // Component Utilities
 export { ComponentPlaceholder } from './ComponentPlaceholder';
-export { ComponentPicker } from './ComponentPicker';
+export { ComponentPicker } from './dialogs/ComponentPicker';
 export { ChartWrapper } from './ChartWrapper';
 
 // Settings Components

@@ -3,8 +3,8 @@
  *
  * Defines the multi-page dashboard system that enables:
  * - Organizing complex dashboards (10+ components) into logical pages
- * - 3-level filter cascade: Global → Page → Component (each can override parent)
- * - 3-level style cascade: Global Theme → Page Styles → Component Styles
+ * - 2-level filter cascade: Page → Component (each can override parent)
+ * - 2-level style cascade: Page Styles → Component Styles
  */
 
 import { RowConfig, FilterConfig, DateRangeConfig } from './dashboard-builder';
@@ -35,21 +35,18 @@ export interface PageConfig {
 
   /**
    * Page-level filter overrides (optional)
-   * If not set, inherits from global dashboard filters
    * If set, these filters apply to all components on this page unless component overrides
    */
   filters?: FilterConfig[];
 
   /**
    * Page-level date range override (optional)
-   * If not set, inherits from global dashboard date range
    * If set, this date range applies to all components on this page unless component overrides
    */
   dateRange?: DateRangeConfig;
 
   /**
    * Page-level style overrides (optional)
-   * If not set, inherits from global theme
    * If set, these styles apply to all components on this page unless component overrides
    */
   pageStyles?: PageStyles;

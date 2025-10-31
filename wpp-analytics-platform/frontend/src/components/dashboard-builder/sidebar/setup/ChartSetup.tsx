@@ -41,6 +41,28 @@ interface DateRange {
   endDate?: Date;
 }
 
+const DATE_PRESET_ALIASES: Record<string, string> = {
+  last7days: 'last7Days',
+  last14days: 'last14Days',
+  last28days: 'last28Days',
+  last30days: 'last30Days',
+  last90days: 'last90Days',
+  thisweek: 'thisWeek',
+  lastweek: 'lastWeek',
+  thismonth: 'thisMonth',
+  lastmonth: 'lastMonth',
+  thisquarter: 'thisQuarter',
+  lastquarter: 'lastQuarter',
+  all_time: 'allTime',
+};
+
+const normalizeDatePreset = (preset?: string): string | undefined => {
+  if (!preset) return undefined;
+  const lower = preset.toLowerCase();
+  if (lower === 'custom') return 'custom';
+  return DATE_PRESET_ALIASES[lower] ?? preset;
+};
+
 /**
  * ChartSetup Component - Enhanced Looker Studio Style
  *
@@ -93,15 +115,15 @@ export const ChartSetup: React.FC<ChartSetupProps> = ({ config, onUpdate }) => {
 
   const dateRange: DateRange = config.dateRange
     ? typeof config.dateRange === 'string'
-      ? { type: 'preset', preset: config.dateRange }
+      ? { type: 'preset', preset: normalizeDatePreset(config.dateRange) || 'last30Days' }
       : config.dateRange.start && config.dateRange.end
         ? {
             type: 'custom',
             startDate: new Date(config.dateRange.start),
             endDate: new Date(config.dateRange.end)
           }
-        : { type: 'preset', preset: 'last30days' }
-    : { type: 'preset', preset: 'last30days' };
+        : { type: 'preset', preset: 'last30Days' }
+    : { type: 'preset', preset: 'last30Days' };
 
   /**
    * Fetch available fields from API on mount

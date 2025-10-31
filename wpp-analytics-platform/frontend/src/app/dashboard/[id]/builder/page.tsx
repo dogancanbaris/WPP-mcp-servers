@@ -1,15 +1,13 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import { DashboardCanvas } from '@/components/dashboard-builder/DashboardCanvas';
 import { EditorTopbar } from '@/components/dashboard-builder/topbar';
 import { SettingsSidebar } from '@/components/dashboard-builder/sidebar';
-import { GlobalFilters } from '@/components/dashboard-builder/GlobalFilters';
 import { PageTabs } from '@/components/dashboard-builder/PageTabs';
 import { useDashboardStore, useCurrentPageId, usePages, useCurrentPage } from '@/store/dashboardStore';
-import { useFilterStore } from '@/store/filterStore';
 import { useViewActions } from '@/components/dashboard-builder/actions/view-actions';
 import { useDataRefresh } from '@/hooks/useDataRefresh';
 import type { RowConfig, ColumnConfig } from '@/types/dashboard-builder';
@@ -34,14 +32,15 @@ export default function DashboardBuilder() {
     updateComponent,
     loadDashboard: loadDashboardFromStore,
     setCurrentPage,
+    setPageFilters,
   } = useDashboardStore();
 
-  const { isFilterBarVisible } = useFilterStore();
   const { showGrid } = useViewActions();
 
   const currentPageId = useCurrentPageId();
   const pages = usePages();
   const currentPage = useCurrentPage();
+  const [filtersReady, setFiltersReady] = useState(false);
 
   // Load dashboard on mount
   useEffect(() => {
@@ -56,6 +55,36 @@ export default function DashboardBuilder() {
       setCurrentPage(pageIdFromUrl);
     }
   }, [pageIdFromUrl, pages, setCurrentPage]);
+
+  // Ensure a date range filter exists before rendering charts to prevent initial fetch without filters
+  useEffect(() => {
+    if (!pages || !currentPageId) return;
+    const page = pages.find(p => p.id === currentPageId);
+    if (!page) return;
+    const hasDate = (page.filters || []).some(f => f.field === 'date' && f.operator === 'inDateRange' && Array.isArray(f.values) && f.values.length >= 2);
+    if (hasDate) {
+      setFiltersReady(true);
+      return;
+    }
+    // Seed Last 30 Days (yesterday inclusive)
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const start = new Date(yesterday);
+    start.setDate(start.getDate() - 29);
+    const fmt = (d: Date) => d.toISOString().slice(0, 10);
+    const cleaned = (page.filters || []).filter(f => !(f.field === 'date' && f.operator === 'inDateRange'));
+    setPageFilters(currentPageId, [
+      ...cleaned,
+      {
+        id: 'date-control-default',
+        field: 'date',
+        operator: 'inDateRange',
+        values: [fmt(start), fmt(yesterday)],
+        enabled: true,
+      } as any,
+    ]);
+    setFiltersReady(true);
+  }, [pages, currentPageId, setPageFilters]);
 
   // Loading state - Professional with fade-in animation
   if (isLoading) {
@@ -100,27 +129,26 @@ export default function DashboardBuilder() {
         <PageTabs />
       )}
 
-      {/* Global Filters Bar - Smooth slide-in animation */}
-      {isFilterBarVisible && (
-        <div className="border-b bg-surface shadow-elevation-1 slide-in-top">
-          <GlobalFilters className="mx-auto max-w-7xl p-4" />
-        </div>
-      )}
-
       {/* Main Content Area - Canvas + Sidebar */}
       <div className="flex-1 flex overflow-hidden">
         {/* Main Canvas - z-index 10 */}
         <div className="flex-1 overflow-hidden z-canvas">
-          <DashboardCanvas
-            dashboardId={dashboardId}
-            onSelectComponent={selectComponent}
-            showGrid={showGrid}
-            viewMode={viewMode}
-          />
+          {filtersReady ? (
+            <DashboardCanvas
+              dashboardId={dashboardId}
+              onSelectComponent={selectComponent}
+              showGrid={showGrid}
+              viewMode={viewMode}
+            />
+          ) : (
+            <div className="h-full w-full flex items-center justify-center">
+              <div className="text-center text-sm text-muted-foreground">Preparing filters…</div>
+            </div>
+          )}
         </div>
 
         {/* Right Settings Sidebar - z-index 40, smooth slide-in - only show in edit mode */}
-        {viewMode === 'edit' && (
+        {viewMode === 'edit' && filtersReady && (
           <div className="z-sidebar slide-in-right">
             <SettingsSidebar
               selectedComponent={currentPage?.rows

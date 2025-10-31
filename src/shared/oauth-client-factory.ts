@@ -13,10 +13,15 @@ import * as fs from 'fs';
 
 const logger = getLogger('oauth-client-factory');
 
-// OAuth configuration constants
-const GOOGLE_CLIENT_ID = '60184572847-2knv6l327muo06kdp35km87049hagsot.apps.googleusercontent.com';
-const GOOGLE_CLIENT_SECRET = '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';
-const TOKENS_PATH = '/home/dogancanbaris/projects/MCP Servers/config/gsc-tokens.json';
+// OAuth configuration constants (SECURITY: Load from environment, never hardcode)
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
+const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || '';
+const TOKENS_PATH = process.env.GSC_TOKENS_PATH || '/home/dogancanbaris/projects/MCP Servers/config/gsc-tokens.json';
+
+// Validate credentials are loaded
+if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
+  logger.warn('OAuth credentials not loaded from environment - token refresh may fail');
+}
 
 /**
  * Create OAuth2Client from access token

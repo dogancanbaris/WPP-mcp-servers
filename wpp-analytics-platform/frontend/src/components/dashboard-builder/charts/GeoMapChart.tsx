@@ -25,9 +25,12 @@ import * as echarts from 'echarts';
 import { Loader2 } from 'lucide-react';
 import { ComponentConfig } from '@/types/dashboard-builder';
 import { DASHBOARD_THEME } from '@/lib/themes/dashboard-theme';
+import { formatChartLabel } from '@/lib/utils/label-formatter';
 import { usePageData } from '@/hooks/usePageData';
 import { useCurrentPageId } from '@/store/dashboardStore';
 import { useCascadedFilters } from '@/hooks/useCascadedFilters';
+import { getChartDefaults, resolveSortField } from '@/lib/defaults/chart-defaults';
+import { formatChartLabel } from '@/lib/utils/label-formatter';
 
 export interface GeoMapDataPoint {
   /** Region/city name (must match GeoJSON feature name) */
@@ -113,8 +116,18 @@ export const GeoMapChart: React.FC<GeoMapChartProps> = (props) => {
     onRegionClick,
     geoJsonName = 'customMap',
     style,
+    // Professional defaults (optional overrides)
+    sortBy,
+    sortDirection,
+    limit,
     ...rest
   } = props;
+
+  // Apply professional defaults
+  const defaults = getChartDefaults('geomap');
+  const finalSortBy = sortBy || resolveSortField(defaults.sortBy, metrics, dimensions?.[0]);
+  const finalSortDirection = sortDirection || defaults.sortDirection;
+  const finalLimit = limit !== undefined ? limit : defaults.limit;
 
   const chartRef = useRef<HTMLDivElement>(null);
   const chartInstanceRef = useRef<echarts.ECharts | null>(null);
@@ -139,6 +152,10 @@ export const GeoMapChart: React.FC<GeoMapChartProps> = (props) => {
     dimensions,
     filters: cascadedFilters,
     enabled: !!dataset_id && dimensions.length > 0 && !!currentPageId,
+    chartType: 'geomap',
+    sortBy: finalSortBy,
+    sortDirection: finalSortDirection,
+    limit: finalLimit,
   });
 
   // Transform API data to GeoMapDataPoint format

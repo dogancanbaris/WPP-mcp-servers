@@ -14,6 +14,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { usePageLevelControl } from '@/hooks/usePageLevelControl';
 
 /**
  * Available dimension options for analytics
@@ -137,6 +138,11 @@ export interface DimensionControlProps {
    * Custom info text
    */
   infoText?: string;
+
+  /**
+   * Optional unique ID for the control (for page-level filter tracking)
+   */
+  id?: string;
 }
 
 /**
@@ -164,7 +170,11 @@ export function DimensionControl({
   className = '',
   showInfo = true,
   infoText = 'Change the dimension to view data broken down by different attributes',
+  id,
 }: DimensionControlProps) {
+  // Use page-level control hook for filter emission
+  const { emitFilter } = usePageLevelControl(id || 'dimension-control');
+
   // Find current dimension details
   const currentDimension = availableDimensions.find(d => d.value === value);
 
@@ -181,6 +191,18 @@ export function DimensionControl({
       return acc;
     }, {} as Record<string, DimensionOption[]>);
   }, [availableDimensions, groupByCategory]);
+
+  // Handle dimension change with page-level filter emission
+  const handleDimensionChange = (newDimension: string) => {
+    onChange(newDimension);
+
+    // Emit dimension change as page-level filter
+    emitFilter({
+      field: 'selected_dimension',
+      operator: 'equals',
+      values: [newDimension],
+    });
+  };
 
   return (
     <div className={`flex flex-col gap-2 ${className}`}>
@@ -204,7 +226,7 @@ export function DimensionControl({
 
       <Select
         value={value}
-        onValueChange={onChange}
+        onValueChange={handleDimensionChange}
         disabled={disabled}
       >
         <SelectTrigger id="dimension-control" className="w-full">

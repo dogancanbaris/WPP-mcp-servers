@@ -2200,13 +2200,273 @@ export declare const allTools: ({
     inputSchema: {
         type: "object";
         properties: {
+            platform: {
+                type: string;
+                enum: string[];
+                description: string;
+            };
+            property: {
+                type: string;
+                description: string;
+            };
+            dateRange: {
+                type: string;
+                items: {
+                    type: string;
+                };
+                minItems: number;
+                maxItems: number;
+                description: string;
+            };
+            dimensions: {
+                type: string;
+                items: {
+                    type: string;
+                };
+                description: string;
+            };
+            tableName: {
+                type: string;
+                description: string;
+            };
+            workspaceId: {
+                type: string;
+                description: string;
+            };
+            useSharedTable: {
+                type: string;
+                description: string;
+                default: boolean;
+            };
+            __oauthToken: {
+                type: string;
+                description: string;
+            };
+        };
+        required: string[];
+    };
+    handler(input: any): Promise<{
+        success: boolean;
+        error: string;
+        table?: undefined;
+        tableName?: undefined;
+        rows_inserted?: undefined;
+        dimensions_pulled?: undefined;
+        platform?: undefined;
+        property?: undefined;
+        dateRange?: undefined;
+    } | {
+        success: boolean;
+        table: string;
+        tableName: string;
+        rows_inserted: number;
+        dimensions_pulled: any;
+        platform: any;
+        property: any;
+        dateRange: any;
+        error?: undefined;
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            bigqueryTable: {
+                type: string;
+            };
+            dateRange: {
+                type: string;
+                items: {
+                    type: string;
+                };
+                minItems: number;
+                maxItems: number;
+            };
+        };
+        required: string[];
+    };
+    handler(input: any): Promise<{
+        success: boolean;
+        insights: {
+            totals: {
+                clicks: any;
+                impressions: any;
+                ctr: string;
+                position: any;
+            };
+            trends: {
+                firstWeekAvg: string;
+                lastWeekAvg: string;
+                clicksChange: string;
+                direction: string;
+            };
+            topPerformers: {
+                topPage: {
+                    url: any;
+                    clicks: any;
+                    share: string;
+                    position: any;
+                };
+                topQuery: {
+                    query: any;
+                    clicks: any;
+                    position: any;
+                };
+                top5Pages: {
+                    url: any;
+                    clicks: any;
+                }[];
+                top5Queries: {
+                    query: any;
+                    clicks: any;
+                    position: any;
+                }[];
+            };
+            deviceInsights: {
+                mobileShare: string;
+                mobileCTR: string;
+                desktopCTR: string;
+                mobileAdvantage: string;
+            };
+            geoInsights: {
+                topCountry: any;
+                topCountryShare: string;
+                highestCTRCountry: any;
+                highestCTR: string;
+                top5Countries: {
+                    country: any;
+                    clicks: any;
+                    ctr: string;
+                }[];
+            };
+        };
+        usage_instructions: string[];
+        error?: undefined;
+    } | {
+        success: boolean;
+        error: string;
+        insights?: undefined;
+        usage_instructions?: undefined;
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
             title: {
+                type: string;
+                description: string;
+            };
+            description: {
                 type: string;
                 description: string;
             };
             datasource: {
                 type: string;
                 description: string;
+            };
+            dataset_id: {
+                type: string;
+                description: string;
+            };
+            pages: {
+                type: string;
+                description: string;
+                items: {
+                    type: string;
+                    properties: {
+                        name: {
+                            type: string;
+                            description: string;
+                        };
+                        order: {
+                            type: string;
+                            description: string;
+                        };
+                        filters: {
+                            type: string;
+                            description: string;
+                            items: {
+                                type: string;
+                                properties: {
+                                    field: {
+                                        type: string;
+                                    };
+                                    operator: {
+                                        type: string;
+                                    };
+                                    values: {
+                                        type: string;
+                                        items: {
+                                            type: string;
+                                        };
+                                    };
+                                };
+                            };
+                        };
+                        pageStyles: {
+                            type: string;
+                            description: string;
+                            properties: {
+                                backgroundColor: {
+                                    type: string;
+                                };
+                                padding: {
+                                    type: string;
+                                };
+                                gap: {
+                                    type: string;
+                                };
+                            };
+                        };
+                        rows: {
+                            type: string;
+                            description: string;
+                            items: {
+                                type: string;
+                                properties: {
+                                    columns: {
+                                        type: string;
+                                        items: {
+                                            type: string;
+                                            properties: {
+                                                width: {
+                                                    type: string;
+                                                    enum: string[];
+                                                };
+                                                component: {
+                                                    type: string;
+                                                    properties: {
+                                                        type: {
+                                                            type: string;
+                                                        };
+                                                        title: {
+                                                            type: string;
+                                                        };
+                                                        dimension: {
+                                                            type: string;
+                                                        };
+                                                        metrics: {
+                                                            type: string;
+                                                            items: {
+                                                                type: string;
+                                                            };
+                                                        };
+                                                    };
+                                                };
+                                            };
+                                            required: string[];
+                                        };
+                                    };
+                                };
+                                required: string[];
+                            };
+                        };
+                    };
+                    required: string[];
+                };
             };
             rows: {
                 type: string;
@@ -2251,6 +2511,39 @@ export declare const allTools: ({
                     required: string[];
                 };
             };
+            theme: {
+                type: string;
+                description: string;
+                properties: {
+                    primaryColor: {
+                        type: string;
+                    };
+                    backgroundColor: {
+                        type: string;
+                    };
+                    textColor: {
+                        type: string;
+                    };
+                    borderColor: {
+                        type: string;
+                    };
+                };
+            };
+            globalStyles: {
+                type: string;
+                description: string;
+                properties: {
+                    backgroundColor: {
+                        type: string;
+                    };
+                    padding: {
+                        type: string;
+                    };
+                    gap: {
+                        type: string;
+                    };
+                };
+            };
             workspaceId: {
                 type: string;
                 description: string;
@@ -2271,7 +2564,7 @@ export declare const allTools: ({
         dashboard_id: string;
         dashboard_url: string;
         workspace_id: string;
-        row_count: number;
+        page_count: number;
         component_count: number;
         created_at: string;
         error?: undefined;
@@ -2283,7 +2576,7 @@ export declare const allTools: ({
         dashboard_id?: undefined;
         dashboard_url?: undefined;
         workspace_id?: undefined;
-        row_count?: undefined;
+        page_count?: undefined;
         component_count?: undefined;
         created_at?: undefined;
     } | {
@@ -2292,7 +2585,7 @@ export declare const allTools: ({
         dashboard_id?: undefined;
         dashboard_url?: undefined;
         workspace_id?: undefined;
-        row_count?: undefined;
+        page_count?: undefined;
         component_count?: undefined;
         created_at?: undefined;
         details?: undefined;
@@ -2415,6 +2708,10 @@ export declare const allTools: ({
                 type: string;
                 description: string;
             };
+            workspaceId: {
+                type: string;
+                description: string;
+            };
             operation: {
                 type: string;
                 enum: string[];
@@ -2436,55 +2733,22 @@ export declare const allTools: ({
         required: string[];
     };
     handler(input: any): Promise<{
+        updated_at: string;
+        page_id?: string | undefined;
         success: boolean;
         dashboard_id: string;
-        operation: "add_row" | "remove_row" | "update_component";
-        row_count: any;
-        updated_at: string;
+        operation: "add_page" | "remove_page" | "update_page" | "reorder_pages" | "add_row_to_page" | "remove_row_from_page" | "update_component_in_page" | "set_page_filters" | "set_component_filters";
+        page_count: number;
         error?: undefined;
         details?: undefined;
     } | {
         success: boolean;
         error: string;
         details: string[];
-        dashboard_id?: undefined;
-        operation?: undefined;
-        row_count?: undefined;
-        updated_at?: undefined;
     } | {
         success: boolean;
         error: string;
-        dashboard_id?: undefined;
-        operation?: undefined;
-        row_count?: undefined;
-        updated_at?: undefined;
         details?: undefined;
-    }>;
-} | {
-    name: string;
-    description: string;
-    inputSchema: {
-        type: "object";
-        properties: {};
-    };
-    handler(_input: any): Promise<{
-        success: boolean;
-        templates: {
-            id: string;
-            name: string;
-            description: string;
-            datasource: string;
-            rows: import("../../wpp-analytics/tools/index.js").RowConfig[];
-            component_count: number;
-            preview: string | undefined;
-        }[];
-        count: number;
-        error?: undefined;
-    } | {
-        success: boolean;
-        error: string;
-        templates?: undefined;
-        count?: undefined;
     }>;
 } | {
     name: string;
@@ -2492,36 +2756,7 @@ export declare const allTools: ({
     inputSchema: {
         type: "object";
         properties: {
-            platform: {
-                type: string;
-                enum: string[];
-                description: string;
-            };
-            property: {
-                type: string;
-                description: string;
-            };
-            dateRange: {
-                type: string;
-                items: {
-                    type: string;
-                };
-                minItems: number;
-                maxItems: number;
-                description: string;
-            };
-            dimensions: {
-                type: string;
-                items: {
-                    type: string;
-                };
-                description: string;
-            };
-            tableName: {
-                type: string;
-                description: string;
-            };
-            useSharedTable: {
+            dashboard_id: {
                 type: string;
                 description: string;
             };
@@ -2529,7 +2764,15 @@ export declare const allTools: ({
                 type: string;
                 description: string;
             };
-            __oauthToken: {
+            confirm: {
+                type: string;
+                description: string;
+            };
+            supabaseUrl: {
+                type: string;
+                description: string;
+            };
+            supabaseKey: {
                 type: string;
                 description: string;
             };
@@ -2538,24 +2781,99 @@ export declare const allTools: ({
     };
     handler(input: any): Promise<{
         success: boolean;
-        error: string;
-        table?: undefined;
-        tableName?: undefined;
-        rows_inserted?: undefined;
-        dimensions_pulled?: undefined;
-        platform?: undefined;
-        property?: undefined;
-        dateRange?: undefined;
+        dashboard_id: string;
+        dashboard_name: any;
+        deleted: boolean;
+        deleted_at: string;
+        error?: undefined;
+        details?: undefined;
     } | {
         success: boolean;
-        table: string;
-        tableName: string;
-        rows_inserted: number;
-        dimensions_pulled: any;
-        platform: any;
-        property: any;
-        dateRange: any;
+        error: string;
+        details: string[];
+        dashboard_id?: undefined;
+        dashboard_name?: undefined;
+        deleted?: undefined;
+        deleted_at?: undefined;
+    } | {
+        success: boolean;
+        error: string;
+        dashboard_id?: undefined;
+        dashboard_name?: undefined;
+        deleted?: undefined;
+        deleted_at?: undefined;
+        details?: undefined;
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            workspace_id: {
+                type: string;
+                description: string;
+            };
+            platform: {
+                type: string;
+                description: string;
+            };
+            supabaseUrl: {
+                type: string;
+                description: string;
+            };
+            supabaseKey: {
+                type: string;
+                description: string;
+            };
+        };
+        required: string[];
+    };
+    handler(input: any): Promise<{
+        success: boolean;
+        datasets: never[];
+        total_count: number;
+        by_platform: {};
+        message: string;
         error?: undefined;
+        details?: undefined;
+    } | {
+        success: boolean;
+        datasets: {
+            id: any;
+            name: any;
+            description: any;
+            bigquery_table: any;
+            platform: any;
+            property: any;
+            dashboard_count: number;
+            last_refreshed: any;
+            estimated_rows: any;
+            data_freshness_days: any;
+            created_at: any;
+            updated_at: any;
+        }[];
+        total_count: number;
+        by_platform: Record<string, number>;
+        message?: undefined;
+        error?: undefined;
+        details?: undefined;
+    } | {
+        success: boolean;
+        error: string;
+        details: string[];
+        datasets?: undefined;
+        total_count?: undefined;
+        by_platform?: undefined;
+        message?: undefined;
+    } | {
+        success: boolean;
+        error: string;
+        datasets?: undefined;
+        total_count?: undefined;
+        by_platform?: undefined;
+        message?: undefined;
+        details?: undefined;
     }>;
 } | {
     name: string;
@@ -2656,89 +2974,6 @@ export declare const allTools: ({
         view_url: string;
         message: string;
         error?: undefined;
-    }>;
-} | {
-    name: string;
-    description: string;
-    inputSchema: {
-        type: "object";
-        properties: {
-            bigqueryTable: {
-                type: string;
-            };
-            dateRange: {
-                type: string;
-                items: {
-                    type: string;
-                };
-                minItems: number;
-                maxItems: number;
-            };
-        };
-        required: string[];
-    };
-    handler(input: any): Promise<{
-        success: boolean;
-        insights: {
-            totals: {
-                clicks: any;
-                impressions: any;
-                ctr: string;
-                position: any;
-            };
-            trends: {
-                firstWeekAvg: string;
-                lastWeekAvg: string;
-                clicksChange: string;
-                direction: string;
-            };
-            topPerformers: {
-                topPage: {
-                    url: any;
-                    clicks: any;
-                    share: string;
-                    position: any;
-                };
-                topQuery: {
-                    query: any;
-                    clicks: any;
-                    position: any;
-                };
-                top5Pages: {
-                    url: any;
-                    clicks: any;
-                }[];
-                top5Queries: {
-                    query: any;
-                    clicks: any;
-                    position: any;
-                }[];
-            };
-            deviceInsights: {
-                mobileShare: string;
-                mobileCTR: string;
-                desktopCTR: string;
-                mobileAdvantage: string;
-            };
-            geoInsights: {
-                topCountry: any;
-                topCountryShare: string;
-                highestCTRCountry: any;
-                highestCTR: string;
-                top5Countries: {
-                    country: any;
-                    clicks: any;
-                    ctr: string;
-                }[];
-            };
-        };
-        usage_instructions: string[];
-        error?: undefined;
-    } | {
-        success: boolean;
-        error: string;
-        insights?: undefined;
-        usage_instructions?: undefined;
     }>;
 })[];
 export declare const readTools: ({

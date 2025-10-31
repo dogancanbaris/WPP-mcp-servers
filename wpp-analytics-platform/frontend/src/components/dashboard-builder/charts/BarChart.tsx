@@ -13,10 +13,11 @@ import { Loader2 } from 'lucide-react';
 import { ComponentConfig } from '@/types/dashboard-builder';
 import { formatMetricValue } from '@/lib/utils/metric-formatter';
 import { standardizeDimensionValue } from '@/lib/utils/data-formatter';
-import { useFilterStore } from '@/store/filterStore';
+import { formatChartLabel } from '@/lib/utils/label-formatter';
 import { usePageData } from '@/hooks/usePageData';
 import { useCurrentPageId } from '@/store/dashboardStore';
 import { useCascadedFilters } from '@/hooks/useCascadedFilters';
+import { getChartDefaults, resolveSortField } from '@/lib/defaults/chart-defaults';
 import {
   Bar,
   BarChart as RechartsBarChart,
@@ -32,6 +33,9 @@ export interface BarChartProps extends Partial<ComponentConfig> {
   orientation?: 'vertical' | 'horizontal';
   barSize?: number;
   stacked?: boolean;
+  sortBy?: string;
+  sortDirection?: 'ASC' | 'DESC';
+  limit?: number;
 }
 
 export const BarChart: React.FC<BarChartProps> = ({
@@ -70,10 +74,19 @@ export const BarChart: React.FC<BarChartProps> = ({
   orientation = 'vertical',
   barSize = 20,
   stacked = false,
+  sortBy,
+  sortDirection,
+  limit,
 
   ...rest
 }) => {
   const currentPageId = useCurrentPageId();
+
+  // Apply professional defaults
+  const defaults = getChartDefaults('bar_chart');
+  const finalSortBy = sortBy || resolveSortField(defaults.sortBy, metrics, dimension || undefined);
+  const finalSortDirection = sortDirection || defaults.sortDirection;
+  const finalLimit = limit !== undefined ? limit : defaults.limit;
 
   // Use cascaded filters (Global → Page → Component)
   const { filters: cascadedFilters } = useCascadedFilters({
@@ -92,6 +105,10 @@ export const BarChart: React.FC<BarChartProps> = ({
     dimensions: dimension ? [dimension] : undefined,
     filters: cascadedFilters,
     enabled: !!dataset_id && metrics.length > 0 && !!dimension && !!currentPageId,
+    chartType: 'bar_chart',
+    sortBy: finalSortBy,
+    sortDirection: finalSortDirection,
+    limit: finalLimit !== null ? finalLimit : undefined,
   });
 
   const containerStyle: React.CSSProperties = {
@@ -129,9 +146,12 @@ export const BarChart: React.FC<BarChartProps> = ({
     );
   }
 
-  const chartData = data?.data || [];
+  // Extract comparison data
+  const currentData = data?.data?.current || data?.data || [];
+  const comparisonData = data?.data?.comparison || [];
+  const hasComparison = comparisonData.length > 0;
 
-  if (chartData.length === 0) {
+  if (currentData.length === 0) {
     return (
       <div style={containerStyle} className="flex items-center justify-center min-h-[300px]">
         <p className="text-sm text-muted-foreground">No data available</p>
@@ -139,14 +159,34 @@ export const BarChart: React.FC<BarChartProps> = ({
     );
   }
 
-  // Transform data for Recharts - standardize dimension values
-  const transformedData = chartData.map((row: any) => ({
-    name: dimension ? standardizeDimensionValue(row[dimension], dimension) : 'Value',
-    ...metrics.reduce((acc, metric) => {
-      acc[metric] = Number(row[metric]) || 0;
-      return acc;
-    }, {} as Record<string, number>)
-  }));
+  // Transform data for Recharts - align comparison by category name
+  const compByName: Record<string, any> = {};
+  if (hasComparison) {
+    comparisonData.forEach((row: any) => {
+      const key = dimension ? standardizeDimensionValue(row[dimension], dimension) : 'Value';
+      compByName[key] = row;
+    });
+  }
+
+  const transformedData = currentData.map((row: any) => {
+    const name = dimension ? standardizeDimensionValue(row[dimension], dimension) : 'Value';
+    const result: any = { name };
+
+    // Current metrics
+    metrics.forEach((metric) => {
+      result[metric] = Number(row[metric]) || 0;
+    });
+
+    // Comparison metrics aligned by name
+    if (hasComparison) {
+      const prevRow = compByName[name];
+      metrics.forEach((metric) => {
+        result[`${metric}_prev`] = prevRow ? (Number(prevRow[metric]) || 0) : 0;
+      });
+    }
+
+    return result;
+  });
 
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
@@ -155,7 +195,7 @@ export const BarChart: React.FC<BarChartProps> = ({
           <p className="font-semibold text-sm mb-1">{payload[0].payload.name}</p>
           {payload.map((entry: any, index: number) => (
             <p key={index} className="text-xs" style={{ color: entry.color }}>
-              {entry.name}: {formatMetricValue(entry.value, entry.name.toLowerCase(), [], 'gsc')}
+              {formatChartLabel(entry.name)}: {formatMetricValue(entry.value, entry.name.toLowerCase(), [], 'gsc')}
             </p>
           ))}
         </div>
@@ -179,6 +219,7 @@ export const BarChart: React.FC<BarChartProps> = ({
               <XAxis
                 dataKey="name"
                 tick={{ fontSize: 11, fill: '#666' }}
+                tickFormatter={(value) => formatChartLabel(value)}
                 angle={-45}
                 textAnchor="end"
                 height={80}
@@ -188,11 +229,12 @@ export const BarChart: React.FC<BarChartProps> = ({
           ) : (
             <>
               <XAxis type="number" tick={{ fontSize: 11, fill: '#666' }} />
-              <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: '#666' }} width={100} />
+              <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: '#666' }} tickFormatter={(value) => formatChartLabel(value)} width={100} />
             </>
           )}
           <Tooltip content={<CustomTooltip />} />
-          {showLegend && <Legend wrapperStyle={{ fontSize: '11px' }} />}
+          {showLegend && <Legend wrapperStyle={{ fontSize: '11px' }} formatter={(value) => formatChartLabel(value)} />}
+          {/* Current period bars */}
           {metrics.map((metric, index) => (
             <Bar
               key={metric}
@@ -200,6 +242,19 @@ export const BarChart: React.FC<BarChartProps> = ({
               fill={chartColors[index % chartColors.length]}
               stackId={stacked ? 'stack' : undefined}
               maxBarSize={barSize}
+              name={formatChartLabel(metric)}
+            />
+          ))}
+
+          {/* Comparison period bars (semi-transparent) */}
+          {hasComparison && metrics.map((metric, index) => (
+            <Bar
+              key={`${metric}_prev`}
+              dataKey={`${metric}_prev`}
+              fill={chartColors[index % chartColors.length]}
+              fillOpacity={0.4}
+              maxBarSize={barSize}
+              name={`${formatChartLabel(metric)} (Previous)`}
             />
           ))}
         </RechartsBarChart>

@@ -7,14 +7,21 @@
   "scripts": {
     "build": "tsc",
     "dev:gsc": "node --loader ts-node/esm src/gsc/server.ts",
+    "dev:http": "MCP_TRANSPORT=http node --loader ts-node/esm src/gsc/server.ts",
+    "dev:stdio": "MCP_TRANSPORT=stdio node --loader ts-node/esm src/gsc/server.ts",
+    "start": "node dist/gsc/server.js",
     "start:gsc": "node dist/gsc/server.js",
+    "start:http": "MCP_TRANSPORT=http node dist/gsc/server.js",
+    "start:stdio": "MCP_TRANSPORT=stdio node dist/gsc/server.js",
     "setup:auth": "node --loader ts-node/esm src/setup-auth.ts",
     "test:ads": "node --loader ts-node/esm src/test-google-ads.ts",
     "test": "jest",
     "test:gsc": "jest tests/gsc",
     "lint": "tsc --noEmit",
     "clean": "rm -rf dist",
-    "prebuild": "npm run lint"
+    "prebuild": "npm run lint",
+    "docker:build": "docker build -t wpp-mcp-server .",
+    "docker:run": "docker run -p 3000:3000 --env-file .env wpp-mcp-server"
   },
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.913.0",

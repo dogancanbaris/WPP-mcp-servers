@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { useSortable } from '@dnd-kit/sortable';
+import { SortableContext, horizontalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { GripVertical, Trash2, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -31,10 +31,17 @@ export const Row: React.FC<RowProps> = ({
     attributes,
     listeners,
     setNodeRef,
+    setActivatorNodeRef,
     transform,
-    transition,
-    isDragging
-  } = useSortable({ id });
+    transition
+  } = useSortable({
+    id,
+    data: {
+      type: 'row',
+      rowId: id
+    },
+    disabled: !isEditing
+  });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -47,6 +54,7 @@ export const Row: React.FC<RowProps> = ({
     <div
       ref={setNodeRef}
       style={style}
+      {...attributes}
       className={cn(
         "group relative flex items-start mb-4", // Changed items-stretch to items-start, removed min-h-[120px]
         "rounded-lg transition-all duration-200",
@@ -55,10 +63,10 @@ export const Row: React.FC<RowProps> = ({
         ) : (
           "border border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700"
         ),
-        isDragging && "opacity-50 cursor-grabbing",
+        // Removed isDragging opacity effect as it was causing display issues
         "bg-white dark:bg-gray-950"
       )}
-      {...attributes}
+      suppressHydrationWarning
     >
       {/* Drag Handle - Left Side */}
       {isEditing && (
@@ -70,7 +78,9 @@ export const Row: React.FC<RowProps> = ({
             "cursor-grab active:cursor-grabbing",
             "border-r border-gray-200 dark:border-gray-800"
           )}
+          ref={setActivatorNodeRef}
           {...listeners}
+          suppressHydrationWarning
         >
           <GripVertical className="w-4 h-4 text-gray-400" />
         </div>
@@ -105,31 +115,37 @@ export const Row: React.FC<RowProps> = ({
         ) : (
           // Columns Container
           <div className="flex gap-4 flex-1">
-            {columns.map((column, index) => (
-              <Column
-                key={column.id || `col-${id}-${index}`}
-                id={column.id || `col-${id}-${index}`}
-                width={column.width}
-                component={column.component}
-                onComponentAdd={(type) =>
-                  onUpdateColumn(column.id, {
-                    component: {
-                      id: `component-${Date.now()}`,
-                      type,
-                      title: `New ${type.replace('-', ' ')}`
-                    }
-                  })
-                }
-                onComponentRemove={() =>
-                  onUpdateColumn(column.id, { component: undefined })
-                }
-                onWidthChange={(width) =>
-                  onUpdateColumn(column.id, { width })
-                }
-                onRemove={() => onRemoveColumn(column.id)}
-                isEditing={isEditing}
-              />
-            ))}
+            <SortableContext
+              items={columns.map((column) => column.id)}
+              strategy={horizontalListSortingStrategy}
+            >
+              {columns.map((column, index) => (
+                <Column
+                  key={column.id}
+                  id={column.id}
+                  rowId={id}
+                  width={column.width}
+                  component={column.component}
+                  onComponentAdd={(type) =>
+                    onUpdateColumn(column.id, {
+                      component: {
+                        id: `component-${Date.now()}`,
+                        type,
+                        title: `New ${type.replace('-', ' ')}`
+                      }
+                    })
+                  }
+                  onComponentRemove={() =>
+                    onUpdateColumn(column.id, { component: undefined })
+                  }
+                  onWidthChange={(width) =>
+                    onUpdateColumn(column.id, { width })
+                  }
+                  onRemove={() => onRemoveColumn(column.id)}
+                  isEditing={isEditing}
+                />
+              ))}
+            </SortableContext>
             {/* Add Column Button (when row has columns) */}
             {isEditing && columns.length < 4 && (
               <button

@@ -17,6 +17,8 @@ import { DASHBOARD_THEME } from '@/lib/themes/dashboard-theme';
 import { usePageData } from '@/hooks/usePageData';
 import { useCurrentPageId } from '@/store/dashboardStore';
 import { useCascadedFilters } from '@/hooks/useCascadedFilters';
+import { Badge } from '@/components/ui/badge';
+import { getChartDefaults } from '@/lib/defaults/chart-defaults';
 
 export interface ScorecardProps extends Partial<ComponentConfig> {}
 
@@ -36,6 +38,9 @@ export const Scorecard: React.FC<ScorecardProps> = (props) => {
 
   const firstMetric = metrics[0];
   const currentPageId = useCurrentPageId();
+
+  // Apply professional defaults (Scorecard is single aggregated value, no sorting needed)
+  const defaults = getChartDefaults('scorecard');
 
   // Get metric color from theme or use default
   const metricColors: Record<string, string> = {
@@ -62,6 +67,7 @@ export const Scorecard: React.FC<ScorecardProps> = (props) => {
     metrics,
     filters: cascadedFilters,
     enabled: !!dataset_id && metrics.length > 0 && !!currentPageId,
+    chartType: 'scorecard', // Single aggregated value
   });
 
   // Styling from global theme
@@ -116,13 +122,29 @@ export const Scorecard: React.FC<ScorecardProps> = (props) => {
     );
   }
 
-  // Extract value
-  const value = data?.data?.[0]?.[firstMetric] || 0;
+  // Extract value with comparison support
+  const currentValue = data?.data?.current?.[0]?.[firstMetric] || data?.data?.[0]?.[firstMetric] || 0;
+  const delta = data?.data?.deltas?.find((d: any) => d.metric === firstMetric);
 
   return (
     <div style={containerStyle}>
       {showTitle && <div style={titleStyle}>{title}</div>}
-      <div style={valueStyle}>{formatMetricValue(value, firstMetric, [])}</div>
+      <div style={valueStyle}>{formatMetricValue(currentValue, firstMetric, [])}</div>
+
+      {/* Comparison Badge */}
+      {delta && (
+        <div className="flex items-center justify-center gap-2 mt-2">
+          <Badge
+            variant={delta.percentChange >= 0 ? 'default' : 'destructive'}
+            className="text-xs font-medium"
+          >
+            {delta.percentChange >= 0 ? '↑' : '↓'} {Math.abs(delta.percentChange).toFixed(1)}%
+          </Badge>
+          <span className="text-xs text-muted-foreground">
+            vs {formatMetricValue(delta.comparisonValue, firstMetric, [])}
+          </span>
+        </div>
+      )}
       {/* Cache info removed per global theme settings */}
     </div>
   );

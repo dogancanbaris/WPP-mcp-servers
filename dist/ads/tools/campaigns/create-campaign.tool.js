@@ -6,7 +6,9 @@
 import { getLogger } from '../../../shared/logger.js';
 import { extractRefreshToken } from '../../../shared/oauth-client-factory.js';
 import { createGoogleAdsClientFromRefreshToken } from '../../client.js';
+import { getAuditLogger } from '../../../gsc/audit.js';
 const logger = getLogger('ads.tools.campaigns.create');
+const audit = getAuditLogger();
 /**
  * Create campaign
  */
@@ -101,6 +103,14 @@ export const createCampaignTool = {
             const client = createGoogleAdsClientFromRefreshToken(refreshToken, developerToken);
             logger.info('Creating campaign', { customerId, name, campaignType });
             const result = await client.createCampaign(customerId, name, budgetId, campaignType, status || 'PAUSED');
+            // AUDIT: Log successful campaign creation
+            await audit.logWriteOperation('user', 'create_campaign', customerId, {
+                campaignId: result,
+                campaignName: name,
+                campaignType,
+                budgetId,
+                initialStatus: status || 'PAUSED',
+            });
             return {
                 success: true,
                 data: {
@@ -120,6 +130,12 @@ export const createCampaignTool = {
         }
         catch (error) {
             logger.error('Failed to create campaign', error);
+            // AUDIT: Log failed campaign creation
+            await audit.logFailedOperation('user', 'create_campaign', input.customerId, error.message, {
+                campaignName: input.name,
+                campaignType: input.campaignType,
+                budgetId: input.budgetId,
+            });
             throw error;
         }
     },

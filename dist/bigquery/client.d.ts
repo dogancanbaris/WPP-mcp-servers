@@ -30,9 +30,27 @@ export declare class BigQueryClient {
      */
     listTables(datasetId: string): Promise<any[]>;
     /**
-     * Create table
+     * Create table (legacy - use createPartitionedTable instead)
      */
     createTable(datasetId: string, tableId: string, schema: any): Promise<any>;
+    /**
+     * Create partitioned and clustered table (RECOMMENDED)
+     *
+     * Creates a table with proper partitioning and clustering for cost optimization.
+     * This should be used for ALL new table creation.
+     *
+     * Cost optimization:
+     * - Partitioning by date reduces scan from GB to MB (95%+ reduction)
+     * - Clustering improves block pruning for filtered queries
+     * - requirePartitionFilter prevents accidental full table scans
+     *
+     * @param datasetId - BigQuery dataset ID
+     * @param tableId - Table name
+     * @param schema - Table schema (must include 'date' column)
+     * @param platform - Platform ID for clustering config ('gsc', 'google_ads', 'analytics')
+     * @returns Created table metadata
+     */
+    createPartitionedTable(datasetId: string, tableId: string, schema: any[], platform: string): Promise<any>;
     /**
      * Insert rows
      */

@@ -10,8 +10,10 @@ import { getApprovalEnforcer, DryRunResultBuilder } from '../../../shared/approv
 import { detectAndEnforceVagueness } from '../../../shared/vagueness-detector.js';
 import { extractRefreshToken } from '../../../shared/oauth-client-factory.js';
 import { createGoogleAdsClientFromRefreshToken } from '../../client.js';
+import { getAuditLogger } from '../../../gsc/audit.js';
 
 const logger = getLogger('ads.tools.campaigns.update-status');
+const audit = getAuditLogger();
 
 /**
  * Update campaign status
@@ -206,6 +208,15 @@ export const updateCampaignStatusTool = {
         }
       );
 
+      // AUDIT: Log successful campaign status update
+      await audit.logWriteOperation('user', 'update_campaign_status', customerId, {
+        campaignId,
+        campaignName,
+        previousStatus: currentStatus,
+        newStatus: status,
+        impactDescription: status === 'PAUSED' ? 'Ad delivery stopped' : status === 'ENABLED' ? 'Ad delivery started' : 'Campaign soft-deleted',
+      });
+
       return {
         success: true,
         data: {
@@ -220,6 +231,13 @@ export const updateCampaignStatusTool = {
       };
     } catch (error) {
       logger.error('Failed to update campaign status', error as Error);
+
+      // AUDIT: Log failed campaign status update
+      await audit.logFailedOperation('user', 'update_campaign_status', input.customerId, (error as Error).message, {
+        campaignId: input.campaignId,
+        attemptedStatus: input.status,
+      });
+
       throw error;
     }
   },

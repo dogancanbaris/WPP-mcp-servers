@@ -4,6 +4,7 @@ import type {
   DashboardConfig,
   ComponentConfig,
   RowConfig,
+  ColumnConfig,
   ComponentType,
   ColumnWidth,
   FilterConfig
@@ -52,6 +53,13 @@ interface DashboardStore {
   // Page state
   currentPageId: string | null;
 
+  // UI state - Settings sidebar focus
+  sidebarScope: 'page' | 'component';
+  sidebarActiveTab: 'setup' | 'style' | 'filters';
+
+  // UI state - Data refresh control
+  pauseUpdates: boolean;
+
   // Actions - Dashboard
   loadDashboard: (id: string) => Promise<void>;
   save: (id: string, force?: boolean) => Promise<void>;
@@ -65,6 +73,10 @@ interface DashboardStore {
   resetError: () => void;
   resetSaveStatus: () => void;
 
+  // UI actions
+  setSidebar: (scope?: 'page' | 'component', tab?: 'setup' | 'style' | 'filters') => void;
+  setPauseUpdates: (pause: boolean) => void;
+
   // Actions - Pages
   addPage: (name?: string) => void;
   removePage: (pageId: string) => void;
@@ -74,11 +86,14 @@ interface DashboardStore {
   setCurrentPage: (pageId: string) => void;
   setPageFilters: (pageId: string, filters: FilterConfig[]) => void;
   setPageStyles: (pageId: string, styles: PageStyles) => void;
+  updatePageFilter: (pageId: string, filter: FilterConfig) => void;
+  removePageFilter: (pageId: string, filterId: string) => void;
 
   // Actions - Rows
   addRow: (layout: ColumnWidth[]) => void;
   removeRow: (rowId: string) => void;
   reorderRows: (oldIndex: number, newIndex: number) => void;
+  reorderColumns: (rowId: string, oldIndex: number, newIndex: number) => void;
   updateRowHeight: (rowId: string, height: number) => void;
 
   // Actions - Components
@@ -88,6 +103,12 @@ interface DashboardStore {
   duplicateComponent: (componentId: string) => void;
   moveComponent: (componentId: string, targetColumnId: string) => void;
   selectComponent: (componentId?: string) => void;
+
+  // Style & lock actions
+  styleClipboard?: Partial<ComponentConfig> | null;
+  copyStyle: (componentId: string) => void;
+  pasteStyle: (componentId: string) => void;
+  toggleLock: (componentId: string) => void;
 
   // Actions - History
   undo: () => void;
@@ -99,15 +120,86 @@ interface DashboardStore {
   reset: () => void;
 }
 
+// Generate unique IDs
+const generateId = (prefix: string): string => {
+  return `${prefix}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+};
+
+const ensureId = (maybeId: string | undefined | null, prefix: string): string => {
+  if (typeof maybeId === 'string' && maybeId.trim().length > 0) {
+    return maybeId;
+  }
+  return generateId(prefix);
+};
+
+// Deep clone helper
+const deepClone = <T>(obj: T): T => {
+  return JSON.parse(JSON.stringify(obj));
+};
+
+const normalizeComponent = (component?: ComponentConfig | null): ComponentConfig | undefined => {
+  if (!component) return undefined;
+
+  const normalized: ComponentConfig = {
+    ...component,
+    id: ensureId(component.id, 'component')
+  };
+
+  return normalized;
+};
+
+const normalizeColumns = (columns?: ColumnConfig[]): ColumnConfig[] => {
+  if (!Array.isArray(columns)) return [];
+
+  return columns.map((column) => {
+    const normalizedColumn: ColumnConfig = {
+      ...column,
+      id: ensureId(column.id, 'col'),
+      width: column.width ?? '1/1'
+    };
+
+    normalizedColumn.component = normalizeComponent(column.component);
+
+    return normalizedColumn;
+  });
+};
+
+const normalizeRows = (rows?: RowConfig[]): RowConfig[] => {
+  if (!Array.isArray(rows)) return [];
+
+  return rows.map((row) => ({
+    ...row,
+    id: ensureId(row.id, 'row'),
+    columns: normalizeColumns(row.columns)
+  }));
+};
+
+const normalizeDashboardConfig = (config: DashboardConfig): DashboardConfig => {
+  const normalizedRows = normalizeRows(config.rows);
+
+  const normalizedPages = (config.pages ?? []).map((page) => ({
+    ...page,
+    id: ensureId(page.id, 'page'),
+    rows: normalizeRows(page.rows)
+  }));
+
+  return {
+    ...config,
+    id: ensureId(config.id, 'dashboard'),
+    rows: normalizedRows,
+    pages: normalizedPages
+  };
+};
+
 // Default empty dashboard configuration
 const createEmptyDashboard = (): DashboardConfig => ({
-  id: '',
+  id: generateId('dashboard'),
   title: 'Untitled Dashboard',
   description: '',
-  rows: [],  // Legacy format (kept for backwards compatibility)
-  pages: [    // NEW - Initialize with one empty page
+  rows: [],
+  pages: [
     {
-      id: crypto.randomUUID(),
+      id: generateId('page'),
       name: 'Page 1',
       order: 0,
       rows: [],
@@ -124,15 +216,7 @@ const createEmptyDashboard = (): DashboardConfig => ({
   updatedAt: new Date().toISOString()
 });
 
-// Generate unique IDs
-const generateId = (prefix: string): string => {
-  return `${prefix}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-};
-
-// Deep clone helper
-const deepClone = <T>(obj: T): T => {
-  return JSON.parse(JSON.stringify(obj));
-};
+const initialDashboard = createEmptyDashboard();
 
 // Auto-save configuration
 const AUTO_SAVE_DELAY = 2000; // 2 seconds
@@ -147,9 +231,9 @@ export const useDashboardStore = create<DashboardStore>()(
   devtools(
     (set, get) => ({
       // Initial State
-      config: createEmptyDashboard(),
+      config: deepClone(initialDashboard),
       selectedComponentId: undefined,
-      history: [createEmptyDashboard()],
+      history: [deepClone(initialDashboard)],
       historyIndex: 0,
       zoom: 100,
       viewMode: 'edit',
@@ -164,7 +248,12 @@ export const useDashboardStore = create<DashboardStore>()(
       conflictData: undefined,
       canUndo: false,
       canRedo: false,
-      currentPageId: null,
+      currentPageId: initialDashboard.pages?.[0]?.id ?? null,
+      // UI state defaults
+      sidebarScope: 'page',
+      sidebarActiveTab: 'setup',
+      pauseUpdates: false,
+      styleClipboard: null,
 
       // Dashboard Actions
       loadDashboard: async (id: string) => {
@@ -178,7 +267,7 @@ export const useDashboardStore = create<DashboardStore>()(
             throw new Error(response.error || 'Dashboard not found');
           }
 
-          const dashboard = response.data;
+          const dashboard = normalizeDashboardConfig(response.data);
 
           // Initialize currentPageId - check URL param or use first page
           let initialPageId: string | null = null;
@@ -247,7 +336,7 @@ export const useDashboardStore = create<DashboardStore>()(
             throw new Error(response.error || 'Failed to save dashboard');
           }
 
-          const savedDashboard = response.data || configToSave;
+          const savedDashboard = normalizeDashboardConfig(response.data || configToSave);
 
           // Check for conflicts (if remote version is newer than our last sync)
           if (
@@ -342,14 +431,16 @@ export const useDashboardStore = create<DashboardStore>()(
 
           case 'remote':
             // Accept remote version
+            if (!state.conflictData) return;
+            const normalizedRemote = normalizeDashboardConfig(state.conflictData.remoteVersion);
             set({
-              config: state.conflictData.remoteVersion,
-              history: [deepClone(state.conflictData.remoteVersion)],
+              config: normalizedRemote,
+              history: [deepClone(normalizedRemote)],
               historyIndex: 0,
               isDirty: false,
               saveStatus: 'saved',
-              lastSaved: new Date(state.conflictData.remoteVersion.updatedAt),
-              lastSyncedVersion: state.conflictData.remoteVersion.updatedAt,
+              lastSaved: new Date(normalizedRemote.updatedAt),
+              lastSyncedVersion: normalizedRemote.updatedAt,
               conflictData: undefined,
               canUndo: false,
               canRedo: false
@@ -392,10 +483,14 @@ export const useDashboardStore = create<DashboardStore>()(
         // Record history before mutation
         state.addToHistory();
 
-        const nextConfig = typeof next === 'function' ? (next as (prev: DashboardConfig) => DashboardConfig)(state.config) : next;
+        const nextConfig = typeof next === 'function'
+          ? (next as (prev: DashboardConfig) => DashboardConfig)(state.config)
+          : next;
+
+        const normalizedConfig = normalizeDashboardConfig(nextConfig);
 
         set({
-          config: deepClone(nextConfig),
+          config: deepClone(normalizedConfig),
           isDirty: true
         });
 
@@ -419,6 +514,18 @@ export const useDashboardStore = create<DashboardStore>()(
           clearTimeout(retryTimer);
           retryTimer = null;
         }
+      },
+
+      // UI actions
+      setSidebar: (scope?: 'page' | 'component', tab?: 'setup' | 'style' | 'filters') => {
+        set((state) => ({
+          sidebarScope: scope ?? state.sidebarScope,
+          sidebarActiveTab: tab ?? state.sidebarActiveTab,
+        }));
+      },
+
+      setPauseUpdates: (pause: boolean) => {
+        set({ pauseUpdates: !!pause });
       },
 
       // Page Actions
@@ -558,6 +665,44 @@ export const useDashboardStore = create<DashboardStore>()(
         get().updatePage(pageId, { pageStyles: styles });
       },
 
+      updatePageFilter: (pageId: string, filter: FilterConfig) => {
+        const config = get().config;
+        if (!config || !config.pages) return;
+
+        const page = config.pages.find((p) => p.id === pageId);
+        if (!page) return;
+
+        get().addToHistory();
+
+        const existingFilters = page.filters || [];
+        const filterIndex = existingFilters.findIndex((f) => f.id === filter.id);
+
+        let newFilters: FilterConfig[];
+        if (filterIndex >= 0) {
+          // Update existing filter
+          newFilters = [...existingFilters];
+          newFilters[filterIndex] = filter;
+        } else {
+          // Add new filter
+          newFilters = [...existingFilters, filter];
+        }
+
+        get().updatePage(pageId, { filters: newFilters });
+      },
+
+      removePageFilter: (pageId: string, filterId: string) => {
+        const config = get().config;
+        if (!config || !config.pages) return;
+
+        const page = config.pages.find((p) => p.id === pageId);
+        if (!page) return;
+
+        get().addToHistory();
+
+        const newFilters = (page.filters || []).filter((f) => f.id !== filterId);
+        get().updatePage(pageId, { filters: newFilters });
+      },
+
       // Row Actions
       addRow: (layout: ColumnWidth[]) => {
         const state = get();
@@ -666,6 +811,76 @@ export const useDashboardStore = create<DashboardStore>()(
         }
       },
 
+      reorderColumns: (rowId: string, oldIndex: number, newIndex: number) => {
+        const state = get();
+        const currentPageId = state.currentPageId;
+
+        if (oldIndex === newIndex) {
+          return;
+        }
+
+        const rowsForCurrentScope: RowConfig[] = state.config.pages && currentPageId
+          ? (state.config.pages.find(page => page.id === currentPageId)?.rows ?? [])
+          : state.config.rows;
+
+        const targetRow = rowsForCurrentScope.find(row => row.id === rowId);
+
+        if (!targetRow) {
+          return;
+        }
+
+        if (
+          oldIndex < 0 ||
+          oldIndex >= targetRow.columns.length ||
+          newIndex < 0 ||
+          newIndex >= targetRow.columns.length
+        ) {
+          return;
+        }
+
+        get().addToHistory();
+
+        const reorder = (rows: RowConfig[]) => {
+          return rows.map(row => {
+            if (row.id !== rowId) {
+              return row;
+            }
+
+            const newColumns = [...row.columns];
+            const [movedColumn] = newColumns.splice(oldIndex, 1);
+            newColumns.splice(newIndex, 0, movedColumn);
+
+            return {
+              ...row,
+              columns: newColumns
+            };
+          });
+        };
+
+        if (state.config.pages && currentPageId) {
+          set({
+            config: {
+              ...state.config,
+              pages: state.config.pages.map(page =>
+                page.id === currentPageId
+                  ? {
+                      ...page,
+                      rows: reorder(page.rows)
+                    }
+                  : page
+              )
+            }
+          });
+        } else {
+          set({
+            config: {
+              ...state.config,
+              rows: reorder(state.config.rows)
+            }
+          });
+        }
+      },
+
       updateRowHeight: (rowId: string, height: number) => {
         const state = get();
         const currentPageId = state.currentPageId;
@@ -766,6 +981,24 @@ export const useDashboardStore = create<DashboardStore>()(
         const state = get();
         const currentPageId = state.currentPageId;
 
+        // Prevent removing locked component
+        const rowsToSearch = (state.config.pages && currentPageId)
+          ? state.config.pages.find(p => p.id === currentPageId)?.rows || []
+          : state.config.rows;
+        let isLocked = false;
+        for (const row of rowsToSearch) {
+          for (const col of row.columns) {
+            if (col.component?.id === componentId && col.component?.locked) {
+              isLocked = true;
+              break;
+            }
+          }
+          if (isLocked) break;
+        }
+        if (isLocked) {
+          return; // No-op for locked components
+        }
+
         get().addToHistory();
 
         // If we have pages, remove component from current page
@@ -820,6 +1053,21 @@ export const useDashboardStore = create<DashboardStore>()(
       updateComponent: (componentId: string, updates: Partial<ComponentConfig>) => {
         const state = get();
         const currentPageId = state.currentPageId;
+
+        // Prevent updating locked component (except toggling lock internally)
+        const rowsToSearch = (state.config.pages && currentPageId)
+          ? state.config.pages.find(p => p.id === currentPageId)?.rows || []
+          : state.config.rows;
+        for (const row of rowsToSearch) {
+          for (const col of row.columns) {
+            if (col.component?.id === componentId && col.component?.locked) {
+              // Allow only lock field changes via toggleLock action; block other updates
+              if (!(Object.keys(updates).length === 1 && 'locked' in updates)) {
+                return;
+              }
+            }
+          }
+        }
 
         get().addToHistory();
 
@@ -967,6 +1215,18 @@ export const useDashboardStore = create<DashboardStore>()(
 
         let componentToMove: ComponentConfig | undefined;
 
+        // Prevent moving locked component
+        const rowsToSearchForLock = (state.config.pages && currentPageId)
+          ? state.config.pages.find(p => p.id === currentPageId)?.rows || []
+          : state.config.rows;
+        for (const row of rowsToSearchForLock) {
+          for (const col of row.columns) {
+            if (col.component?.id === componentId && col.component?.locked) {
+              return; // No-op when locked
+            }
+          }
+        }
+
         get().addToHistory();
 
         // Helper function to move component within rows
@@ -1038,8 +1298,8 @@ export const useDashboardStore = create<DashboardStore>()(
       addToHistory: () => {
         set((state) => {
           const newHistory = state.history.slice(0, state.historyIndex + 1);
-          const configClone = deepClone(state.config);
-          newHistory.push(configClone);
+          const normalizedClone = deepClone(normalizeDashboardConfig(state.config));
+          newHistory.push(normalizedClone);
 
           // Limit history to 50 steps
           if (newHistory.length > 50) {
@@ -1068,7 +1328,7 @@ export const useDashboardStore = create<DashboardStore>()(
           const newIndex = state.historyIndex - 1;
 
           return {
-            config: deepClone(state.history[newIndex]),
+            config: deepClone(normalizeDashboardConfig(state.history[newIndex])),
             historyIndex: newIndex,
             isDirty: true,
             canUndo: newIndex > 0,
@@ -1084,7 +1344,7 @@ export const useDashboardStore = create<DashboardStore>()(
           const newIndex = state.historyIndex + 1;
 
           return {
-            config: deepClone(state.history[newIndex]),
+            config: deepClone(normalizeDashboardConfig(state.history[newIndex])),
             historyIndex: newIndex,
             isDirty: true,
             canUndo: true,
@@ -1095,11 +1355,97 @@ export const useDashboardStore = create<DashboardStore>()(
 
       clearHistory: () => {
         set((state) => ({
-          history: [deepClone(state.config)],
+          history: [deepClone(normalizeDashboardConfig(state.config))],
           historyIndex: 0,
           canUndo: false,
           canRedo: false
         }));
+      },
+
+      // Style & lock actions
+      copyStyle: (componentId: string) => {
+        const state = get();
+        const currentPageId = state.currentPageId;
+
+        const rows = (state.config.pages && currentPageId)
+          ? state.config.pages.find(p => p.id === currentPageId)?.rows || []
+          : state.config.rows;
+
+        let source: ComponentConfig | undefined;
+        rows.forEach(row => row.columns.forEach(col => {
+          if (col.component?.id === componentId) source = col.component;
+        }));
+        if (!source) return;
+
+        const styleKeys: (keyof ComponentConfig)[] = [
+          'titleFontFamily','titleFontSize','titleFontWeight','titleColor','titleBackgroundColor','titleAlignment',
+          'backgroundColor','showBorder','borderColor','borderWidth','borderRadius','showShadow','shadowColor','shadowBlur','padding',
+          'showLegend','chartColors','metricsConfig','tableStyle','tableHeaderStyle','tableBodyStyle','fontFamily','fontSize','fontWeight','color','alignment'
+        ];
+
+        const clip: Partial<ComponentConfig> = {};
+        styleKeys.forEach(k => {
+          const v = source?.[k];
+          if (v !== undefined) (clip as any)[k] = JSON.parse(JSON.stringify(v));
+        });
+
+        set({ styleClipboard: clip });
+      },
+
+      pasteStyle: (componentId: string) => {
+        const state = get();
+        const clip = state.styleClipboard;
+        if (!clip) return;
+
+        state.updateComponent(componentId, clip);
+      },
+
+      toggleLock: (componentId: string) => {
+        const state = get();
+        const currentPageId = state.currentPageId;
+        const rows = (state.config.pages && currentPageId)
+          ? state.config.pages.find(p => p.id === currentPageId)?.rows || []
+          : state.config.rows;
+
+        // Find current lock state
+        let locked = false;
+        rows.forEach(row => row.columns.forEach(col => {
+          if (col.component?.id === componentId) locked = !!col.component.locked;
+        }));
+
+        // Update only the locked flag (bypass lock check by calling set directly)
+        get().addToHistory();
+
+        if (state.config.pages && currentPageId) {
+          set({
+            config: {
+              ...state.config,
+              pages: state.config.pages.map(page => page.id === currentPageId ? {
+                ...page,
+                rows: page.rows.map(row => ({
+                  ...row,
+                  columns: row.columns.map(col => col.component?.id === componentId ? {
+                    ...col,
+                    component: { ...(col.component as ComponentConfig), locked: !locked }
+                  } : col)
+                }))
+              } : page)
+            }
+          });
+        } else {
+          set({
+            config: {
+              ...state.config,
+              rows: state.config.rows.map(row => ({
+                ...row,
+                columns: row.columns.map(col => col.component?.id === componentId ? {
+                  ...col,
+                  component: { ...(col.component as ComponentConfig), locked: !locked }
+                } : col)
+              }))
+            }
+          });
+        }
       },
 
       // Reset

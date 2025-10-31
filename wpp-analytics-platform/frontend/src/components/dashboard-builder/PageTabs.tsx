@@ -113,6 +113,7 @@ function SortablePageTab({
             {...attributes}
             {...listeners}
             className="cursor-grab active:cursor-grabbing hover:text-primary"
+            suppressHydrationWarning
           >
             <GripVertical size={14} />
           </div>

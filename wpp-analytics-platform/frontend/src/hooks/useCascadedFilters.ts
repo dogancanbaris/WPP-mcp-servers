@@ -1,21 +1,26 @@
 /**
  * useCascadedFilters Hook
  *
- * Implements a 3-level filter cascade: Global → Page → Component
- * Merges filters from all levels and provides them to chart components.
+ * Implements a 2-level filter cascade: Page → Component
+ * Merges filters from page and component levels and provides them to chart components.
  *
- * This hook replaces the legacy useGlobalFilters hook for multi-page dashboards,
- * enabling page-level and component-level filter overrides.
- *
- * Filter Priority: Component > Page > Global
+ * Filter Priority: Component > Page
  */
 
 import { useMemo } from 'react';
-import { useFilterStore, getDateRangeFromFilter } from '@/store/filterStore';
 import { useDashboardStore } from '@/store/dashboardStore';
 import { getMergedFilters, getFilterSource } from '@/lib/utils/filter-cascade';
 import type { ComponentConfig } from '@/types/dashboard-builder';
-import type { DatasetFilter } from '@/hooks/useGlobalFilters';
+
+export type DatasetFilter = {
+  member: string;
+  operator: string;
+  values: any[];
+  // Preserve comparison metadata for API to build comparison period
+  comparisonEnabled?: boolean;
+  comparisonValues?: any[];
+  comparisonType?: string;
+};
 
 // Re-export FilterConfig from dashboard-builder for convenience
 export type { FilterConfig } from '@/types/dashboard-builder';
@@ -52,7 +57,7 @@ export interface UseCascadedFiltersOptions {
 
 export interface UseCascadedFiltersResult {
   /**
-   * Merged filters from all 3 levels (ready to use in queries)
+   * Merged filters from 2 levels (ready to use in queries)
    * These are in DatasetFilter format (member, operator, values)
    */
   filters: DatasetFilter[];
@@ -61,12 +66,7 @@ export interface UseCascadedFiltersResult {
    * Indicates which level is providing the active filters
    * Useful for UI badges and debugging
    */
-  source: 'global' | 'page' | 'component' | 'none' | 'mixed';
-
-  /**
-   * Raw global filters (before merging)
-   */
-  globalFilters: DatasetFilter[];
+  source: 'page' | 'component' | 'none';
 
   /**
    * Raw page filters (before merging)
@@ -95,7 +95,7 @@ export interface UseCascadedFiltersResult {
 }
 
 /**
- * Hook to get cascaded filters from all 3 levels (Global → Page → Component)
+ * Hook to get cascaded filters from 2 levels (Page → Component)
  *
  * @example
  * // Basic usage in a chart component
@@ -107,7 +107,7 @@ export interface UseCascadedFiltersResult {
  * });
  *
  * @example
- * // Component with custom filters (overrides all parent filters)
+ * // Component with custom filters (overrides page filters)
  * const { filters, source } = useCascadedFilters({
  *   componentConfig: {
  *     id: 'scorecard-1',
@@ -125,7 +125,6 @@ export interface UseCascadedFiltersResult {
  *   componentConfig: {
  *     id: 'scorecard-2',
  *     type: 'scorecard',
- *     useGlobalFilters: false,
  *     usePageFilters: false
  *   }
  * });
@@ -151,14 +150,6 @@ export function useCascadedFilters(
     componentConfigProp?.componentFilters ? JSON.stringify(componentConfigProp.componentFilters) : undefined,
   ]);
 
-  // Get global filters from filter store
-  // Select filters directly and memoize the enabled filter to prevent infinite loop
-  const allFilters = useFilterStore((state) => state.filters);
-  const globalFiltersRaw = useMemo(() =>
-    allFilters.filter(f => f.enabled),
-    [allFilters]
-  );
-
   // Get current page ID from dashboard store if not provided
   const currentPageId = useDashboardStore((state) => state.currentPageId);
   const effectivePageId = pageId || currentPageId;
@@ -169,72 +160,34 @@ export function useCascadedFilters(
   const currentPage = effectivePageId ? pages.find(p => p.id === effectivePageId) : null;
   const pageFiltersRaw = currentPage?.filters;
 
-  // Convert global filters to FilterConfig format for cascade merge
-  // Note: FilterConfig from dashboard-builder has a different shape than GlobalFilter
-  // We need to convert GlobalFilter → FilterConfig for cascade utilities
-  const globalFiltersConfig = useMemo(() => {
-    return globalFiltersRaw.map(filter => {
-      if (filter.type === 'dateRange') {
-        // Convert date range filter
-        const { startDate, endDate } = getDateRangeFromFilter(filter);
-
-        return {
-          id: filter.id,
-          field: filter.dimension === 'date' ? dateDimension : filter.dimension,
-          operator: 'inDateRange',
-          values: [startDate, endDate],
-          enabled: filter.enabled,
-        };
-      } else if (filter.type === 'dimension') {
-        return {
-          id: filter.id,
-          field: filter.dimension,
-          operator: filter.operator,
-          values: filter.values,
-          enabled: filter.enabled,
-        };
-      } else if (filter.type === 'measure') {
-        return {
-          id: filter.id,
-          field: filter.measure,
-          operator: filter.operator,
-          values: [filter.value.toString()],
-          enabled: filter.enabled,
-        };
-      }
-      return null;
-    }).filter(Boolean) as any[];
-  }, [globalFiltersRaw, dateDimension]);
-
-  // Merge filters using cascade utility
+  // Merge filters using cascade utility (Page → Component)
   const mergedFiltersConfig = useMemo(
-    () => getMergedFilters(globalFiltersConfig, pageFiltersRaw, componentConfig),
-    [globalFiltersConfig, pageFiltersRaw, componentConfig]
+    () => getMergedFilters(pageFiltersRaw, componentConfig),
+    [pageFiltersRaw, componentConfig]
   );
 
   // Convert merged FilterConfig to DatasetFilter format (for dataset queries)
   const mergedFiltersDataset = useMemo(() => {
-    return mergedFiltersConfig.map(filter => ({
+    const ds = mergedFiltersConfig.map(filter => ({
       member: filter.field,
       operator: filter.operator,
       values: filter.values,
+      ...(filter.comparisonEnabled !== undefined ? { comparisonEnabled: filter.comparisonEnabled } : {}),
+      ...(filter.comparisonValues !== undefined ? { comparisonValues: filter.comparisonValues } : {}),
+      ...(filter.comparisonType !== undefined ? { comparisonType: filter.comparisonType } : {}),
     }));
+    try {
+      const summary = ds.map(f => `${f.member}:${f.operator}${f.comparisonEnabled ? '(cmp)' : ''}`).join(', ');
+      console.log('[useCascadedFilters]', { componentId, pageId: effectivePageId, count: ds.length, summary });
+    } catch {}
+    return ds;
   }, [mergedFiltersConfig]);
 
   // Determine filter source
   const source = useMemo(
-    () => getFilterSource(globalFiltersConfig, pageFiltersRaw, componentConfig),
-    [globalFiltersConfig, pageFiltersRaw, componentConfig]
+    () => getFilterSource(pageFiltersRaw, componentConfig),
+    [pageFiltersRaw, componentConfig]
   );
-
-  // Convert global filters to DatasetFilter format
-  const globalFiltersDataset = useMemo(() => {
-    return globalFiltersConfig.map(f => ({
-      member: f.field,
-      operator: f.operator,
-      values: f.values,
-    }));
-  }, [globalFiltersConfig]);
 
   // Convert page filters to DatasetFilter format
   const pageFiltersDataset = useMemo(() => {
@@ -271,7 +224,6 @@ export function useCascadedFilters(
   return {
     filters: mergedFiltersDataset,
     source,
-    globalFilters: globalFiltersDataset,
     pageFilters: pageFiltersDataset,
     componentFilters: componentFiltersDataset,
     activeFilterCount: mergedFiltersDataset.length,
@@ -282,7 +234,7 @@ export function useCascadedFilters(
 
 /**
  * Hook for date range filter only (most common use case)
- * Cascades through global → page → component levels
+ * Cascades through page → component levels
  */
 export const useCascadedDateRangeFilter = (
   dateDimension: string = 'date',

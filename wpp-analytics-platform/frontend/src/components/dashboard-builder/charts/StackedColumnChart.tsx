@@ -18,6 +18,8 @@ import { DASHBOARD_THEME } from '@/lib/themes/dashboard-theme';
 import { useCascadedFilters } from '@/hooks/useCascadedFilters';
 import { usePageData } from '@/hooks/usePageData';
 import { useCurrentPageId } from '@/store/dashboardStore';
+import { getChartDefaults, resolveSortField } from '@/lib/defaults/chart-defaults';
+import { formatChartLabel } from '@/lib/utils/label-formatter';
 import type { EChartsOption } from 'echarts';
 
 export interface StackedColumnChartProps extends Partial<ComponentConfig> {
@@ -32,6 +34,9 @@ export interface StackedColumnChartProps extends Partial<ComponentConfig> {
   isPercentStacked?: boolean;
   barWidth?: number | string;
   chartHeight?: string;
+  sortBy?: string;
+  sortDirection?: 'ASC' | 'DESC';
+  limit?: number;
 }
 
 export const StackedColumnChart: React.FC<StackedColumnChartProps> = (props) => {
@@ -41,8 +46,8 @@ export const StackedColumnChart: React.FC<StackedColumnChartProps> = (props) => 
     id: componentId,
     dataset_id,
     metrics = [],
-    dimensions = ['category'],
-    dimension = dimensions[0] || 'category',
+    dimensions = [],
+    dimension,
     dateRange,
     filters = [],
     title = 'Stacked Column Chart',
@@ -55,10 +60,19 @@ export const StackedColumnChart: React.FC<StackedColumnChartProps> = (props) => 
     barWidth = '60%',
     chartHeight = '400px',
     style,
+    sortBy,
+    sortDirection,
+    limit,
     ...rest
   } = props;
 
   const currentPageId = useCurrentPageId();
+
+  // Apply professional defaults
+  const defaults = getChartDefaults('stacked_column');
+  const finalSortBy = sortBy || resolveSortField(defaults.sortBy, metrics, dimension || undefined);
+  const finalSortDirection = sortDirection || defaults.sortDirection;
+  const finalLimit = limit !== undefined ? limit : defaults.limit;
 
   // Use cascaded filters (Global → Page → Component)
   const { filters: cascadedFilters } = useCascadedFilters({
@@ -77,6 +91,10 @@ export const StackedColumnChart: React.FC<StackedColumnChartProps> = (props) => 
     dimensions,
     filters: cascadedFilters,
     enabled: !!dataset_id && metrics.length > 0 && !!currentPageId,
+    chartType: 'stacked_column',
+    sortBy: finalSortBy,
+    sortDirection: finalSortDirection,
+    limit: finalLimit !== null ? finalLimit : undefined,
   });
 
   // Styling
@@ -109,10 +127,12 @@ export const StackedColumnChart: React.FC<StackedColumnChartProps> = (props) => 
     );
   }
 
-  // Extract data
-  const chartData = data?.data || [];
+  // Extract comparison data
+  const currentData = data?.data?.current || data?.data || [];
+  const comparisonData = data?.data?.comparison || [];
+  const hasComparison = comparisonData.length > 0;
 
-  if (chartData.length === 0) {
+  if (currentData.length === 0) {
     return (
       <div style={containerStyle} className="flex items-center justify-center min-h-[400px]">
         <p className="text-sm text-muted-foreground">No data available</p>
@@ -120,8 +140,10 @@ export const StackedColumnChart: React.FC<StackedColumnChartProps> = (props) => 
     );
   }
 
-  const categories = chartData.map((row: any) => row[dimension]);
-  const series = seriesConfig || metrics.map(m => ({ key: m, name: m }));
+  // Extract dimension (support both singular and plural props)
+  const actualDimension = dimension || dimensions?.[0];
+  const categories = currentData.map((row: any) => formatChartLabel(row[actualDimension]));
+  const series = seriesConfig || metrics.map(m => ({ key: m, name: formatChartLabel(m) }));
 
   const colors = [
     DASHBOARD_THEME.colors.wppBlue,
@@ -135,7 +157,7 @@ export const StackedColumnChart: React.FC<StackedColumnChartProps> = (props) => 
   const option: EChartsOption = (() => {
     // Calculate totals for percentage mode
     const totals = isPercentStacked
-      ? chartData.map(item => {
+      ? currentData.map(item => {
           return series.reduce((sum, s) => {
             const value = Number(item[s.key]) || 0;
             return sum + value;
@@ -143,9 +165,9 @@ export const StackedColumnChart: React.FC<StackedColumnChartProps> = (props) => 
         })
       : [];
 
-    // Transform data for ECharts series
+    // Transform data for ECharts series (current period)
     const chartSeries = series.map((s, index) => {
-      const seriesData = chartData.map((item, dataIndex) => {
+      const seriesData = currentData.map((item, dataIndex) => {
         const value = Number(item[s.key]) || 0;
         if (isPercentStacked && totals[dataIndex] > 0) {
           return (value / totals[dataIndex]) * 100;
@@ -180,6 +202,34 @@ export const StackedColumnChart: React.FC<StackedColumnChartProps> = (props) => 
           : undefined,
       };
     });
+
+    // Add comparison series if available (lower opacity)
+    if (hasComparison) {
+      series.forEach((s, index) => {
+        const compSeriesData = comparisonData.map((item, dataIndex) => {
+          const value = Number(item[s.key]) || 0;
+          if (isPercentStacked && totals[dataIndex] > 0) {
+            return (value / totals[dataIndex]) * 100;
+          }
+          return value;
+        });
+
+        chartSeries.push({
+          name: `${s.name} (Previous)`,
+          type: 'bar',
+          stack: 'comparison',
+          barWidth,
+          data: compSeriesData,
+          itemStyle: {
+            color: s.color || colors[index % colors.length],
+            opacity: 0.4,
+          },
+          emphasis: {
+            focus: 'series',
+          },
+        });
+      });
+    }
 
     return {
       backgroundColor: '#ffffff',
@@ -227,7 +277,7 @@ export const StackedColumnChart: React.FC<StackedColumnChartProps> = (props) => 
     };
   })();
 
-  console.log('[StackedColumnChart] Data loaded:', chartData.length, 'categories');
+  console.log('[StackedColumnChart] Data loaded:', currentData.length, 'categories');
 
   return (
     <div style={containerStyle}>

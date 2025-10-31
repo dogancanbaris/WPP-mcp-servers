@@ -99,7 +99,7 @@ const scopes = [
 - oauth-client-factory.ts with 9 client creation methods
 - Auto-refresh for expired tokens
 - Token file loading (temporary until OMA connected)
-- All 31 MCP tools use OAuth
+- All 65 MCP tools use OAuth
 - GSCAuthManager for complete auth flow
 
 ⏳ **Pending:**

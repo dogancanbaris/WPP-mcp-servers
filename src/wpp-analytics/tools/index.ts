@@ -5,49 +5,31 @@
  * in the main MCP server.
  */
 
-import { dashboardTools } from './dashboards/index.js';
 import { dataPushTools } from './push-data-to-bigquery.js';
-import { dashboardCreationTools } from './create-dashboard-from-table.js';
 import { insightsTools } from './analyze-data-insights.js';
+import { dashboardTools } from './dashboards/index.js';
 
-export { dashboardTools, dataPushTools, dashboardCreationTools, insightsTools };
+export { dataPushTools, insightsTools, dashboardTools };
 
 // Re-export individual tools for convenience
-export {
-  createDashboardTool,
-  getDashboardTool,
-  listDashboardsTool,
-  updateDashboardLayoutTool,
-  listDashboardTemplatesTool,
-} from './dashboards/index.js';
-
 export {
   pushPlatformDataToBigQueryTool
 } from './push-data-to-bigquery.js';
 
 export {
-  createDashboardFromTableTool
-} from './create-dashboard-from-table.js';
-
-export {
   analyzeGSCDataForInsightsTool
 } from './analyze-data-insights.js';
 
-// Re-export types for external use
-export type {
-  ComponentType,
-  ColumnWidth,
-  ComponentConfig,
-  ColumnConfig,
-  RowConfig,
-  DashboardLayout,
-  DashboardTemplate,
-} from './dashboards/index.js';
+// Re-export create_dashboard_from_table (the robust tool)
+export { createDashboardFromTableTool } from './create-dashboard-from-table.js';
+
+// Import for array
+import { createDashboardFromTableTool } from './create-dashboard-from-table.js';
 
 // Export all tools combined
 export const allWppAnalyticsTools = [
-  ...dashboardTools,
   ...dataPushTools,
-  ...dashboardCreationTools,
-  ...insightsTools
+  ...insightsTools,
+  ...dashboardTools,
+  createDashboardFromTableTool
 ];

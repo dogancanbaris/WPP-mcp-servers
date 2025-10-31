@@ -1,19 +1,18 @@
 import type { NextConfig } from "next";
+import path from "path";
 
 const nextConfig: NextConfig = {
-  /* config options here */
-  reactStrictMode: false, // Disable to suppress Craft.js React 19 warnings
+  reactStrictMode: false,
   eslint: {
-    // Warning: This allows production builds to successfully complete even if
-    // your project has ESLint errors.
-    ignoreDuringBuilds: true, // Set to true to allow build with ESLint warnings
+    // Allow builds to proceed despite ESLint warnings
+    ignoreDuringBuilds: true,
   },
   typescript: {
-    // Warning: Dangerously allow production builds to successfully complete even if
-    // your project has type errors.
-    // Temporarily set to true to unblock builds while fixing type errors incrementally
+    // Temporarily allow builds to proceed despite TS errors while migrating
     ignoreBuildErrors: true,
   },
+  // Stabilize file tracing in this multi-lockfile workspace and silence root warnings
+  outputFileTracingRoot: path.join(__dirname, "..", ".."),
 };
 
 export default nextConfig;

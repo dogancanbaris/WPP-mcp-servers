@@ -55,7 +55,7 @@ Built with Supabase, BigQuery, Next.js, React 19, and Recharts
 1. **Supabase Cloud** - Authentication + PostgreSQL database (multi-tenant RLS)
 2. **BigQuery** - Central data lake for all marketing platforms
 3. **Next.js 15** - App Router + React 19 + TypeScript
-4. **ECharts 5.5 + Recharts 3.3** - 34 chart types with full customization (ECharts primary, Recharts secondary)
+4. **ECharts 5.5 + Recharts 3.3** - 32 chart types with full customization (ECharts primary, Recharts secondary)
 5. **Shadcn/ui** - Professional UI components (14 installed)
 6. **@dnd-kit** - Drag-and-drop library for dashboard builder
 
@@ -220,7 +220,7 @@ Power user features:
 
 **Dashboard Management**: Create, Read, Update, Delete, Duplicate, Templates
 
-**Builder**: 34 chart types, Drag-and-drop, Auto-formatting, Auto-sizing
+**Builder**: 32 chart types, Drag-and-drop, Auto-formatting, Auto-sizing
 
 **Filters**: Date range, Search, Multi-select, Range slider, Filter chips
 

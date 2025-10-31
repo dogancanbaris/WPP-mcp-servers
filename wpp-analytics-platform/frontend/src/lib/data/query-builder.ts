@@ -61,14 +61,14 @@ export function buildQuery(config: QueryConfig): string {
   // Build WHERE clause
   const whereConditions: string[] = [];
 
-  // Multi-tenant filter
+  // Multi-tenant filter (SECURITY: Escape to prevent SQL injection)
   if (config.clientId) {
-    whereConditions.push(`client_id = '${config.clientId}'`);
+    whereConditions.push(`client_id = '${escapeSqlValue(config.clientId)}'`);
   }
 
-  // Date range filter
+  // Date range filter (SECURITY: Escape to prevent SQL injection)
   if (config.dateRange) {
-    whereConditions.push(`date BETWEEN '${config.dateRange[0]}' AND '${config.dateRange[1]}'`);
+    whereConditions.push(`date BETWEEN '${escapeSqlValue(config.dateRange[0])}' AND '${escapeSqlValue(config.dateRange[1])}'`);
   }
 
   // Custom filters
@@ -128,12 +128,13 @@ export function buildBlendQuery(config: BlendConfig): string {
 
     const whereConditions = [];
 
+    // SECURITY: Escape all user inputs to prevent SQL injection
     if (config.clientId) {
-      whereConditions.push(`client_id = '${config.clientId}'`);
+      whereConditions.push(`client_id = '${escapeSqlValue(config.clientId)}'`);
     }
 
     if (config.dateRange) {
-      whereConditions.push(`date BETWEEN '${config.dateRange[0]}' AND '${config.dateRange[1]}'`);
+      whereConditions.push(`date BETWEEN '${escapeSqlValue(config.dateRange[0])}' AND '${escapeSqlValue(config.dateRange[1])}'`);
     }
 
     return `
@@ -189,7 +190,18 @@ ${config.limit ? `LIMIT ${config.limit}` : ''}
 }
 
 /**
- * Build filter condition SQL
+ * Escape single quotes in SQL string values to prevent SQL injection
+ */
+function escapeSqlValue(value: string | number): string {
+  if (typeof value === 'number') {
+    return value.toString();
+  }
+  // SECURITY: Escape single quotes by doubling them (SQL standard)
+  return String(value).replace(/'/g, "''");
+}
+
+/**
+ * Build filter condition SQL (with SQL injection protection)
  */
 function buildFilterCondition(filter: Filter): string {
   switch (filter.operator) {
@@ -197,21 +209,21 @@ function buildFilterCondition(filter: Filter): string {
       if (!Array.isArray(filter.value) || filter.value.length !== 2) {
         throw new Error('BETWEEN operator requires array of 2 values');
       }
-      return `${filter.field} BETWEEN '${filter.value[0]}' AND '${filter.value[1]}'`;
+      return `${filter.field} BETWEEN '${escapeSqlValue(filter.value[0])}' AND '${escapeSqlValue(filter.value[1])}'`;
 
     case 'IN':
     case 'NOT IN':
       if (!Array.isArray(filter.value)) {
         throw new Error(`${filter.operator} operator requires array of values`);
       }
-      const values = filter.value.map(v => `'${v}'`).join(', ');
+      const values = filter.value.map(v => `'${escapeSqlValue(v)}'`).join(', ');
       return `${filter.field} ${filter.operator} (${values})`;
 
     case 'LIKE':
-      return `${filter.field} LIKE '%${filter.value}%'`;
+      return `${filter.field} LIKE '%${escapeSqlValue(filter.value as string)}%'`;
 
     default:
-      return `${filter.field} ${filter.operator} '${filter.value}'`;
+      return `${filter.field} ${filter.operator} '${escapeSqlValue(filter.value as string | number)}'`;
   }
 }
 

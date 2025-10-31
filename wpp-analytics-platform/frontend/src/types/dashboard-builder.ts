@@ -121,6 +121,11 @@ export interface FilterConfig {
   operator: string;
   values: string[];
   enabled?: boolean; // Optional flag to enable/disable filter without removing it
+
+  // Comparison support for date range filters
+  comparisonEnabled?: boolean; // True if comparison mode is active
+  comparisonValues?: string[]; // [comparisonStartDate, comparisonEndDate] for comparison period
+  comparisonType?: 'previous_period' | 'previous_week' | 'previous_month' | 'previous_year' | 'custom'; // Type of comparison
 }
 
 // Table style configuration
@@ -146,6 +151,7 @@ export interface ComponentConfig {
   type: ComponentType;
 
   // Data props
+  dataset_id?: string;
   datasource?: string;
   dimension?: string | null;
   breakdownDimension?: string | null;
@@ -155,23 +161,16 @@ export interface ComponentConfig {
 
   // Filter cascade overrides (for multi-page dashboards)
   /**
-   * Whether to inherit global dashboard filters
-   * @default true - Component will use global filters
-   * If false, component ignores global filters (but may still use page filters)
-   */
-  useGlobalFilters?: boolean;
-
-  /**
    * Whether to inherit page-level filters
    * @default true - Component will use page filters
-   * If false, component ignores page filters (but may still use global filters)
+   * If false, component ignores page filters
    */
   usePageFilters?: boolean;
 
   /**
    * Component-specific filter overrides
-   * These filters apply in addition to or instead of global/page filters
-   * depending on useGlobalFilters and usePageFilters settings
+   * These filters apply in addition to or instead of page filters
+   * depending on usePageFilters setting
    */
   componentFilters?: FilterConfig[];
 
@@ -216,6 +215,20 @@ export interface ComponentConfig {
   showLegend?: boolean;
   chartColors?: string[];
 
+  // NEW: Professional defaults - sorting and pagination
+  sortBy?: string;
+  sortDirection?: 'ASC' | 'DESC';
+  limit?: number;
+  offset?: number;
+
+  // NEW: Legend configuration
+  legendPosition?: 'top' | 'bottom' | 'left' | 'right' | 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
+  legendScroll?: boolean;
+
+  // NEW: Table-specific pagination
+  showPagination?: boolean;
+  pageSize?: number;
+
   // Title component specific props
   text?: string;
   headingLevel?: 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6';
@@ -224,6 +237,10 @@ export interface ComponentConfig {
   fontWeight?: string;
   color?: string;
   alignment?: 'left' | 'center' | 'right' | 'justify';
+
+  // Interaction & layout controls
+  /** If true, component can't be moved or removed via the canvas */
+  locked?: boolean;
 }
 
 // Column configuration
@@ -266,8 +283,8 @@ export interface DashboardLayout {
    *
    * Benefits of pages:
    * - Organize complex dashboards (10+ components) into logical sections
-   * - 3-level filter cascade: Global → Page → Component
-   * - 3-level style cascade: Global Theme → Page Styles → Component Styles
+   * - 2-level filter cascade: Page → Component
+   * - 2-level style cascade: Page Styles → Component Styles
    */
   pages?: PageConfig[];
 

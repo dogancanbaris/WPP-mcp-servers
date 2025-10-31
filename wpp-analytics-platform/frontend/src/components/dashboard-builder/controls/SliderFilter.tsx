@@ -4,6 +4,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { RotateCcw } from 'lucide-react';
+import { usePageLevelControl } from '@/hooks/usePageLevelControl';
 
 interface SliderFilterProps {
   /**
@@ -15,6 +16,11 @@ interface SliderFilterProps {
    * Unique identifier for the filter
    */
   filterId: string;
+
+  /**
+   * Field name to filter on
+   */
+  field: string;
 
   /**
    * Minimum value of the range
@@ -75,6 +81,11 @@ interface SliderFilterProps {
    * Debounce delay in ms for onChange callback
    */
   debounceMs?: number;
+
+  /**
+   * Optional unique ID for the control (for page-level filter tracking)
+   */
+  id?: string;
 }
 
 /**
@@ -107,6 +118,7 @@ interface SliderFilterProps {
 export const SliderFilter: React.FC<SliderFilterProps> = ({
   label,
   filterId,
+  field,
   min,
   max,
   initialMinValue,
@@ -119,7 +131,11 @@ export const SliderFilter: React.FC<SliderFilterProps> = ({
   showReset = true,
   className = '',
   debounceMs = 300,
+  id,
 }) => {
+  // Use page-level control hook for filter emission
+  const { emitFilter } = usePageLevelControl(id || filterId || field);
+
   // State for current range values
   const [minValue, setMinValue] = useState(initialMinValue ?? min);
   const [maxValue, setMaxValue] = useState(initialMaxValue ?? max);
@@ -147,9 +163,16 @@ export const SliderFilter: React.FC<SliderFilterProps> = ({
 
       debounceTimer.current = setTimeout(() => {
         onChange(filterId, { min: newMin, max: newMax });
+
+        // Emit page-level filter
+        emitFilter({
+          field,
+          operator: 'between',
+          values: [newMin.toString(), newMax.toString()],
+        });
       }, debounceMs);
     },
-    [filterId, onChange, debounceMs]
+    [filterId, onChange, debounceMs, field, emitFilter]
   );
 
   // Handle min value change

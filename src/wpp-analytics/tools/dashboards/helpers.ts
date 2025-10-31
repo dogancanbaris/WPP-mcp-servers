@@ -6,7 +6,7 @@
 
 import { randomBytes } from 'crypto';
 import { createClient } from '@supabase/supabase-js';
-import type { RowConfigInput, RowConfig } from './types.js';
+import type { RowConfigInput, RowConfig, PageConfig } from './types.js';
 
 /**
  * Generate unique ID
@@ -100,7 +100,47 @@ export function processLayout(rows: RowConfigInput[]): RowConfig[] {
     columns: row.columns.map(col => ({
       id: generateId(),
       width: col.width,
-      component: col.component,
+      component: col.component ? {
+        ...col.component,
+        id: generateId(),
+      } : undefined,
     })),
+    height: row.height,
   }));
+}
+
+/**
+ * Process page configuration and assign IDs
+ * Converts input page config to fully structured page with generated IDs
+ */
+export interface PageConfigInput {
+  name: string;
+  order?: number;
+  filters?: any[];
+  dateRange?: any;
+  pageStyles?: any;
+  rows: RowConfigInput[];
+}
+
+export function processPage(page: PageConfigInput, index: number): PageConfig {
+  const processedRows = processLayout(page.rows);
+
+  return {
+    id: generateDashboardId(), // Use UUID format for page IDs
+    name: page.name || `Page ${index + 1}`,
+    order: page.order ?? index,
+    filters: page.filters || [],
+    dateRange: page.dateRange,
+    pageStyles: page.pageStyles || {},
+    rows: processedRows,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+/**
+ * Process multiple pages
+ */
+export function processPages(pages: PageConfigInput[]): PageConfig[] {
+  return pages.map((page, index) => processPage(page, index));
 }

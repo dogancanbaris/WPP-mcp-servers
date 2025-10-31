@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { Check, Search, X } from 'lucide-react';
+import { usePageLevelControl } from '@/hooks/usePageLevelControl';
 
 export interface ListFilterOption {
   value: string;
@@ -12,6 +13,8 @@ export interface ListFilterProps {
   id: string;
   /** Display title for the filter */
   title: string;
+  /** Field name to filter on */
+  dimension: string;
   /** Available options to filter */
   options: ListFilterOption[];
   /** Currently selected values */
@@ -70,6 +73,7 @@ export interface ListFilterProps {
 export const ListFilter: React.FC<ListFilterProps> = ({
   id,
   title,
+  dimension,
   options,
   selectedValues,
   onSelectionChange,
@@ -83,6 +87,9 @@ export const ListFilter: React.FC<ListFilterProps> = ({
   searchPlaceholder = 'Search...',
   emptyMessage = 'No options available',
 }) => {
+  // Use page-level control hook for filter emission
+  const { emitFilter, clearFilter } = usePageLevelControl(id || dimension);
+
   const [searchQuery, setSearchQuery] = useState('');
 
   // Filter options based on search query
@@ -125,26 +132,50 @@ export const ListFilter: React.FC<ListFilterProps> = ({
         : [...selectedValues, value];
 
       onSelectionChange(newValues);
+
+      // Emit page-level filter
+      if (newValues.length === 0) {
+        clearFilter();
+      } else {
+        emitFilter({
+          field: dimension,
+          operator: 'inList',
+          values: newValues,
+        });
+      }
     },
-    [selectedValues, onSelectionChange, disabled]
+    [selectedValues, onSelectionChange, disabled, dimension, emitFilter, clearFilter]
   );
 
   // Handle select all / deselect all
   const handleSelectAll = useCallback(() => {
     if (disabled) return;
 
+    let newValues: string[];
+
     if (isAllSelected) {
       // Deselect all filtered options
       const filteredValues = new Set(filteredOptions.map((o) => o.value));
-      const newValues = selectedValues.filter((v) => !filteredValues.has(v));
-      onSelectionChange(newValues);
+      newValues = selectedValues.filter((v) => !filteredValues.has(v));
     } else {
       // Select all filtered options
       const filteredValues = filteredOptions.map((o) => o.value);
-      const newValues = Array.from(
+      newValues = Array.from(
         new Set([...selectedValues, ...filteredValues])
       );
-      onSelectionChange(newValues);
+    }
+
+    onSelectionChange(newValues);
+
+    // Emit page-level filter
+    if (newValues.length === 0) {
+      clearFilter();
+    } else {
+      emitFilter({
+        field: dimension,
+        operator: 'inList',
+        values: newValues,
+      });
     }
   }, [
     filteredOptions,
@@ -152,6 +183,9 @@ export const ListFilter: React.FC<ListFilterProps> = ({
     onSelectionChange,
     isAllSelected,
     disabled,
+    dimension,
+    emitFilter,
+    clearFilter,
   ]);
 
   // Clear search

@@ -18,14 +18,9 @@ import {
   Table,
   Hash,
   Activity,
-  Map,
-  Calendar,
-  Gauge,
-  Filter,
   Network,
   Pyramid,
   Box,
-  Target,
 } from 'lucide-react';
 
 interface ComponentPickerProps {
@@ -43,7 +38,7 @@ interface ComponentOption {
 }
 
 const COMPONENT_OPTIONS: ComponentOption[] = [
-  // Basic Charts
+  // ===== BASIC CHARTS =====
   {
     type: 'time_series',
     name: 'Time Series',
@@ -56,6 +51,13 @@ const COMPONENT_OPTIONS: ComponentOption[] = [
     name: 'Bar Chart',
     icon: <BarChart3 className="w-6 h-6" />,
     description: 'Compare values across categories',
+    category: 'basic',
+  },
+  {
+    type: 'horizontal_bar',
+    name: 'Horizontal Bar',
+    icon: <BarChart3 className="w-6 h-6" />,
+    description: 'Compare values horizontally',
     category: 'basic',
   },
   {
@@ -73,6 +75,61 @@ const COMPONENT_OPTIONS: ComponentOption[] = [
     category: 'basic',
   },
   {
+    type: 'donut_chart',
+    name: 'Donut Chart',
+    icon: <PieChart className="w-6 h-6" />,
+    description: 'Ring-shaped pie chart',
+    category: 'basic',
+  },
+  {
+    type: 'area_chart',
+    name: 'Area Chart',
+    icon: <Activity className="w-6 h-6" />,
+    description: 'Filled line chart showing volume',
+    category: 'basic',
+  },
+
+  // ===== STACKED CHARTS =====
+  {
+    type: 'stacked_bar',
+    name: 'Stacked Bar',
+    icon: <BarChart3 className="w-6 h-6" />,
+    description: 'Stacked bar chart',
+    category: 'advanced',
+  },
+  {
+    type: 'stacked_column',
+    name: 'Stacked Column',
+    icon: <BarChart3 className="w-6 h-6" />,
+    description: 'Stacked column chart',
+    category: 'advanced',
+  },
+
+  // ===== HIERARCHICAL =====
+  {
+    type: 'treemap',
+    name: 'Treemap',
+    icon: <Box className="w-6 h-6" />,
+    description: 'Hierarchical data with nested rectangles',
+    category: 'advanced',
+  },
+  {
+    type: 'sunburst',
+    name: 'Sunburst',
+    icon: <Box className="w-6 h-6" />,
+    description: 'Radial hierarchical visualization',
+    category: 'advanced',
+  },
+  {
+    type: 'tree',
+    name: 'Tree',
+    icon: <Box className="w-6 h-6" />,
+    description: 'Hierarchical tree structure',
+    category: 'advanced',
+  },
+
+  // ===== DATA DISPLAY =====
+  {
     type: 'table',
     name: 'Table',
     icon: <Table className="w-6 h-6" />,
@@ -87,21 +144,7 @@ const COMPONENT_OPTIONS: ComponentOption[] = [
     category: 'basic',
   },
 
-  // Advanced Charts
-  {
-    type: 'area_chart',
-    name: 'Area Chart',
-    icon: <Activity className="w-6 h-6" />,
-    description: 'Filled line chart showing volume',
-    category: 'advanced',
-  },
-  {
-    type: 'gauge',
-    name: 'Gauge',
-    icon: <Gauge className="w-6 h-6" />,
-    description: 'Show progress towards a goal',
-    category: 'advanced',
-  },
+  // ===== ADVANCED VISUALIZATION =====
   {
     type: 'heatmap',
     name: 'Heatmap',
@@ -110,14 +153,35 @@ const COMPONENT_OPTIONS: ComponentOption[] = [
     category: 'advanced',
   },
   {
-    type: 'treemap',
-    name: 'Treemap',
-    icon: <Box className="w-6 h-6" />,
-    description: 'Hierarchical data with nested rectangles',
+    type: 'scatter_chart',
+    name: 'Scatter Plot',
+    icon: <Activity className="w-6 h-6" />,
+    description: 'Two-dimensional scatter plot',
+    category: 'advanced',
+  },
+  {
+    type: 'bubble_chart',
+    name: 'Bubble Chart',
+    icon: <Activity className="w-6 h-6" />,
+    description: 'Bubble chart with three dimensions',
+    category: 'advanced',
+  },
+  {
+    type: 'waterfall',
+    name: 'Waterfall',
+    icon: <BarChart3 className="w-6 h-6" />,
+    description: 'Show cumulative effect of values',
     category: 'advanced',
   },
 
-  // Specialized Charts
+  // ===== SPECIALIZED =====
+  {
+    type: 'funnel_chart',
+    name: 'Funnel',
+    icon: <Pyramid className="w-6 h-6" />,
+    description: 'Conversion rates through stages',
+    category: 'specialized',
+  },
   {
     type: 'sankey',
     name: 'Sankey Diagram',
@@ -126,17 +190,10 @@ const COMPONENT_OPTIONS: ComponentOption[] = [
     category: 'specialized',
   },
   {
-    type: 'funnel_chart',
-    name: 'Funnel Chart',
-    icon: <Pyramid className="w-6 h-6" />,
-    description: 'Conversion rates through stages',
-    category: 'specialized',
-  },
-  {
-    type: 'radar_chart',
-    name: 'Radar Chart',
-    icon: <Target className="w-6 h-6" />,
-    description: 'Multi-dimensional comparison',
+    type: 'word_cloud',
+    name: 'Word Cloud',
+    icon: <Activity className="w-6 h-6" />,
+    description: 'Text frequency visualization',
     category: 'specialized',
   },
 ];

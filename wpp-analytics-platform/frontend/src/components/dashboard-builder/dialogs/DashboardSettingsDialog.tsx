@@ -57,7 +57,7 @@ const DEFAULT_SETTINGS: DashboardSettings = {
   name: '',
   description: '',
   tags: [],
-  defaultDateRange: 'last30days',
+  defaultDateRange: 'last30Days',
   refreshInterval: 'manual',
   accessLevel: 'private',
   displayOptions: {
@@ -191,9 +191,9 @@ export const DashboardSettingsDialog: React.FC<DashboardSettingsDialogProps> = (
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="last7days">Last 7 days</SelectItem>
-                  <SelectItem value="last30days">Last 30 days</SelectItem>
-                  <SelectItem value="last90days">Last 90 days</SelectItem>
+                  <SelectItem value="last7Days">Last 7 days</SelectItem>
+                  <SelectItem value="last30Days">Last 30 days</SelectItem>
+                  <SelectItem value="last90Days">Last 90 days</SelectItem>
                   <SelectItem value="thisMonth">This month</SelectItem>
                   <SelectItem value="lastMonth">Last month</SelectItem>
                   <SelectItem value="thisQuarter">This quarter</SelectItem>

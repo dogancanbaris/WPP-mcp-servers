@@ -16,7 +16,7 @@ WPP MCP Servers is an enterprise-grade Model Context Protocol server that connec
 6. BigQuery (data blending)
 7. Bright Data SERP (unlimited rank tracking)
 
-**Total: 58 MCP tools** with comprehensive safety features.
+**Total: 65 MCP tools** with comprehensive safety features.
 
 ---
 
@@ -33,7 +33,7 @@ WPP MCP Servers is an enterprise-grade Model Context Protocol server that connec
    ```
    /mcp
    ```
-   You should see "wpp-digital-marketing" server with 58 tools.
+   You should see "wpp-digital-marketing" server with 65 tools.
 
 2. **Try Your First Query:**
    ```

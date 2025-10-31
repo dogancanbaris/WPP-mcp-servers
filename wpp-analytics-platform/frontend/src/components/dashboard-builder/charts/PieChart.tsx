@@ -13,8 +13,10 @@ import { getEChartsTheme } from '@/lib/themes/echarts-theme';
 import { Loader2 } from 'lucide-react';
 import { ComponentConfig } from '@/types/dashboard-builder';
 import { standardizeDimensionValue } from '@/lib/utils/data-formatter';
+import { formatChartLabel } from '@/lib/utils/label-formatter';
 import { useCascadedFilters } from '@/hooks/useCascadedFilters';
 import { useCurrentPageId } from '@/store/dashboardStore';
+import { getChartDefaults } from '@/lib/defaults/chart-defaults';
 
 export interface PieChartProps extends Partial<ComponentConfig> {
   pieRadius?: string | [string, string];
@@ -65,6 +67,10 @@ export const PieChart: React.FC<PieChartProps> = (props) => {
     ...rest
   } = props;
 
+  // Apply professional defaults
+  const defaults = getChartDefaults('pie_chart');
+  const finalLimit = props.limit !== undefined ? props.limit : defaults.limit;
+
   const currentPageId = useCurrentPageId();
 
   // Use cascaded filters (Global → Page → Component)
@@ -77,13 +83,14 @@ export const PieChart: React.FC<PieChartProps> = (props) => {
 
   // Fetch from dataset API (with caching)
   const { data, isLoading, error } = useQuery({
-    queryKey: ['piechart', dataset_id, dimension, metrics, cascadedFilters],
+    queryKey: ['piechart', dataset_id, dimension, metrics, cascadedFilters, finalLimit],
     queryFn: async () => {
       const params = new URLSearchParams({
         ...(dimension && { dimensions: dimension }),
         metrics: metrics.join(','),
         ...(cascadedFilters.length > 0 && { filters: JSON.stringify(cascadedFilters) }),
-        limit: '10' // Top 10 for pie charts
+        limit: finalLimit?.toString() || '10', // Use defaults or fallback to 10
+        chartType: 'pie_chart' // Tell backend to sort by metric DESC
       });
 
       const response = await fetch(`/api/datasets/${dataset_id}/query?${params}`);
@@ -132,9 +139,12 @@ export const PieChart: React.FC<PieChartProps> = (props) => {
     );
   }
 
-  const chartData = data?.data || [];
+  // Extract comparison data
+  const currentData = data?.data?.current || data?.data || [];
+  const comparisonData = data?.data?.comparison || [];
+  const hasComparison = comparisonData.length > 0;
 
-  if (chartData.length === 0) {
+  if (currentData.length === 0) {
     return (
       <div style={containerStyle} className="flex items-center justify-center min-h-[300px]">
         <p className="text-sm text-muted-foreground">No data available</p>
@@ -142,44 +152,116 @@ export const PieChart: React.FC<PieChartProps> = (props) => {
     );
   }
 
-  // Transform to ECharts format with standardized names
-  const pieData = chartData.map((row: any, idx: number) => ({
-    name: standardizeDimensionValue(row[dimension || ''], dimension || ''),
+  // Transform to ECharts format with capitalized names
+  const pieData = currentData.map((row: any, idx: number) => ({
+    name: formatChartLabel(standardizeDimensionValue(row[dimension || ''], dimension || '')),
     value: Number(row[metrics[0]]),
     itemStyle: { color: chartColors[idx % chartColors.length] }
   }));
+
+  // Transform comparison data if available
+  const comparisonPieData = hasComparison
+    ? comparisonData.map((row: any, idx: number) => ({
+        name: formatChartLabel(standardizeDimensionValue(row[dimension || ''], dimension || '')),
+        value: Number(row[metrics[0]]),
+        itemStyle: { color: chartColors[idx % chartColors.length], opacity: 0.5 }
+      }))
+    : [];
 
   const option = {
     backgroundColor: 'transparent',
     tooltip: {
       trigger: 'item',
-      formatter: '{b}: {c} ({d}%)'
+      formatter: (params: any) => {
+        const name = formatChartLabel(params.name);
+        return `${name}: ${params.value} (${params.percent}%)`;
+      }
     },
     legend: {
       show: showLegend,
+      type: 'scroll',  // Enable scrolling for many items
       orient: 'horizontal',
       bottom: 0,
-      textStyle: { color: '#666', fontSize: 11 }
-    },
-    series: [{
-      type: 'pie',
-      radius: pieRadius,
-      center: pieCenter,
-      data: pieData,
-      label: {
-        show: showLabel,
-        position: labelPosition,
-        fontSize: 11,
-        color: '#666'
+      formatter: (name: string) => formatChartLabel(name),
+      textStyle: {
+        color: '#374151',  // Darker for better readability
+        fontSize: 12       // Larger for professional appearance
       },
-      emphasis: {
-        itemStyle: {
-          shadowBlur: 10,
-          shadowOffsetX: 0,
-          shadowColor: 'rgba(0, 0, 0, 0.3)'
+      pageIconSize: 12,
+      pageTextStyle: {
+        fontSize: 12
+      }
+    },
+    grid: {
+      bottom: '25%',  // More space for legend
+      top: '10%',
+      containLabel: true
+    },
+    series: hasComparison ? [
+      // Current period pie (left)
+      {
+        type: 'pie',
+        radius: typeof pieRadius === 'string' ? pieRadius : pieRadius[1],
+        center: ['30%', '50%'],
+        data: pieData,
+        label: {
+          show: showLabel,
+          position: labelPosition,
+          fontSize: 10,
+          color: '#666',
+          formatter: '{b}\n{d}%'
+        },
+        emphasis: {
+          itemStyle: {
+            shadowBlur: 10,
+            shadowOffsetX: 0,
+            shadowColor: 'rgba(0, 0, 0, 0.3)'
+          }
+        }
+      },
+      // Comparison period pie (right, semi-transparent)
+      {
+        type: 'pie',
+        radius: typeof pieRadius === 'string' ? pieRadius : pieRadius[1],
+        center: ['70%', '50%'],
+        data: comparisonPieData,
+        label: {
+          show: showLabel,
+          position: labelPosition,
+          fontSize: 10,
+          color: '#999',
+          formatter: '{b}\n{d}%'
+        },
+        emphasis: {
+          itemStyle: {
+            shadowBlur: 10,
+            shadowOffsetX: 0,
+            shadowColor: 'rgba(0, 0, 0, 0.3)'
+          }
         }
       }
-    }]
+    ] : [
+      // Single pie (no comparison)
+      {
+        type: 'pie',
+        radius: pieRadius,
+        center: pieCenter,
+        data: pieData,
+        label: {
+          show: showLabel,
+          position: labelPosition,
+          fontSize: 11,
+          color: '#666'
+        },
+        emphasis: {
+          itemStyle: {
+            shadowBlur: 10,
+            shadowOffsetX: 0,
+            shadowColor: 'rgba(0, 0, 0, 0.3)'
+          }
+        }
+      }
+    ]
   };
 
   return (

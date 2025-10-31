@@ -14,10 +14,14 @@ let bigqueryClient: BigQuery | null = null;
  */
 export function getBigQueryClient(): BigQuery {
   if (!bigqueryClient) {
+    // SECURITY: Use environment variable for key path (never hardcode)
+    const keyPath = process.env.GOOGLE_SERVICE_ACCOUNT_PATH ||
+      '/home/dogancanbaris/projects/MCP Servers/config/service-account-key.json';
+
     bigqueryClient = new BigQuery({
       projectId: 'mcp-servers-475317',
       // Service account key for server-side operations
-      keyFilename: '/home/dogancanbaris/projects/MCP Servers/mcp-servers-475317-adc00dc800cc.json'
+      keyFilename: keyPath
     });
   }
 

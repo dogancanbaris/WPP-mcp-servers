@@ -6,16 +6,16 @@ Complete documentation for the WPP Analytics Platform - the dashboard builder an
 
 ### [SPEC.md](./SPEC.md)
 Technical specification for the reporting platform:
-- Complete technology stack (Next.js 15, React 19, Recharts)
-- 13 chart types and their configurations
+- Complete technology stack (Next.js 15, React 19, ECharts + Recharts)
+- 32 chart types + 12 controls and their configurations
 - BigQuery integration details
-- Data flow architecture
+- Data flow architecture (direct BigQuery, no semantic layer)
 
 ### [COMPLETE-GUIDE.md](./COMPLETE-GUIDE.md)
 Comprehensive user and developer guide:
 - Platform overview and quick start
 - Architecture and component breakdown
-- MCP server integration (31 tools across 7 Google APIs)
+- MCP server integration (65 tools across 7 Google APIs)
 - Dashboard builder usage with examples
 - Use cases and workflows (5+ detailed scenarios)
 - Troubleshooting and FAQ
@@ -34,20 +34,20 @@ Comprehensive user and developer guide:
 ### For Developers (Building Features)
 1. Review [SPEC.md](./SPEC.md) for architecture
 2. Study chart integration examples in [COMPLETE-GUIDE.md](./COMPLETE-GUIDE.md)
-3. Understand data flow: BigQuery → Cube.js → Frontend Recharts
-4. Reference the 13 chart types and configuration options
+3. Understand data flow: Platform APIs → BigQuery → Frontend Charts (direct, no semantic layer)
+4. Reference the 32 chart types + 12 controls and configuration options
 5. Follow component patterns for new features
 
 ## 📊 Core Concepts
 
 ### Technology Stack
 - **Frontend**: Next.js 15 + React 19 + Shadcn/ui
-- **Visualization**: Recharts (NOT Cube.js semantic layer)
-- **Data**: BigQuery for central data warehouse
+- **Visualization**: ECharts 5.5 (primary) + Recharts 3.3 (secondary)
+- **Data**: BigQuery for central data warehouse (direct queries, no semantic layer)
 - **Authentication**: Supabase with OAuth
 - **State Management**: Zustand for client state
 
-### 13 Chart Types
+### 32 Chart Types (Basic 13 + Advanced 19)
 1. **Scorecard** - Single metric KPI
 2. **Time Series** - Line chart over time
 3. **Area Chart** - Filled area visualization

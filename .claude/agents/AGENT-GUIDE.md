@@ -75,7 +75,7 @@ frontend-developer: Creates chart component with Cube.js integration
 ✅ "Design Cube.js data model for analytics"
 ✅ "Configure Metabase dashboard"
 
-**Tools Access:** All 58 MCP tools (trusts 9-layer safety system)
+**Tools Access:** All 65 MCP tools (trusts 9-layer safety system)
 
 **Context7 Docs:** `/cube-js/cube` for semantic layer patterns
 
@@ -98,7 +98,7 @@ frontend-developer: Creates chart component with Cube.js integration
 ✅ "Fix bug in Analytics reporting"
 ✅ "Integrate new API (Facebook Ads)"
 
-**Tools Access:** All 58 MCP tools
+**Tools Access:** All 65 MCP tools
 
 **Key Files:**
 - `src/{api}/tools/` - Tool implementations
@@ -124,7 +124,7 @@ frontend-developer: Creates chart component with Cube.js integration
 ✅ "Implement MFA for sensitive operations"
 ✅ "Design department-specific access control"
 
-**Tools Access:** All 58 MCP tools
+**Tools Access:** All 65 MCP tools
 
 **Context7 Docs:** `/supabase/supabase` for RLS patterns
 
@@ -152,7 +152,7 @@ frontend-developer: Creates chart component with Cube.js integration
 ✅ "Optimize query returning 50K rows to 400"
 ✅ "Build data pipeline from Ads to BigQuery"
 
-**Tools Access:** All 58 MCP tools
+**Tools Access:** All 65 MCP tools
 
 **Context7 Docs:** `/cube-js/cube` for data modeling
 
@@ -181,7 +181,7 @@ frontend-developer: Creates chart component with Cube.js integration
 ✅ "Set up CloudWatch monitoring"
 ✅ "Configure CI/CD with GitHub Actions"
 
-**Tools Access:** All 58 MCP tools
+**Tools Access:** All 65 MCP tools
 
 **Key Infrastructure:**
 - ECS Fargate: 2-10 auto-scaling tasks
@@ -441,7 +441,7 @@ Speedup: 6x faster
 
 ### The 9-Layer Safety System
 
-All agents inherit access to 58 MCP tools. Write operations are automatically protected by:
+All agents inherit access to 65 MCP tools. Write operations are automatically protected by:
 
 **1. Account Authorization Manager**
 - Two-layer auth: Google OAuth + WPP manager approval
@@ -810,7 +810,7 @@ Then re-launch frontend-developer
 
 **All agents:**
 - Use Sonnet 4.5 (consistent quality)
-- Have access to all 58 MCP tools
+- Have access to all 65 MCP tools
 - Trust 9-layer safety system
 - Reference Context7 for latest docs
 - Follow platform standards

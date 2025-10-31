@@ -11,6 +11,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { usePageLevelControl } from '@/hooks/usePageLevelControl';
 
 /**
  * CheckboxFilter Component
@@ -71,6 +72,9 @@ export interface CheckboxFilterProps {
 
   /** Custom CSS class */
   className?: string;
+
+  /** Optional unique ID for the control (for page-level filter tracking) */
+  id?: string;
 }
 
 export const CheckboxFilter: React.FC<CheckboxFilterProps> = ({
@@ -87,13 +91,28 @@ export const CheckboxFilter: React.FC<CheckboxFilterProps> = ({
   counts,
   compact = false,
   className = '',
+  id,
 }) => {
   const [localValue, setLocalValue] = useState<boolean | null>(value);
+
+  // Use page-level control hook for filter emission
+  const { emitFilter, clearFilter } = usePageLevelControl(id || dimension);
 
   const handleChange = useCallback((newValue: boolean | null) => {
     setLocalValue(newValue);
     onChange(newValue);
-  }, [onChange]);
+
+    // Emit page-level filter
+    if (newValue !== null) {
+      emitFilter({
+        field: dimension,
+        operator: 'equals',
+        values: [newValue.toString()],
+      });
+    } else {
+      clearFilter();
+    }
+  }, [onChange, dimension, emitFilter, clearFilter]);
 
   const getFilterMode = (): 'all' | 'true' | 'false' => {
     if (localValue === null) return 'all';

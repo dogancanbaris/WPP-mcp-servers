@@ -27,6 +27,8 @@ import { DASHBOARD_THEME } from '@/lib/themes/dashboard-theme';
 import { useCascadedFilters } from '@/hooks/useCascadedFilters';
 import { usePageData } from '@/hooks/usePageData';
 import { useCurrentPageId } from '@/store/dashboardStore';
+import { getChartDefaults, resolveSortField } from '@/lib/defaults/chart-defaults';
+import { formatChartLabel } from '@/lib/utils/label-formatter';
 
 export interface WaterfallChartProps extends Partial<ComponentConfig> {
   categoryField?: string;
@@ -48,6 +50,12 @@ export const WaterfallChart: React.FC<WaterfallChartProps> = (props) => {
     ...rest
   } = props;
 
+  // Apply professional defaults
+  const defaults = getChartDefaults('waterfall');
+  const finalSortBy = props.sortBy || resolveSortField(defaults.sortBy, metrics, dimensions[0]);
+  const finalSortDirection = props.sortDirection || defaults.sortDirection;
+  const finalLimit = props.limit !== undefined ? props.limit : defaults.limit;
+
   const currentPageId = useCurrentPageId();
 
   // Use cascaded filters (Global → Page → Component)
@@ -67,6 +75,10 @@ export const WaterfallChart: React.FC<WaterfallChartProps> = (props) => {
     dimensions,
     filters: cascadedFilters,
     enabled: !!dataset_id && metrics.length > 0 && dimensions.length > 0 && !!currentPageId,
+    chartType: 'waterfall',
+    sortBy: finalSortBy,
+    sortDirection: finalSortDirection,
+    limit: finalLimit,
   });
 
   // Container styling
@@ -100,8 +112,13 @@ export const WaterfallChart: React.FC<WaterfallChartProps> = (props) => {
     );
   }
 
+  // Extract comparison data
+  const currentData = data?.data?.current || data?.data || [];
+  const comparisonData = data?.data?.comparison || [];
+  const hasComparison = comparisonData.length > 0;
+
   // No data state
-  if (!data?.data || data.data.length === 0) {
+  if (currentData.length === 0) {
     return (
       <div style={containerStyle} className="flex items-center justify-center">
         <p className="text-sm text-muted-foreground">No data available</p>
@@ -111,7 +128,7 @@ export const WaterfallChart: React.FC<WaterfallChartProps> = (props) => {
 
   // Transform data for waterfall chart (cumulative calculation)
   let cumulative = 0;
-  const waterfallData = data.data.map((row: any, index: number) => {
+  const waterfallData = currentData.map((row: any, index: number) => {
     const value = parseFloat(row[valueField]) || 0;
     const start = cumulative;
     cumulative += value;
@@ -155,7 +172,7 @@ export const WaterfallChart: React.FC<WaterfallChartProps> = (props) => {
               return [`${item.isPositive ? '+' : '-'}${value}`, `Change (Total: ${item.end})`];
             }}
           />
-          <Legend />
+            <Legend formatter={(value) => formatChartLabel(value)} />
           <Bar dataKey="value" stackId="a">
             {waterfallData.map((entry: any, index: number) => (
               <Cell key={`cell-${index}`} fill={entry.fill} />

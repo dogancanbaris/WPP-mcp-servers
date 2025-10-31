@@ -13,9 +13,11 @@ import { Loader2 } from 'lucide-react';
 import { ComponentConfig } from '@/types/dashboard-builder';
 import { formatMetricValue } from '@/lib/utils/metric-formatter';
 import { standardizeDimensionValue } from '@/lib/utils/data-formatter';
+import { formatChartLabel } from '@/lib/utils/label-formatter';
 import { useCascadedFilters } from '@/hooks/useCascadedFilters';
 import { usePageData } from '@/hooks/usePageData';
 import { useCurrentPageId } from '@/store/dashboardStore';
+import { getChartDefaults, resolveSortField } from '@/lib/defaults/chart-defaults';
 import {
   Area,
   AreaChart as RechartsAreaChart,
@@ -31,6 +33,9 @@ export interface AreaChartProps extends Partial<ComponentConfig> {
   smooth?: boolean;
   stacked?: boolean;
   fillOpacity?: number;
+  sortBy?: string;
+  sortDirection?: 'ASC' | 'DESC';
+  limit?: number;
 }
 
 export const AreaChart: React.FC<AreaChartProps> = ({
@@ -67,10 +72,19 @@ export const AreaChart: React.FC<AreaChartProps> = ({
   smooth = true,
   stacked = false,
   fillOpacity = 0.6,
+  sortBy,
+  sortDirection,
+  limit,
 
   ...rest
 }) => {
   const currentPageId = useCurrentPageId();
+
+  // Apply professional defaults
+  const defaults = getChartDefaults('area_chart');
+  const finalSortBy = sortBy || resolveSortField(defaults.sortBy, metrics, dimension || undefined);
+  const finalSortDirection = sortDirection || defaults.sortDirection;
+  const finalLimit = limit !== undefined ? limit : defaults.limit;
 
   // Use cascaded filters (Global → Page → Component)
   const { filters: cascadedFilters } = useCascadedFilters({
@@ -89,6 +103,10 @@ export const AreaChart: React.FC<AreaChartProps> = ({
     dimensions: dimension ? [dimension] : [],
     filters: cascadedFilters,
     enabled: !!dataset_id && metrics.length > 0 && !!dimension && !!currentPageId,
+    chartType: 'area_chart',
+    sortBy: finalSortBy,
+    sortDirection: finalSortDirection,
+    limit: finalLimit !== null ? finalLimit : undefined,
   });
 
   const containerStyle: React.CSSProperties = {
@@ -126,9 +144,12 @@ export const AreaChart: React.FC<AreaChartProps> = ({
     );
   }
 
-  const chartData = data?.data || [];
+  // Extract comparison data
+  const currentData = data?.data?.current || data?.data || [];
+  const comparisonData = data?.data?.comparison || [];
+  const hasComparison = comparisonData.length > 0;
 
-  if (chartData.length === 0) {
+  if (currentData.length === 0) {
     return (
       <div style={containerStyle} className="flex items-center justify-center min-h-[300px]">
         <p className="text-sm text-muted-foreground">No data available</p>
@@ -137,13 +158,25 @@ export const AreaChart: React.FC<AreaChartProps> = ({
   }
 
   // Transform data for Recharts - standardize dimension values
-  const transformedData = chartData.map((row: any) => ({
-    name: dimension ? standardizeDimensionValue(row[dimension], dimension) : 'Value',
-    ...metrics.reduce((acc, metric) => {
-      acc[metric] = Number(row[metric]) || 0;
-      return acc;
-    }, {} as Record<string, number>)
-  }));
+  const transformedData = currentData.map((row: any, index: number) => {
+    const result: any = {
+      name: dimension ? standardizeDimensionValue(row[dimension], dimension) : 'Value',
+    };
+
+    // Add current metrics
+    metrics.forEach((metric) => {
+      result[metric] = Number(row[metric]) || 0;
+    });
+
+    // Add comparison metrics if available
+    if (hasComparison && comparisonData[index]) {
+      metrics.forEach((metric) => {
+        result[`${metric}_prev`] = Number(comparisonData[index][metric]) || 0;
+      });
+    }
+
+    return result;
+  });
 
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
@@ -152,7 +185,7 @@ export const AreaChart: React.FC<AreaChartProps> = ({
           <p className="font-semibold text-sm mb-1">{payload[0].payload.name}</p>
           {payload.map((entry: any, index: number) => (
             <p key={index} className="text-xs" style={{ color: entry.color }}>
-              {entry.name}: {formatMetricValue(entry.value, entry.name.toLowerCase(), [], 'gsc')}
+              {formatChartLabel(entry.name)}: {formatMetricValue(entry.value, entry.name.toLowerCase(), [], 'gsc')}
             </p>
           ))}
         </div>
@@ -181,13 +214,15 @@ export const AreaChart: React.FC<AreaChartProps> = ({
           <XAxis
             dataKey="name"
             tick={{ fontSize: 11, fill: '#666' }}
+            tickFormatter={(value) => formatChartLabel(value)}
             angle={-45}
             textAnchor="end"
             height={80}
           />
           <YAxis tick={{ fontSize: 11, fill: '#666' }} />
           <Tooltip content={<CustomTooltip />} />
-          {showLegend && <Legend wrapperStyle={{ fontSize: '11px' }} />}
+          {showLegend && <Legend wrapperStyle={{ fontSize: '11px' }} formatter={(value) => formatChartLabel(value)} />}
+          {/* Current period areas */}
           {metrics.map((metric, index) => (
             <Area
               key={metric}
@@ -197,6 +232,21 @@ export const AreaChart: React.FC<AreaChartProps> = ({
               fill={`url(#color${index})`}
               fillOpacity={fillOpacity}
               stackId={stacked ? 'stack' : undefined}
+              name={formatChartLabel(metric)}
+            />
+          ))}
+
+          {/* Comparison period areas (dashed, lower opacity) */}
+          {hasComparison && metrics.map((metric, index) => (
+            <Area
+              key={`${metric}_prev`}
+              type={smooth ? 'monotone' : 'linear'}
+              dataKey={`${metric}_prev`}
+              stroke={chartColors[index % chartColors.length]}
+              strokeDasharray="5 5"
+              fill={`url(#color${index})`}
+              fillOpacity={fillOpacity * 0.3}
+              name={`${formatChartLabel(metric)} (Previous)`}
             />
           ))}
         </RechartsAreaChart>

@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { useFilterStore } from '@/store/filterStore';
+import { useDashboardStore } from '@/store/dashboardStore';
 
 /**
  * Hook to auto-refresh data at midnight for dashboards using preset date filters
@@ -16,29 +16,23 @@ import { useFilterStore } from '@/store/filterStore';
  */
 export const useDataRefresh = () => {
   const queryClient = useQueryClient();
-  const { getActiveFilters } = useFilterStore();
+  const paused = useDashboardStore((s) => s.pauseUpdates);
 
   useEffect(() => {
     // Check every minute for midnight
     const interval = setInterval(() => {
+      if (paused) return; // Updates paused by user
       const now = new Date();
       const currentHour = now.getHours();
       const currentMinute = now.getMinutes();
 
       // At midnight (00:00)
       if (currentHour === 0 && currentMinute === 0) {
-        const activeFilters = getActiveFilters();
-        const hasPresetDateFilter = activeFilters.some(
-          f => f.type === 'dateRange' && (f as any).preset && (f as any).preset !== 'custom'
-        );
-
-        if (hasPresetDateFilter) {
-          console.log('[Auto-Refresh] Refreshing dashboard data at midnight');
-          queryClient.invalidateQueries();
-        }
+        console.log('[Auto-Refresh] Refreshing dashboard data at midnight');
+        queryClient.invalidateQueries();
       }
     }, 60 * 1000); // Check every minute
 
     return () => clearInterval(interval);
-  }, [queryClient, getActiveFilters]);
+  }, [queryClient, paused]);
 };

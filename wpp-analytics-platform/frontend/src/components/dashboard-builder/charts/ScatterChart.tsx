@@ -24,9 +24,11 @@ import {
 } from 'recharts';
 import { ComponentConfig } from '@/types/dashboard-builder';
 import { DASHBOARD_THEME } from '@/lib/themes/dashboard-theme';
+import { formatChartLabel } from '@/lib/utils/label-formatter';
 import { useCascadedFilters } from '@/hooks/useCascadedFilters';
 import { usePageData } from '@/hooks/usePageData';
 import { useCurrentPageId } from '@/store/dashboardStore';
+import { getChartDefaults, resolveSortField } from '@/lib/defaults/chart-defaults';
 
 export interface ScatterChartProps extends Partial<ComponentConfig> {
   xAxisField?: string;
@@ -52,6 +54,12 @@ export const ScatterChart: React.FC<ScatterChartProps> = (props) => {
     ...rest
   } = props;
 
+  // Apply professional defaults
+  const defaults = getChartDefaults('scatter_chart');
+  const finalSortBy = props.sortBy || resolveSortField(defaults.sortBy, metrics, dimensions[0]);
+  const finalSortDirection = props.sortDirection || defaults.sortDirection;
+  const finalLimit = props.limit !== undefined ? props.limit : defaults.limit;
+
   const currentPageId = useCurrentPageId();
 
   // Use cascaded filters (Global → Page → Component)
@@ -71,6 +79,10 @@ export const ScatterChart: React.FC<ScatterChartProps> = (props) => {
     dimensions,
     filters: cascadedFilters,
     enabled: !!dataset_id && metrics.length >= 2 && !!currentPageId,
+    chartType: 'scatter_chart',
+    sortBy: finalSortBy,
+    sortDirection: finalSortDirection,
+    limit: finalLimit,
   });
 
   // Container styling
@@ -104,8 +116,13 @@ export const ScatterChart: React.FC<ScatterChartProps> = (props) => {
     );
   }
 
+  // Extract comparison data
+  const currentData = data?.data?.current || data?.data || [];
+  const comparisonData = data?.data?.comparison || [];
+  const hasComparison = comparisonData.length > 0;
+
   // No data state
-  if (!data?.data || data.data.length === 0) {
+  if (currentData.length === 0) {
     return (
       <div style={containerStyle} className="flex items-center justify-center">
         <p className="text-sm text-muted-foreground">No data available</p>
@@ -114,12 +131,22 @@ export const ScatterChart: React.FC<ScatterChartProps> = (props) => {
   }
 
   // Transform data for scatter chart
-  const scatterData = data.data.map((row: any, index: number) => ({
+  const scatterData = currentData.map((row: any, index: number) => ({
     x: parseFloat(row[xAxisField]) || 0,
     y: parseFloat(row[yAxisField]) || 0,
     z: sizeField ? parseFloat(row[sizeField]) || 1 : 1,
     name: dimensions[0] ? row[dimensions[0]] : `Point ${index + 1}`
   }));
+
+  // Transform comparison data if available
+  const comparisonScatterData = hasComparison
+    ? comparisonData.map((row: any, index: number) => ({
+        x: parseFloat(row[xAxisField]) || 0,
+        y: parseFloat(row[yAxisField]) || 0,
+        z: sizeField ? parseFloat(row[sizeField]) || 1 : 1,
+        name: dimensions[0] ? row[dimensions[0]] : `Point ${index + 1}`
+      }))
+    : [];
 
   const colors = [
     DASHBOARD_THEME.colors.wppBlue,
@@ -144,21 +171,21 @@ export const ScatterChart: React.FC<ScatterChartProps> = (props) => {
         </h3>
       )}
       <ResponsiveContainer width="100%" height="100%">
-        <RechartsScatter data={scatterData}>
+        <RechartsScatter>
           <CartesianGrid strokeDasharray="3 3" stroke={theme.gridColor} />
           <XAxis
             type="number"
             dataKey="x"
-            name={xAxisField}
+            name={formatChartLabel(xAxisField)}
             stroke={theme.axisColor}
-            label={{ value: xAxisField, position: 'insideBottom', offset: -5 }}
+            label={{ value: formatChartLabel(xAxisField), position: 'insideBottom', offset: -5 }}
           />
           <YAxis
             type="number"
             dataKey="y"
-            name={yAxisField}
+            name={formatChartLabel(yAxisField)}
             stroke={theme.axisColor}
-            label={{ value: yAxisField, angle: -90, position: 'insideLeft' }}
+            label={{ value: formatChartLabel(yAxisField), angle: -90, position: 'insideLeft' }}
           />
           <Tooltip
             cursor={{ strokeDasharray: '3 3' }}
@@ -167,13 +194,28 @@ export const ScatterChart: React.FC<ScatterChartProps> = (props) => {
               border: `1px solid ${theme.borderColor}`,
               borderRadius: '4px'
             }}
+            formatter={(value, name) => [value, formatChartLabel(name as string)]}
           />
-          <Legend />
-          <Scatter name={title} fill={DASHBOARD_THEME.colors.wppBlue}>
+          <Legend formatter={(value) => formatChartLabel(value)} />
+          {/* Current period scatter */}
+          <Scatter name="Current" data={scatterData} fill={DASHBOARD_THEME.colors.wppBlue}>
             {scatterData.map((entry: any, index: number) => (
               <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
             ))}
           </Scatter>
+
+          {/* Comparison period scatter (semi-transparent) */}
+          {hasComparison && (
+            <Scatter name="Previous" data={comparisonScatterData} fill={DASHBOARD_THEME.colors.wppGreen}>
+              {comparisonScatterData.map((entry: any, index: number) => (
+                <Cell
+                  key={`comp-cell-${index}`}
+                  fill={colors[index % colors.length]}
+                  fillOpacity={0.4}
+                />
+              ))}
+            </Scatter>
+          )}
         </RechartsScatter>
       </ResponsiveContainer>
     </div>

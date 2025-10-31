@@ -142,7 +142,7 @@ All docs consolidated into /docs with claude.md as entry point.
 - [2025-10-25] Documentation completed
 
 ## 🎯 Outcome
-OAuth client factory implemented and tested. All 31 MCP tools now use centralized OAuth with auto-refresh.
+OAuth client factory implemented and tested. All 65 MCP tools now use centralized OAuth with auto-refresh.
 ```
 
 Then change status to **Closed**

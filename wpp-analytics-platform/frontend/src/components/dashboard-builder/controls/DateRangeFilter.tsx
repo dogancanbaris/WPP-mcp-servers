@@ -16,12 +16,16 @@ import {
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import { Separator } from '@/components/ui/separator';
 import {
   Calendar as CalendarIcon,
   X,
   ChevronDown,
   Clock,
-  TrendingUp
+  TrendingUp,
+  ArrowRight
 } from 'lucide-react';
 import {
   format,
@@ -41,7 +45,9 @@ import {
   subYears
 } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { useFilterStore } from '@/store/filterStore';
+import { useDashboardStore } from '@/store/dashboardStore';
+import { useQueryClient } from '@tanstack/react-query';
+import type { FilterConfig } from '@/types/dashboard-builder';
 
 /**
  * DateRangeFilter - Interactive calendar control for dashboard-wide date filtering
@@ -71,10 +77,13 @@ export interface DateRange {
   endDate?: Date;
 }
 
+export type ComparisonType = 'previous_period' | 'previous_week' | 'previous_month' | 'previous_year';
+
 export interface DateRangeComparison {
   enabled: boolean;
   comparisonStartDate?: Date;
   comparisonEndDate?: Date;
+  type?: ComparisonType;
 }
 
 export interface DateRangeFilterValue {
@@ -97,16 +106,17 @@ interface DateRangeFilterProps {
   granularity?: DatasetTimeDimension['granularity'];
   className?: string;
   disabled?: boolean;
+  config?: { id?: string }; // Component config for unique filter ID
 }
 
 type DatePresetValue =
   | 'today'
   | 'yesterday'
-  | 'last7days'
-  | 'last14days'
-  | 'last28days'
-  | 'last30days'
-  | 'last90days'
+  | 'last7Days'
+  | 'last14Days'
+  | 'last28Days'
+  | 'last30Days'
+  | 'last90Days'
   | 'thisWeek'
   | 'lastWeek'
   | 'thisMonth'
@@ -115,6 +125,7 @@ type DatePresetValue =
   | 'lastQuarter'
   | 'thisYear'
   | 'lastYear'
+  | 'allTime'
   | 'custom';
 
 interface DatePreset {
@@ -125,28 +136,11 @@ interface DatePreset {
   category: 'relative' | 'period' | 'custom';
 }
 
+// Curated preset list: Only essential presets for analytics
 const DATE_PRESETS: DatePreset[] = [
+  // Quick Select (4 presets)
   {
-    value: 'today',
-    label: 'Today',
-    icon: <Clock className="h-3 w-3" />,
-    category: 'relative',
-    getDateRange: () => ({
-      startDate: startOfDay(new Date()),
-      endDate: endOfDay(new Date()),
-    }),
-  },
-  {
-    value: 'yesterday',
-    label: 'Yesterday',
-    category: 'relative',
-    getDateRange: () => ({
-      startDate: startOfDay(subDays(new Date(), 1)),
-      endDate: endOfDay(subDays(new Date(), 1)),
-    }),
-  },
-  {
-    value: 'last7days',
+    value: 'last7Days',
     label: 'Last 7 days',
     category: 'relative',
     getDateRange: () => {
@@ -158,7 +152,7 @@ const DATE_PRESETS: DatePreset[] = [
     },
   },
   {
-    value: 'last14days',
+    value: 'last14Days',
     label: 'Last 14 days',
     category: 'relative',
     getDateRange: () => {
@@ -170,19 +164,7 @@ const DATE_PRESETS: DatePreset[] = [
     },
   },
   {
-    value: 'last28days',
-    label: 'Last 28 days',
-    category: 'relative',
-    getDateRange: () => {
-      const yesterday = subDays(new Date(), 1);
-      return {
-        startDate: startOfDay(subDays(yesterday, 27)),
-        endDate: endOfDay(yesterday),
-      };
-    },
-  },
-  {
-    value: 'last30days',
+    value: 'last30Days',
     label: 'Last 30 days',
     category: 'relative',
     getDateRange: () => {
@@ -194,7 +176,7 @@ const DATE_PRESETS: DatePreset[] = [
     },
   },
   {
-    value: 'last90days',
+    value: 'last90Days',
     label: 'Last 90 days',
     category: 'relative',
     getDateRange: () => {
@@ -205,36 +187,7 @@ const DATE_PRESETS: DatePreset[] = [
       };
     },
   },
-  {
-    value: 'thisWeek',
-    label: 'This week',
-    category: 'period',
-    getDateRange: () => ({
-      startDate: startOfWeek(new Date(), { weekStartsOn: 1 }),
-      endDate: endOfWeek(new Date(), { weekStartsOn: 1 }),
-    }),
-  },
-  {
-    value: 'lastWeek',
-    label: 'Last week',
-    category: 'period',
-    getDateRange: () => {
-      const lastWeek = subDays(new Date(), 7);
-      return {
-        startDate: startOfWeek(lastWeek, { weekStartsOn: 1 }),
-        endDate: endOfWeek(lastWeek, { weekStartsOn: 1 }),
-      };
-    },
-  },
-  {
-    value: 'thisMonth',
-    label: 'This month',
-    category: 'period',
-    getDateRange: () => ({
-      startDate: startOfMonth(new Date()),
-      endDate: endOfMonth(new Date()),
-    }),
-  },
+  // Periods (3 presets)
   {
     value: 'lastMonth',
     label: 'Last month',
@@ -246,15 +199,6 @@ const DATE_PRESETS: DatePreset[] = [
         endDate: endOfMonth(lastMonth),
       };
     },
-  },
-  {
-    value: 'thisQuarter',
-    label: 'This quarter',
-    category: 'period',
-    getDateRange: () => ({
-      startDate: startOfQuarter(new Date()),
-      endDate: endOfQuarter(new Date()),
-    }),
   },
   {
     value: 'lastQuarter',
@@ -269,15 +213,6 @@ const DATE_PRESETS: DatePreset[] = [
     },
   },
   {
-    value: 'thisYear',
-    label: 'This year',
-    category: 'period',
-    getDateRange: () => ({
-      startDate: startOfYear(new Date()),
-      endDate: endOfYear(new Date()),
-    }),
-  },
-  {
     value: 'lastYear',
     label: 'Last year',
     category: 'period',
@@ -289,6 +224,7 @@ const DATE_PRESETS: DatePreset[] = [
       };
     },
   },
+  // Custom
   {
     value: 'custom',
     label: 'Custom range',
@@ -300,18 +236,55 @@ const DATE_PRESETS: DatePreset[] = [
   },
 ];
 
+export function computeComparisonRange(
+  range: { startDate: Date; endDate: Date },
+  type: ComparisonType = 'previous_period'
+): { comparisonStartDate: Date; comparisonEndDate: Date } {
+  const start = range.startDate;
+  const end = range.endDate;
+  const duration = end.getTime() - start.getTime();
+
+  switch (type) {
+    case 'previous_week': {
+      const comparisonStartDate = new Date(start.getTime() - 7 * 86400000);
+      const comparisonEndDate = new Date(end.getTime() - 7 * 86400000);
+      return { comparisonStartDate, comparisonEndDate };
+    }
+    case 'previous_month': {
+      const comparisonStartDate = new Date(start);
+      comparisonStartDate.setMonth(comparisonStartDate.getMonth() - 1);
+      const comparisonEndDate = new Date(end);
+      comparisonEndDate.setMonth(comparisonEndDate.getMonth() - 1);
+      return { comparisonStartDate, comparisonEndDate };
+    }
+    case 'previous_year': {
+      const comparisonStartDate = new Date(start);
+      comparisonStartDate.setFullYear(comparisonStartDate.getFullYear() - 1);
+      const comparisonEndDate = new Date(end);
+      comparisonEndDate.setFullYear(comparisonEndDate.getFullYear() - 1);
+      return { comparisonStartDate, comparisonEndDate };
+    }
+    case 'previous_period':
+    default: {
+      const comparisonEndDate = new Date(start.getTime() - 86400000);
+      const comparisonStartDate = new Date(comparisonEndDate.getTime() - duration);
+      return { comparisonStartDate, comparisonEndDate };
+    }
+  }
+}
+
 export function DateRangeFilter({
   value,
   onChange,
   onApply,
   showComparison = false,
-  dimension = 'createdAt',
+  dimension = 'date',
   granularity = 'day',
   className,
   disabled = false,
+  config,
 }: DateRangeFilterProps) {
-  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
-  const [isPresetMenuOpen, setIsPresetMenuOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
 
   // Calculate actual dates for preset values
   const actualDateRange = useMemo(() => {
@@ -330,17 +303,47 @@ export function DateRangeFilter({
 
   // Calculate comparison period
   const comparisonDateRange = useMemo(() => {
-    if (!value.comparison.enabled || !actualDateRange) return null;
+    if (!value.comparison.enabled) return null;
 
-    const duration = actualDateRange.endDate.getTime() - actualDateRange.startDate.getTime();
-    const comparisonEndDate = new Date(actualDateRange.startDate.getTime() - 1);
-    const comparisonStartDate = new Date(comparisonEndDate.getTime() - duration);
+    if (value.comparison.comparisonStartDate && value.comparison.comparisonEndDate) {
+      return {
+        comparisonStartDate: value.comparison.comparisonStartDate,
+        comparisonEndDate: value.comparison.comparisonEndDate,
+      };
+    }
 
+    if (!actualDateRange) return null;
+
+    return computeComparisonRange(actualDateRange, value.comparison.type || 'previous_period');
+  }, [value.comparison, actualDateRange]);
+
+  const buildComparisonState = (
+    enabled: boolean,
+    type: ComparisonType | undefined,
+    rangeOverride?: { startDate: Date; endDate: Date }
+  ): DateRangeComparison => {
+    if (!enabled) {
+      return {
+        enabled: false,
+        type,
+      };
+    }
+
+    const effectiveRange = rangeOverride || actualDateRange;
+    if (!effectiveRange) {
+      return {
+        enabled: true,
+        type: type || 'previous_period',
+      };
+    }
+
+    const comparisonRange = computeComparisonRange(effectiveRange, type || 'previous_period');
     return {
-      comparisonStartDate,
-      comparisonEndDate,
+      enabled: true,
+      type: type || 'previous_period',
+      ...comparisonRange,
     };
-  }, [value.comparison.enabled, actualDateRange]);
+  };
 
   // Handle preset selection
   const handlePresetChange = (presetValue: string) => {
@@ -356,9 +359,16 @@ export function DateRangeFilter({
           startDate: new Date(),
           endDate: new Date()
         },
+        comparison: buildComparisonState(
+          value.comparison.enabled,
+          value.comparison.type,
+          {
+            startDate: new Date(),
+            endDate: new Date(),
+          }
+        ),
       });
-      setIsPresetMenuOpen(false);
-      setIsCalendarOpen(true);
+      // Stay open for custom selection
     } else {
       const { startDate, endDate } = preset.getDateRange();
       onChange({
@@ -369,46 +379,77 @@ export function DateRangeFilter({
           startDate,
           endDate
         },
+        comparison: buildComparisonState(
+          value.comparison.enabled,
+          value.comparison.type,
+          {
+            startDate,
+            endDate,
+          }
+        ),
       });
-      setIsPresetMenuOpen(false);
+      // Do NOT auto-apply; wait for explicit Apply
     }
   };
 
   // Handle custom date selection
   const handleDateSelect = (dates: { from?: Date; to?: Date } | undefined) => {
     if (dates?.from && dates?.to) {
+      const start = startOfDay(dates.from);
+      const end = endOfDay(dates.to);
       onChange({
         ...value,
         range: {
           type: 'custom',
           preset: 'custom',
-          startDate: startOfDay(dates.from),
-          endDate: endOfDay(dates.to),
+          startDate: start,
+          endDate: end,
         },
+        comparison: buildComparisonState(
+          value.comparison.enabled,
+          value.comparison.type,
+          {
+            startDate: start,
+            endDate: end,
+          }
+        ),
       });
-      setIsCalendarOpen(false);
+      // Don't auto-close, let user apply changes
     } else if (dates?.from) {
+      const start = startOfDay(dates.from);
+      const end = value.range.endDate ?? endOfDay(dates.from);
       onChange({
         ...value,
         range: {
           type: 'custom',
           preset: 'custom',
-          startDate: startOfDay(dates.from),
-          endDate: value.range.endDate,
+          startDate: start,
+          endDate: end,
         },
+        comparison: buildComparisonState(
+          value.comparison.enabled,
+          value.comparison.type,
+          {
+            startDate: start,
+            endDate: end,
+          }
+        ),
       });
     }
   };
 
   // Handle comparison toggle
   const handleComparisonToggle = (enabled: boolean) => {
-    onChange({
+    console.log('[DateRangeFilter] Comparison toggle clicked:', { enabled, currentValue: value.comparison.enabled });
+    const newValue = {
       ...value,
-      comparison: {
+      comparison: buildComparisonState(
         enabled,
-        ...(enabled && comparisonDateRange ? comparisonDateRange : {}),
-      },
-    });
+        value.comparison.type || 'previous_period'
+      ),
+    };
+    console.log('[DateRangeFilter] New value:', newValue);
+    onChange(newValue);
   };
 
   // Clear filter
@@ -416,31 +457,61 @@ export function DateRangeFilter({
     const defaultRange: DateRangeFilterValue = {
       range: {
         type: 'preset',
-        preset: 'last30days',
-        ...DATE_PRESETS.find(p => p.value === 'last30days')!.getDateRange(),
+        preset: 'last30Days',
+        ...DATE_PRESETS.find(p => p.value === 'last30Days')!.getDateRange(),
       },
       comparison: { enabled: false },
     };
     onChange(defaultRange);
   };
 
-  // Get filter store for global date range
-  const filterStore = useFilterStore();
+  // Get dashboard store for page-level filters
+  const currentPageId = useDashboardStore((state) => state.currentPageId);
+  const updatePageFilter = useDashboardStore((state) => state.updatePageFilter);
+  const setPageFilters = useDashboardStore((state) => state.setPageFilters);
+  const queryClient = useQueryClient();
 
   // Apply filter to dashboard
   const handleApply = () => {
     if (!actualDateRange) return;
 
-    const dateRange: [string, string] = [
-      format(actualDateRange.startDate, 'yyyy-MM-dd'),
-      format(actualDateRange.endDate, 'yyyy-MM-dd'),
-    ];
+    const startDate = format(actualDateRange.startDate, 'yyyy-MM-dd');
+    const endDate = format(actualDateRange.endDate, 'yyyy-MM-dd');
 
-    // Update global filter store (all charts will react)
-    filterStore.setActiveDateRange(dateRange);
+    // Build filter config
+    const filterConfig: FilterConfig = {
+      id: `date-control-${config?.id || 'default'}`,
+      field: dimension || 'date',
+      operator: 'inDateRange',
+      values: [startDate, endDate],
+      enabled: true,
+    };
 
-    // Also call onApply if provided (for backward compatibility)
+    // Add comparison data if enabled
+    if (value.comparison.enabled && comparisonDateRange) {
+      const compStartDate = format(comparisonDateRange.comparisonStartDate, 'yyyy-MM-dd');
+      const compEndDate = format(comparisonDateRange.comparisonEndDate, 'yyyy-MM-dd');
+
+      filterConfig.comparisonEnabled = true;
+      filterConfig.comparisonValues = [compStartDate, compEndDate];
+      filterConfig.comparisonType = value.comparison.type || 'previous_period';
+    }
+
+    // Save to page filters (not global) with de-duplication by field/operator
+    if (currentPageId) {
+      const state = useDashboardStore.getState();
+      const page = state.config.pages?.find(p => p.id === currentPageId);
+      const existing = page?.filters || [];
+      const cleaned = existing.filter(f => !(f.field === (dimension || 'date') && f.operator === 'inDateRange'));
+      setPageFilters(currentPageId, [...cleaned, filterConfig]);
+
+      // Invalidate all chart queries to trigger refresh
+      queryClient.invalidateQueries({ queryKey: ['page-component-data'] });
+    }
+
+    // Call onApply if provided (optional callback)
     if (onApply) {
+      const dateRange: [string, string] = [startDate, endDate];
       const timeDimension: DatasetTimeDimension = {
         dimension,
         dateRange,
@@ -448,6 +519,9 @@ export function DateRangeFilter({
       };
       onApply(timeDimension);
     }
+
+    // Close popover after applying
+    setIsOpen(false);
   };
 
   // Get display value
@@ -477,9 +551,9 @@ export function DateRangeFilter({
   return (
     <div className={cn("space-y-3", className)}>
       <div className="flex items-center justify-between">
-        <label className="text-sm font-medium text-gray-900 dark:text-gray-100">
+        <Label className="text-sm font-medium text-foreground">
           Date Range
-        </label>
+        </Label>
         {actualDateRange && (
           <Button
             variant="ghost"
@@ -494,102 +568,33 @@ export function DateRangeFilter({
         )}
       </div>
 
-      <div className="space-y-2">
-        {/* Preset Selector */}
-        <Popover open={isPresetMenuOpen} onOpenChange={setIsPresetMenuOpen}>
-          <PopoverTrigger asChild>
-            <Button
-              variant="outline"
-              className={cn(
-                "w-full justify-between text-left font-normal",
-                !actualDateRange && "text-muted-foreground"
-              )}
-              disabled={disabled}
-            >
-              <span className="truncate">{selectedPresetLabel}</span>
-              <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-[280px] p-0" align="start">
-            <div className="p-2">
-              <div className="mb-2">
-                <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-2 py-1">
-                  Relative dates
-                </div>
-                <div className="space-y-1">
-                  {groupedPresets.relative.map((preset) => (
-                    <button
-                      key={preset.value}
-                      onClick={() => handlePresetChange(preset.value)}
-                      className={cn(
-                        "w-full text-left px-2 py-1.5 text-sm rounded-md hover:bg-accent transition-colors",
-                        value.range.preset === preset.value && "bg-accent font-medium"
-                      )}
-                    >
-                      <div className="flex items-center gap-2">
-                        {preset.icon}
-                        <span>{preset.label}</span>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="mb-2 pt-2 border-t">
-                <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-2 py-1">
-                  Periods
-                </div>
-                <div className="space-y-1">
-                  {groupedPresets.period.map((preset) => (
-                    <button
-                      key={preset.value}
-                      onClick={() => handlePresetChange(preset.value)}
-                      className={cn(
-                        "w-full text-left px-2 py-1.5 text-sm rounded-md hover:bg-accent transition-colors",
-                        value.range.preset === preset.value && "bg-accent font-medium"
-                      )}
-                    >
-                      {preset.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="pt-2 border-t">
-                {groupedPresets.custom.map((preset) => (
-                  <button
-                    key={preset.value}
-                    onClick={() => handlePresetChange(preset.value)}
-                    className={cn(
-                      "w-full text-left px-2 py-1.5 text-sm rounded-md hover:bg-accent transition-colors",
-                      value.range.preset === preset.value && "bg-accent font-medium"
-                    )}
-                  >
-                    {preset.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </PopoverContent>
-        </Popover>
-
-        {/* Date Display & Calendar Button */}
-        <div className="flex gap-2">
-          <div className="flex-1 px-3 py-2 text-sm border rounded-md bg-muted/50">
-            {getDisplayValue()}
-          </div>
-
-          <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                size="icon"
-                disabled={disabled}
-              >
-                <CalendarIcon className="h-4 w-4" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="end">
+      {/* Main Date Range Trigger */}
+      <Popover open={isOpen} onOpenChange={setIsOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            className={cn(
+              "w-full justify-start text-left font-normal",
+              !actualDateRange && "text-muted-foreground"
+            )}
+            disabled={disabled}
+          >
+            <CalendarIcon className="mr-2 h-4 w-4" />
+            {actualDateRange ? (
+              <>
+                <span className="font-medium">{format(actualDateRange.startDate, 'MMM d, yyyy')}</span>
+                <ArrowRight className="mx-2 h-3 w-3 text-muted-foreground" />
+                <span className="font-medium">{format(actualDateRange.endDate, 'MMM d, yyyy')}</span>
+              </>
+            ) : (
+              "Select date range"
+            )}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0 max-w-[700px]" align="start" side="bottom">
+          <div className="flex">
+            {/* Left: Calendar */}
+            <div className="p-3">
               <Calendar
                 mode="range"
                 selected={{
@@ -597,63 +602,147 @@ export function DateRangeFilter({
                   to: actualDateRange?.endDate,
                 }}
                 onSelect={handleDateSelect}
-                numberOfMonths={2}
+                numberOfMonths={1}
                 disabled={disabled}
               />
-            </PopoverContent>
-          </Popover>
-        </div>
+            </div>
 
-        {/* Comparison Toggle */}
-        {showComparison && (
-          <div className="flex items-start gap-2 pt-2 border-t">
-            <input
-              type="checkbox"
-              id="compare-date"
-              checked={value.comparison.enabled}
-              onChange={(e) => handleComparisonToggle(e.target.checked)}
-              className="mt-0.5 rounded"
-              disabled={disabled}
-            />
-            <div className="flex-1">
-              <label
-                htmlFor="compare-date"
-                className="text-sm font-medium text-gray-900 dark:text-gray-100 cursor-pointer"
-              >
-                Compare to previous period
-              </label>
-              {value.comparison.enabled && comparisonDateRange && (
-                <div className="flex items-center gap-1 mt-1">
-                  <TrendingUp className="h-3 w-3 text-muted-foreground" />
-                  <span className="text-xs text-muted-foreground">
-                    {format(comparisonDateRange.comparisonStartDate, 'MMM d')} - {format(comparisonDateRange.comparisonEndDate, 'MMM d, yyyy')}
-                  </span>
+            {/* Right: Presets & Options */}
+            <div className="border-l flex flex-col" style={{ width: '200px' }}>
+              {/* Presets Section */}
+              <div className="p-3 space-y-3 flex-1 overflow-y-auto">
+                <div className="space-y-1">
+                  <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                    QUICK SELECT
+                  </div>
+                  {groupedPresets.relative.map((preset) => (
+                    <Button
+                      key={preset.value}
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handlePresetChange(preset.value)}
+                      className={cn(
+                        "w-full justify-start h-8 text-sm font-normal",
+                        value.range.preset === preset.value && "bg-accent font-medium"
+                      )}
+                    >
+                      {preset.label}
+                    </Button>
+                  ))}
                 </div>
+
+                <Separator />
+
+                <div className="space-y-1">
+                  <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                    PERIODS
+                  </div>
+                  {groupedPresets.period.map((preset) => (
+                    <Button
+                      key={preset.value}
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handlePresetChange(preset.value)}
+                      className={cn(
+                        "w-full justify-start h-8 text-sm font-normal",
+                        value.range.preset === preset.value && "bg-accent font-medium"
+                      )}
+                    >
+                      {preset.label}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Comparison Section */}
+              {showComparison && (
+                <>
+                  <Separator />
+                  <div className="p-3 space-y-2 bg-muted/30">
+                    <div className="flex items-center justify-between">
+                      <Label
+                        htmlFor="compare-toggle"
+                        className="text-xs font-medium cursor-pointer"
+                      >
+                        Compare
+                      </Label>
+                      <Switch
+                        id="compare-toggle"
+                        checked={value.comparison.enabled}
+                        onCheckedChange={handleComparisonToggle}
+                        disabled={disabled}
+                        className="scale-90"
+                      />
+                    </div>
+
+                    {value.comparison.enabled && (
+                      <div className="space-y-2 animate-in fade-in-50 duration-200">
+                        <Select
+                          value={value.comparison.type || 'previous_period'}
+                          onValueChange={(type) => {
+                            const nextType = type as ComparisonType;
+                            onChange({
+                              ...value,
+                              comparison: buildComparisonState(
+                                value.comparison.enabled,
+                                nextType
+                              ),
+                            });
+                          }}
+                          disabled={disabled}
+                        >
+                          <SelectTrigger className="h-8 text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="previous_period">Previous Period</SelectItem>
+                            <SelectItem value="previous_week">Week over Week</SelectItem>
+                            <SelectItem value="previous_month">Month over Month</SelectItem>
+                            <SelectItem value="previous_year">Year over Year</SelectItem>
+                          </SelectContent>
+                        </Select>
+
+                        {comparisonDateRange && (
+                          <div className="text-xs text-muted-foreground p-2 bg-background rounded border">
+                            <div className="font-medium text-foreground">vs</div>
+                            <div>
+                              {format(comparisonDateRange.comparisonStartDate, 'MMM d')} - {format(comparisonDateRange.comparisonEndDate, 'MMM d, yyyy')}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </>
               )}
+
+              {/* Apply Button - Always visible for custom date selection */}
+              <>
+                <Separator />
+                <div className="p-3">
+                  <Button
+                    onClick={handleApply}
+                    className="w-full h-9"
+                    disabled={disabled || !actualDateRange}
+                  >
+                    Apply
+                  </Button>
+                </div>
+              </>
             </div>
           </div>
-        )}
+        </PopoverContent>
+      </Popover>
 
-        {/* Summary Badges - Removed days badge for cleaner UI */}
-        {actualDateRange && value.comparison.enabled && (
-          <div className="flex flex-wrap gap-2 pt-2">
-            <Badge variant="outline" className="text-xs">
-              Comparison enabled
-            </Badge>
-          </div>
-        )}
-
-        {/* Apply Button */}
-        {onApply && (
-          <Button
-            onClick={handleApply}
-            className="w-full"
-            disabled={disabled || !actualDateRange}
-          >
-            Apply to Dashboard
-          </Button>
-        )}
-      </div>
+      {/* Summary Badge */}
+      {actualDateRange && value.comparison.enabled && (
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <Badge variant="secondary" className="text-xs font-normal">
+            <TrendingUp className="h-3 w-3 mr-1" />
+            Comparison active
+          </Badge>
+        </div>
+      )}
     </div>
   );
 }

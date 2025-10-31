@@ -7,42 +7,31 @@ import { BarChart } from './charts/BarChart';
 import { LineChart } from './charts/LineChart';
 import { PieChart } from './charts/PieChart';
 import { AreaChart } from './charts/AreaChart';
-import { ComboChart } from './charts/ComboChart';
 
 // Chart Components - Advanced
 import { ScatterChart } from './charts/ScatterChart';
 import { BubbleChart } from './charts/BubbleChart';
 import { HeatmapChart } from './charts/HeatmapChart';
-import { CalendarHeatmap } from './charts/CalendarHeatmap';
-import { RadarChart } from './charts/RadarChart';
 import { FunnelChart } from './charts/FunnelChart';
-import { GaugeChart } from './charts/GaugeChart';
 import { TreemapChart } from './charts/TreemapChart';
 import { SunburstChart } from './charts/SunburstChart';
 import { SankeyChart } from './charts/SankeyChart';
 import { WaterfallChart } from './charts/WaterfallChart';
-import { ParallelChart } from './charts/ParallelChart';
-import { BoxplotChart } from './charts/BoxplotChart';
-import { BulletChart } from './charts/BulletChart';
-import { CandlestickChart } from './charts/CandlestickChart';
 import { GeoMapChart } from './charts/GeoMapChart';
-import { PictorialBarChart } from './charts/PictorialBarChart';
-import { StackedBarChart } from './charts/StackedBarChart';
-import { StackedColumnChart } from './charts/StackedColumnChart';
-import { ThemeRiverChart } from './charts/ThemeRiverChart';
 import { TreeChart } from './charts/TreeChart';
+import { WordCloudChart } from './charts/WordCloudChart';
+
+// Chart Components - Stacked
+import { StackedColumnChart } from './charts/StackedColumnChart';
+import { StackedBarChart } from './charts/StackedBarChart';
 
 // Chart Components - Data Display
 import { TableChart } from './charts/TableChart';
-import PivotTableChart from './charts/PivotTableChart';
 import { Scorecard } from './charts/Scorecard';
-
-// Chart Components - Specialized
-import { GraphChart } from './charts/GraphChart';
-import { TimelineChart } from './charts/TimelineChart';
 
 // Control Components
 import { DateRangeFilter } from './controls/DateRangeFilter';
+import { DateRangeFilterWrapper } from './controls/DateRangeFilterWrapper';
 import { CheckboxFilter } from './controls/CheckboxFilter';
 import { DimensionControl } from './controls/DimensionControl';
 import { SliderFilter } from './controls/SliderFilter';
@@ -72,16 +61,14 @@ interface ChartWrapperProps {
  * ChartWrapper Component
  *
  * Universal wrapper that renders ANY dashboard component based on configuration type.
- * Supports 49 component types across 3 categories:
+ * Supports 36 component types across 3 categories:
  *
- * CHARTS (32 types):
- * - Basic: time_series, bar_chart, line_chart, pie_chart, area_chart, combo_chart
- * - Advanced: scatter_chart, bubble_chart, heatmap, calendar_heatmap, radar, funnel,
- *             gauge, treemap, sunburst, sankey, waterfall, parallel, boxplot, bullet,
- *             candlestick, geomap, pictorial_bar, stacked_bar, stacked_column,
- *             theme_river, tree
- * - Data Display: table, pivot_table, scorecard
- * - Specialized: graph, timeline
+ * CHARTS (20 types):
+ * - Basic: time_series, bar_chart, line_chart, pie_chart, donut_chart, area_chart,
+ *          horizontal_bar
+ * - Advanced: scatter_chart, bubble_chart, heatmap, funnel, treemap, sunburst,
+ *             sankey, waterfall, geomap, stacked_bar, stacked_column, tree, word_cloud
+ * - Data Display: table, scorecard
  *
  * CONTROLS (11 types):
  * - Filters: date_range_filter, checkbox_filter, slider_filter, preset_filter,
@@ -105,7 +92,8 @@ export const ChartWrapper: React.FC<ChartWrapperProps> = ({
     id: config.id,
     title: config.title,
     metrics: config.metrics,
-    dimension: config.dimension
+    dimension: config.dimension,
+    dataset_id: (config as any).dataset_id
   });
 
   /**
@@ -127,11 +115,16 @@ export const ChartWrapper: React.FC<ChartWrapperProps> = ({
       case 'pie_chart':
         return <PieChart {...config} />;
 
+      case 'donut_chart':
+        // Donut chart = Pie chart with hollow center
+        return <PieChart {...config} pieRadius={['40%', '70%']} />;
+
+      case 'horizontal_bar':
+        // Horizontal bar chart = Bar chart with horizontal orientation
+        return <BarChart {...config} orientation="horizontal" />;
+
       case 'area_chart':
         return <AreaChart {...config} />;
-
-      case 'combo_chart':
-        return <ComboChart {...config} />;
 
       // ===== ADVANCED CHARTS =====
       case 'scatter_chart':
@@ -143,17 +136,8 @@ export const ChartWrapper: React.FC<ChartWrapperProps> = ({
       case 'heatmap':
         return <HeatmapChart {...config} />;
 
-      case 'calendar_heatmap':
-        return <CalendarHeatmap {...config} />;
-
-      case 'radar':
-        return <RadarChart {...config} />;
-
       case 'funnel':
         return <FunnelChart {...config} />;
-
-      case 'gauge':
-        return <GaugeChart {...config} />;
 
       case 'treemap':
         return <TreemapChart {...config} />;
@@ -175,26 +159,6 @@ export const ChartWrapper: React.FC<ChartWrapperProps> = ({
           query={{ measures: config.metrics || [], dimensions: config.dimension ? [config.dimension] : [] }}
         />;
 
-      case 'parallel':
-        return <ParallelChart
-          {...config}
-          query={{ measures: config.metrics || [], dimensions: config.dimension ? [config.dimension] : [] }}
-          axes={config.metrics?.map(m => ({ name: m, label: m, type: 'value' as const })) || []}
-        />;
-
-      case 'boxplot':
-        return <BoxplotChart {...config} />;
-
-      case 'bullet':
-        return <BulletChart
-          {...config}
-          query={{ measures: config.metrics || [], dimensions: config.dimension ? [config.dimension] : [] }}
-          measure={config.metrics?.[0] || ''}
-        />;
-
-      case 'candlestick':
-        return <CandlestickChart {...config} />;
-
       case 'geomap':
         return <GeoMapChart
           {...config}
@@ -202,9 +166,6 @@ export const ChartWrapper: React.FC<ChartWrapperProps> = ({
           mapType="world"
           data={[]}
         />;
-
-      case 'pictorial_bar':
-        return <PictorialBarChart {...config} />;
 
       case 'stacked_bar':
         return <StackedBarChart
@@ -220,8 +181,9 @@ export const ChartWrapper: React.FC<ChartWrapperProps> = ({
           series={config.metrics?.map(m => ({ key: m, name: m })) || []}
         />;
 
-      case 'theme_river':
-        return <ThemeRiverChart {...config} />;
+      case 'tree':
+      case 'word_cloud':
+        return <WordCloudChart {...config} />;
 
       case 'tree':
         return <TreeChart {...config} />;
@@ -230,32 +192,12 @@ export const ChartWrapper: React.FC<ChartWrapperProps> = ({
       case 'table':
         return <TableChart {...config} />;
 
-      case 'pivot_table':
-        return <PivotTableChart
-          {...config}
-          query={{ measures: config.metrics || [], dimensions: config.dimension ? [config.dimension] : [] }}
-        />;
-
       case 'scorecard':
         return <Scorecard {...config} />;
 
-      // ===== SPECIALIZED CHARTS =====
-      case 'graph':
-        return <GraphChart {...config} />;
-
-      case 'timeline':
-        return <TimelineChart {...config} />;
-
       // ===== CONTROL COMPONENTS =====
       case 'date_range_filter':
-        return <DateRangeFilter
-          {...(config as any)}
-          value={{
-            range: { type: 'preset', preset: 'last7days' },
-            comparison: { enabled: false }
-          }}
-          onChange={() => {}}
-        />;
+        return <DateRangeFilterWrapper {...config} />;
 
       case 'checkbox_filter':
         return <CheckboxFilter
@@ -373,7 +315,7 @@ export const ChartWrapper: React.FC<ChartWrapperProps> = ({
               <p className="text-gray-500 font-medium">Unknown Component Type</p>
               <p className="text-gray-400 text-sm mt-1">{config.type}</p>
               <p className="text-gray-400 text-xs mt-2">
-                Supported: 32 charts + 11 controls + 6 content elements
+                Supported: 20 charts + 11 controls + 6 content elements
               </p>
             </div>
           </div>

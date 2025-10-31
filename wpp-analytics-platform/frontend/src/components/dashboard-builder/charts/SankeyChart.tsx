@@ -14,9 +14,12 @@ import { Loader2 } from 'lucide-react';
 import ReactECharts from 'echarts-for-react';
 import { ComponentConfig } from '@/types/dashboard-builder';
 import { DASHBOARD_THEME } from '@/lib/themes/dashboard-theme';
+import { formatChartLabel } from '@/lib/utils/label-formatter';
 import { useCascadedFilters } from '@/hooks/useCascadedFilters';
 import { usePageData } from '@/hooks/usePageData';
 import { useCurrentPageId } from '@/store/dashboardStore';
+import { getChartDefaults, resolveSortField } from '@/lib/defaults/chart-defaults';
+import { formatChartLabel } from '@/lib/utils/label-formatter';
 
 export interface SankeyChartProps extends Partial<ComponentConfig> {
   sourceField?: string;
@@ -37,8 +40,18 @@ export const SankeyChart: React.FC<SankeyChartProps> = (props) => {
     sourceField = dimensions[0],
     targetField = dimensions[1],
     valueField = metrics[0],
+    // Professional defaults (optional overrides)
+    sortBy,
+    sortDirection,
+    limit,
     ...rest
   } = props;
+
+  // Apply professional defaults
+  const defaults = getChartDefaults('sankey');
+  const finalSortBy = sortBy || resolveSortField(defaults.sortBy, metrics, dimensions?.[0]);
+  const finalSortDirection = sortDirection || defaults.sortDirection;
+  const finalLimit = limit !== undefined ? limit : defaults.limit;
 
   const currentPageId = useCurrentPageId();
 
@@ -59,6 +72,10 @@ export const SankeyChart: React.FC<SankeyChartProps> = (props) => {
     dimensions,
     filters: cascadedFilters,
     enabled: !!dataset_id && metrics.length > 0 && dimensions.length >= 2 && !!currentPageId,
+    chartType: 'sankey',
+    sortBy: finalSortBy,
+    sortDirection: finalSortDirection,
+    limit: finalLimit,
   });
 
   // Container styling
@@ -92,8 +109,13 @@ export const SankeyChart: React.FC<SankeyChartProps> = (props) => {
     );
   }
 
+  // Extract comparison data
+  const currentData = data?.data?.current || data?.data || [];
+  const comparisonData = data?.data?.comparison || [];
+  const hasComparison = comparisonData.length > 0;
+
   // No data state
-  if (!data?.data || data.data.length === 0) {
+  if (currentData.length === 0) {
     return (
       <div style={containerStyle} className="flex items-center justify-center">
         <p className="text-sm text-muted-foreground">No data available</p>
@@ -105,7 +127,7 @@ export const SankeyChart: React.FC<SankeyChartProps> = (props) => {
   const nodes: Set<string> = new Set();
   const links: Array<{ source: string; target: string; value: number }> = [];
 
-  data.data.forEach((row: any) => {
+  currentData.forEach((row: any) => {
     const source = row[sourceField];
     const target = row[targetField];
     const value = parseFloat(row[valueField]) || 0;
