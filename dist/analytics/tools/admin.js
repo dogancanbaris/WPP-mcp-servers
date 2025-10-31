@@ -12,32 +12,7 @@ const logger = getLogger('analytics.tools.admin');
  */
 export const createPropertyTool = {
     name: 'create_analytics_property',
-    description: `Create a new Google Analytics 4 property.
-
-💡 AGENT GUIDANCE - PROPERTY CREATION:
-
-🎯 WHAT THIS DOES:
-- Creates a new GA4 property under an account
-- Sets up empty property ready for data streams
-- Defines timezone, currency, industry
-
-📋 PROPERTY SETTINGS:
-- Display name (client name or website)
-- Time zone (for report day boundaries)
-- Currency code (for revenue reporting)
-- Industry category (optional)
-
-💡 COMMON USE CASES:
-- Set up GA4 for new client website
-- Create separate properties for staging/production
-- Migrate from Universal Analytics to GA4
-
-⚠️ NEXT STEPS AFTER CREATION:
-1. Create data stream (web, iOS, or Android)
-2. Install tracking code on website
-3. Configure custom dimensions/metrics
-4. Set up conversion events
-5. Link to Google Ads`,
+    description: 'Create a new Google Analytics 4 property.',
     inputSchema: {
         type: 'object',
         properties: {
@@ -150,29 +125,7 @@ export const createPropertyTool = {
  */
 export const createDataStreamTool = {
     name: 'create_data_stream',
-    description: `Create a web or app data stream in GA4 property.
-
-💡 AGENT GUIDANCE - DATA STREAMS:
-
-🎯 WHAT THIS DOES:
-- Creates tracking stream for website or mobile app
-- Generates Measurement ID (G-XXXXXXXXXX)
-- Enables data collection for property
-
-📋 STREAM TYPES:
-- WEB - Website tracking
-- IOS_APP - iOS app tracking
-- ANDROID_APP - Android app tracking
-
-💡 USE CASES:
-- "Add website tracking for www.client.com"
-- "Create data stream for mobile app"
-- "Set up tracking for new subdomain"
-
-⚠️ NEXT STEPS:
-1. Get Measurement ID from created stream
-2. Install gtag.js on website with Measurement ID
-3. Verify data is flowing (check real-time reports)`,
+    description: 'Create a web or app data stream in GA4 property.',
     inputSchema: {
         type: 'object',
         properties: {
@@ -290,35 +243,7 @@ export const createDataStreamTool = {
  */
 export const createCustomDimensionTool = {
     name: 'create_custom_dimension',
-    description: `Create a custom dimension in GA4 for tracking additional data.
-
-💡 AGENT GUIDANCE - CUSTOM DIMENSIONS:
-
-🎯 WHAT THIS DOES:
-- Create custom dimension to track data beyond default GA4 dimensions
-- Define dimension name, parameter name, and scope
-- Enable custom reporting on your specific data
-
-📋 DIMENSION SCOPES:
-- EVENT - Different for each event (e.g., product_name on purchase event)
-- USER - Same for all events from user (e.g., customer_segment)
-- ITEM - For e-commerce items (e.g., item_color)
-
-💡 COMMON USE CASES:
-- Customer segment (user scope)
-- Product category (event scope)
-- Campaign source (event scope)
-- User role (user scope)
-- Content type (event scope)
-
-⚠️ REQUIREMENTS:
-- Must already be sending parameter in events
-- Parameter name must match exactly
-- Limit: 50 event-scoped, 25 user-scoped per property
-
-📊 EXAMPLE:
-Event sent: purchase { customer_tier: "gold" }
-Custom dimension: "Customer Tier" → parameter: customer_tier, scope: EVENT`,
+    description: 'Create a custom dimension in GA4 for tracking additional data..',
     inputSchema: {
         type: 'object',
         properties: {
@@ -430,30 +355,7 @@ Custom dimension: "Customer Tier" → parameter: customer_tier, scope: EVENT`,
  */
 export const createCustomMetricTool = {
     name: 'create_custom_metric',
-    description: `Create a custom metric in GA4 for tracking numeric data.
-
-💡 AGENT GUIDANCE - CUSTOM METRICS:
-
-🎯 WHAT THIS DOES:
-- Create custom metric to track numeric values
-- Define metric name, parameter name, and scope
-- Enable custom calculations in reports
-
-📋 METRIC SCOPES:
-- EVENT - Different for each event (e.g., video_progress)
-
-📊 MEASUREMENT UNITS:
-- STANDARD - Default (count)
-- CURRENCY - Monetary value
-- TIME - Duration (seconds, milliseconds)
-- DISTANCE - Length (meters, miles)
-
-💡 COMMON USE CASES:
-- Customer lifetime value
-- Product margin
-- Video watch time
-- Page scroll depth
-- Cart value`,
+    description: 'Create a custom metric in GA4 for tracking numeric data..',
     inputSchema: {
         type: 'object',
         properties: {
@@ -551,25 +453,7 @@ export const createCustomMetricTool = {
  */
 export const createConversionEventTool = {
     name: 'create_conversion_event',
-    description: `Mark a GA4 event as a conversion (key event).
-
-💡 AGENT GUIDANCE:
-
-🎯 WHAT THIS DOES:
-- Marks an existing GA4 event as a conversion
-- Enables conversion tracking in reports
-- Sends conversions to Google Ads (if linked)
-
-💡 COMMON CONVERSIONS:
-- purchase (e-commerce)
-- generate_lead (forms)
-- sign_up (accounts)
-- add_to_cart
-- begin_checkout
-
-⚠️ REQUIREMENTS:
-- Event must already exist in GA4
-- Use exact event name (case-sensitive)`,
+    description: 'Mark a GA4 event as a conversion (key event)..',
     inputSchema: {
         type: 'object',
         properties: {
@@ -640,23 +524,7 @@ export const createConversionEventTool = {
  */
 export const createGoogleAdsLinkTool = {
     name: 'create_google_ads_link',
-    description: `Link GA4 property to Google Ads account for conversion import.
-
-💡 AGENT GUIDANCE:
-
-🎯 WHAT THIS DOES:
-- Links GA4 property to Google Ads account
-- Enables conversion import to Google Ads
-- Allows bidding on GA4 conversions
-
-💡 CRITICAL FOR:
-- Using GA4 conversions in Google Ads bidding
-- Importing GA4 audiences to Google Ads
-- Unified reporting
-
-⚠️ REQUIREMENTS:
-- Must have admin access to both GA4 and Google Ads
-- Google Ads customer ID must be valid`,
+    description: 'Link GA4 property to Google Ads account for conversion import..',
     inputSchema: {
         type: 'object',
         properties: {

@@ -29,20 +29,7 @@ export declare const listAnalyticsPropertiesTool: {
             };
         };
     };
-    handler(input: any): Promise<{
-        success: boolean;
-        data: {
-            accountId: any;
-            properties: {
-                name: any;
-                displayName: any;
-                timeZone: any;
-                currencyCode: any;
-            }[];
-            count: number;
-            message: string;
-        };
-    }>;
+    handler(input: any): Promise<import("../../shared/interactive-workflow.js").McpResponse>;
 };
 /**
  * List data streams
@@ -60,19 +47,6 @@ export declare const listDataStreamsTool: {
         };
         required: string[];
     };
-    handler(input: any): Promise<{
-        success: boolean;
-        data: {
-            propertyId: any;
-            streams: {
-                name: any;
-                type: any;
-                displayName: any;
-                webStreamData: any;
-            }[];
-            count: number;
-            message: string;
-        };
-    }>;
+    handler(input: any): Promise<import("../../shared/interactive-workflow.js").McpResponse>;
 };
 //# sourceMappingURL=accounts.d.ts.map

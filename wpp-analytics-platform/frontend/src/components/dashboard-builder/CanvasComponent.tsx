@@ -223,6 +223,8 @@ const CanvasComponentInner: React.FC<CanvasComponentProps> = ({
       minWidth={minWidth}
       minHeight={minHeight}
       disableDragging={!enableDrag}
+      dragHandleClassName="drag-handle" // Only drag via this element
+      cancel=".settings-button, .lock-button, .remove-button, .dropdown-trigger" // Don't start drag on these
       enableResizing={
         enableResize
           ? {
@@ -237,6 +239,26 @@ const CanvasComponentInner: React.FC<CanvasComponentProps> = ({
             }
           : false
       }
+      resizeHandleStyles={{
+        top: { cursor: 'ns-resize', zIndex: 100 },
+        right: { cursor: 'ew-resize', zIndex: 100 },
+        bottom: { cursor: 'ns-resize', zIndex: 100 },
+        left: { cursor: 'ew-resize', zIndex: 100 },
+        topRight: { cursor: 'nesw-resize', zIndex: 100 },
+        topLeft: { cursor: 'nwse-resize', zIndex: 100 },
+        bottomRight: { cursor: 'nwse-resize', zIndex: 100 },
+        bottomLeft: { cursor: 'nesw-resize', zIndex: 100 },
+      }}
+      resizeHandleClasses={{
+        top: 'resize-handle-edge',
+        right: 'resize-handle-edge',
+        bottom: 'resize-handle-edge',
+        left: 'resize-handle-edge',
+        topRight: 'resize-handle-corner',
+        topLeft: 'resize-handle-corner',
+        bottomRight: 'resize-handle-corner',
+        bottomLeft: 'resize-handle-corner',
+      }}
       style={{ ...rndStyle, zIndex }} // Apply z-index in Rnd style (works!)
       className={cn(
         'group canvas-component',
@@ -253,14 +275,16 @@ const CanvasComponentInner: React.FC<CanvasComponentProps> = ({
       {isEditing && !isLocked && (
         <div
           className={cn(
+            'drag-handle', // For dragHandleClassName
             'absolute left-2 top-2 z-10',
             'flex h-6 w-6 items-center justify-center',
             'rounded-md border border-gray-200 bg-white text-gray-400 shadow-sm',
             'opacity-0 group-hover:opacity-100 transition-opacity duration-200',
-            'cursor-grab active:cursor-grabbing'
+            'pointer-events-auto' // Can be clicked/dragged
+            // Remove cursor-grab - let Rnd handle cursor
           )}
         >
-          <GripVertical className="h-3 w-3" />
+          <GripVertical className="h-3 w-3 pointer-events-none" />
         </div>
       )}
 
@@ -276,27 +300,30 @@ const CanvasComponentInner: React.FC<CanvasComponentProps> = ({
 
       {/* Component Controls */}
       {isEditing && (
-        <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+        <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-[90]">
           {/* Lock/Unlock Button */}
           {onToggleLock && (
             <button
               onClick={(e) => {
                 e.stopPropagation();
+                e.preventDefault(); // Prevent any drag
                 onToggleLock(id);
               }}
               className={cn(
+                'lock-button', // For cancel prop
                 'p-1.5 rounded-md',
                 'bg-white dark:bg-gray-800',
                 'border border-gray-200 dark:border-gray-700',
                 'hover:bg-gray-50 dark:hover:bg-gray-800',
+                'pointer-events-auto cursor-pointer', // Ensure clickable
                 isLocked && 'bg-yellow-50 border-yellow-400'
               )}
               title={isLocked ? 'Unlock component' : 'Lock component'}
             >
               {isLocked ? (
-                <Lock className="w-3.5 h-3.5 text-yellow-600" />
+                <Lock className="w-3.5 h-3.5 text-yellow-600 pointer-events-none" />
               ) : (
-                <Unlock className="w-3.5 h-3.5 text-gray-600 dark:text-gray-400" />
+                <Unlock className="w-3.5 h-3.5 text-gray-600 dark:text-gray-400 pointer-events-none" />
               )}
             </button>
           )}
@@ -306,14 +333,19 @@ const CanvasComponentInner: React.FC<CanvasComponentProps> = ({
             <DropdownMenuTrigger asChild>
               <button
                 className={cn(
+                  'settings-button dropdown-trigger', // For cancel prop
                   'p-1.5 rounded-md',
                   'bg-white dark:bg-gray-800',
                   'border border-gray-200 dark:border-gray-700',
-                  'hover:bg-gray-50 dark:hover:bg-gray-800'
+                  'hover:bg-gray-50 dark:hover:bg-gray-800',
+                  'pointer-events-auto cursor-pointer' // Ensure clickable
                 )}
-                onClick={(e) => e.stopPropagation()}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault(); // Prevent any drag
+                }}
               >
-                <Settings className="w-3.5 h-3.5 text-gray-600 dark:text-gray-400" />
+                <Settings className="w-3.5 h-3.5 text-gray-600 dark:text-gray-400 pointer-events-none" />
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
@@ -353,15 +385,18 @@ const CanvasComponentInner: React.FC<CanvasComponentProps> = ({
           <button
             onClick={(e) => {
               e.stopPropagation();
+              e.preventDefault(); // Prevent any drag
               onRemove(id);
             }}
             className={cn(
+              'remove-button', // For cancel prop
               'p-1.5 rounded-md',
               'bg-red-50 dark:bg-red-950 text-red-600 dark:text-red-400',
-              'hover:bg-red-100 dark:hover:bg-red-900'
+              'hover:bg-red-100 dark:hover:bg-red-900',
+              'pointer-events-auto cursor-pointer' // Ensure clickable
             )}
           >
-            <X className="w-3.5 h-3.5" />
+            <X className="w-3.5 h-3.5 pointer-events-none" />
           </button>
         </div>
       )}
@@ -392,7 +427,7 @@ const CanvasComponentInner: React.FC<CanvasComponentProps> = ({
 };
 
 // Memoize component to prevent unnecessary re-renders
-// Only re-render if id, position, component, isEditing, or isSelected changes
+// Only re-render if id, position, component, isEditing, isSelected, or zIndex changes
 export const CanvasComponent = React.memo(CanvasComponentInner, (prevProps, nextProps) => {
   return (
     prevProps.id === nextProps.id &&
@@ -402,6 +437,7 @@ export const CanvasComponent = React.memo(CanvasComponentInner, (prevProps, next
     prevProps.position.height === nextProps.position.height &&
     prevProps.component === nextProps.component &&
     prevProps.isEditing === nextProps.isEditing &&
-    prevProps.isSelected === nextProps.isSelected
+    prevProps.isSelected === nextProps.isSelected &&
+    prevProps.zIndex === nextProps.zIndex // CRITICAL: Track z-index changes!
   );
 });

@@ -209,6 +209,7 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
           <Selecto
             ref={selectoRef}
             container={canvasRef.current}
+            rootContainer={document.body} // CRITICAL: Non-transformed container for accurate coordinates
             dragContainer={canvasRef.current}
             selectableTargets={['.canvas-component']}
             hitRate={0} // Any intersection selects (Looker/Figma style)

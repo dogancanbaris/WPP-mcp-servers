@@ -8,6 +8,7 @@ import { validateGSCProperty } from '../validation.js';
 import { getLogger } from '../../shared/logger.js';
 import { getApprovalEnforcer, DryRunResultBuilder as NewDryRunResultBuilder } from '../../shared/approval-enforcer.js';
 import { detectAndEnforceVagueness } from '../../shared/vagueness-detector.js';
+import { injectGuidance, formatDiscoveryResponse, formatNextSteps } from '../../shared/interactive-workflow.js';
 const logger = getLogger('gsc.tools.sitemaps');
 /**
  * List sitemaps tool
@@ -23,7 +24,7 @@ export const listSitemapsTool = {
                 description: 'Property URL (e.g., sc-domain:example.com)',
             },
         },
-        required: ['property'],
+        required: [],
     },
     async handler(input) {
         try {
@@ -35,6 +36,19 @@ export const listSitemapsTool = {
             }
             // Create GSC client with user's OAuth token
             const gscClient = createGSCClient(oauthToken);
+            // Property discovery
+            if (!property) {
+                const res = await gscClient.sites.list();
+                const sites = res.data.siteEntry || [];
+                return formatDiscoveryResponse({
+                    step: '1/1',
+                    title: 'SELECT PROPERTY',
+                    items: sites.map(s => ({ url: s.siteUrl })),
+                    itemFormatter: (s, i) => `${i + 1}. ${s.url}`,
+                    prompt: 'Which property\'s sitemaps?',
+                    nextParam: 'property',
+                });
+            }
             // Validate input
             validateGSCProperty(property);
             const audit = getAuditLogger();
@@ -55,15 +69,15 @@ export const listSitemapsTool = {
             await audit.logReadOperation('user', 'list_sitemaps', property, {
                 sitemapCount: sitemaps.length,
             });
-            return {
-                success: true,
-                data: {
-                    property,
-                    sitemaps: formatted,
-                    count: sitemaps.length,
-                    message: `Found ${sitemaps.length} submitted sitemaps`,
-                },
-            };
+            return injectGuidance({ property, sitemaps: formatted, count: sitemaps.length }, `🗺️ SITEMAPS FOR ${property}
+
+Found ${sitemaps.length} submitted sitemap(s)
+
+${formatted.map((s, i) => `${i + 1}. ${s.url}
+   Last submitted: ${s.lastSubmitted || 'N/A'}
+   Errors: ${s.errors} | Warnings: ${s.warnings}`).join('\n\n')}
+
+${formatNextSteps(['Submit new: use submit_sitemap', 'Get details: use get_sitemap', 'Check indexing: use inspect_url'])}`);
         }
         catch (error) {
             logger.error('Failed to list sitemaps', error);
@@ -90,18 +104,43 @@ export const getSitemapTool = {
                 description: 'Sitemap URL',
             },
         },
-        required: ['property', 'sitemapUrl'],
+        required: [],
     },
     async handler(input) {
         try {
             const { property, sitemapUrl } = input;
-            // Extract OAuth token from request
+            // Extract OAuth token
             const oauthToken = await extractOAuthToken(input);
-            if (!oauthToken) {
+            if (!oauthToken)
                 throw new Error('OAuth token required for Google Search Console API access');
-            }
-            // Create GSC client with user's OAuth token
             const gscClient = createGSCClient(oauthToken);
+            // Property discovery
+            if (!property) {
+                const res = await gscClient.sites.list();
+                const sites = res.data.siteEntry || [];
+                return formatDiscoveryResponse({
+                    step: '1/2',
+                    title: 'SELECT PROPERTY',
+                    items: sites.map(s => ({ url: s.siteUrl })),
+                    itemFormatter: (s, i) => `${i + 1}. ${s.url}`,
+                    prompt: 'Which property?',
+                    nextParam: 'property',
+                });
+            }
+            // Sitemap URL discovery
+            if (!sitemapUrl) {
+                const res = await gscClient.sitemaps.list({ siteUrl: property });
+                const sitemaps = res.data.sitemap || [];
+                return formatDiscoveryResponse({
+                    step: '2/2',
+                    title: 'SELECT SITEMAP',
+                    items: sitemaps,
+                    itemFormatter: (s, i) => `${i + 1}. ${s.path}`,
+                    prompt: 'Which sitemap?',
+                    nextParam: 'sitemapUrl',
+                    context: { property },
+                });
+            }
             // Validate input
             validateGSCProperty(property);
             const audit = getAuditLogger();

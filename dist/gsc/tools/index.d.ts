@@ -967,59 +967,6 @@ export declare const allTools: ({
                 type: string;
                 description: string;
             };
-        };
-    };
-    handler(input: any): Promise<{
-        success: boolean;
-        data: {
-            accountId: any;
-            properties: {
-                name: any;
-                displayName: any;
-                timeZone: any;
-                currencyCode: any;
-            }[];
-            count: number;
-            message: string;
-        };
-    }>;
-} | {
-    name: string;
-    description: string;
-    inputSchema: {
-        type: "object";
-        properties: {
-            propertyId: {
-                type: string;
-                description: string;
-            };
-        };
-        required: string[];
-    };
-    handler(input: any): Promise<{
-        success: boolean;
-        data: {
-            propertyId: any;
-            streams: {
-                name: any;
-                type: any;
-                displayName: any;
-                webStreamData: any;
-            }[];
-            count: number;
-            message: string;
-        };
-    }>;
-} | {
-    name: string;
-    description: string;
-    inputSchema: {
-        type: "object";
-        properties: {
-            accountId: {
-                type: string;
-                description: string;
-            };
             displayName: {
                 type: string;
                 description: string;
@@ -1424,63 +1371,6 @@ export declare const allTools: ({
             message: string;
             requiresApproval?: undefined;
             dryRun?: undefined;
-        };
-    }>;
-} | {
-    name: string;
-    description: string;
-    inputSchema: {
-        type: "object";
-        properties: {
-            property: {
-                type: string;
-                description: string;
-            };
-        };
-        required: string[];
-    };
-    handler(input: any): Promise<{
-        success: boolean;
-        data: {
-            property: any;
-            sitemaps: {
-                url: any;
-                lastSubmitted: any;
-                lastDownloaded: any;
-                errors: any;
-                warnings: any;
-                contents: any;
-            }[];
-            count: number;
-            message: string;
-        };
-    }>;
-} | {
-    name: string;
-    description: string;
-    inputSchema: {
-        type: "object";
-        properties: {
-            property: {
-                type: string;
-                description: string;
-            };
-            sitemapUrl: {
-                type: string;
-                description: string;
-            };
-        };
-        required: string[];
-    };
-    handler(input: any): Promise<{
-        success: boolean;
-        data: {
-            url: string | null | undefined;
-            lastSubmitted: string | null | undefined;
-            lastDownloaded: string | null | undefined;
-            errors: string | number;
-            warnings: string | number;
-            contents: import("googleapis").searchconsole_v1.Schema$WmxSitemapContent[];
         };
     }>;
 } | {
@@ -2764,63 +2654,6 @@ export declare const readTools: ({
         required: string[];
     };
     handler(input: any): Promise<import("../../shared/interactive-workflow.js").McpResponse>;
-} | {
-    name: string;
-    description: string;
-    inputSchema: {
-        type: "object";
-        properties: {
-            property: {
-                type: string;
-                description: string;
-            };
-        };
-        required: string[];
-    };
-    handler(input: any): Promise<{
-        success: boolean;
-        data: {
-            property: any;
-            sitemaps: {
-                url: any;
-                lastSubmitted: any;
-                lastDownloaded: any;
-                errors: any;
-                warnings: any;
-                contents: any;
-            }[];
-            count: number;
-            message: string;
-        };
-    }>;
-} | {
-    name: string;
-    description: string;
-    inputSchema: {
-        type: "object";
-        properties: {
-            property: {
-                type: string;
-                description: string;
-            };
-            sitemapUrl: {
-                type: string;
-                description: string;
-            };
-        };
-        required: string[];
-    };
-    handler(input: any): Promise<{
-        success: boolean;
-        data: {
-            url: string | null | undefined;
-            lastSubmitted: string | null | undefined;
-            lastDownloaded: string | null | undefined;
-            errors: string | number;
-            warnings: string | number;
-            contents: import("googleapis").searchconsole_v1.Schema$WmxSitemapContent[];
-        };
-    }>;
 } | {
     name: string;
     description: string;

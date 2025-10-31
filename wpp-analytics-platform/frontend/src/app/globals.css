@@ -442,4 +442,40 @@
   pointer-events: none !important;
   z-index: 99998 !important;
 }
+
+/* ========================================
+   REACT-RND RESIZE HANDLES
+   Make handles bigger and more visible
+   ======================================== */
+
+/* Edge handles - thin but full length */
+.resize-handle-edge {
+  z-index: 100 !important;
+  pointer-events: auto !important;
 }
+
+/* Corner handles - visible circles */
+.resize-handle-corner {
+  width: 10px !important;
+  height: 10px !important;
+  z-index: 100 !important;
+  border: 2px solid #3b82f6 !important;
+  background: white !important;
+  border-radius: 50% !important;
+  pointer-events: auto !important;
+  opacity: 0;
+  transition: opacity 200ms;
+}
+
+/* Show corner handles on hover */
+.group:hover .resize-handle-corner {
+  opacity: 1;
+}
+
+/* Selected component always shows handles */
+.selected .resize-handle-corner {
+  opacity: 1;
+  border-color: #2563eb !important;
+}
+}
+

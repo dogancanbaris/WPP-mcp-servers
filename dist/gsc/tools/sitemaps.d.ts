@@ -15,24 +15,9 @@ export declare const listSitemapsTool: {
                 description: string;
             };
         };
-        required: string[];
+        required: never[];
     };
-    handler(input: any): Promise<{
-        success: boolean;
-        data: {
-            property: any;
-            sitemaps: {
-                url: any;
-                lastSubmitted: any;
-                lastDownloaded: any;
-                errors: any;
-                warnings: any;
-                contents: any;
-            }[];
-            count: number;
-            message: string;
-        };
-    }>;
+    handler(input: any): Promise<import("../../shared/interactive-workflow.js").McpResponse>;
 };
 /**
  * Get sitemap details tool
@@ -52,19 +37,9 @@ export declare const getSitemapTool: {
                 description: string;
             };
         };
-        required: string[];
+        required: never[];
     };
-    handler(input: any): Promise<{
-        success: boolean;
-        data: {
-            url: string | null | undefined;
-            lastSubmitted: string | null | undefined;
-            lastDownloaded: string | null | undefined;
-            errors: string | number;
-            warnings: string | number;
-            contents: import("googleapis").searchconsole_v1.Schema$WmxSitemapContent[];
-        };
-    }>;
+    handler(input: any): Promise<import("../../shared/interactive-workflow.js").McpResponse>;
 };
 /**
  * Submit sitemap tool (WRITE)

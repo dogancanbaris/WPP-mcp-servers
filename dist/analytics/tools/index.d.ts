@@ -28,20 +28,7 @@ export declare const analyticsTools: ({
             };
         };
     };
-    handler(input: any): Promise<{
-        success: boolean;
-        data: {
-            accountId: any;
-            properties: {
-                name: any;
-                displayName: any;
-                timeZone: any;
-                currencyCode: any;
-            }[];
-            count: number;
-            message: string;
-        };
-    }>;
+    handler(input: any): Promise<import("../../shared/interactive-workflow.js").McpResponse>;
 } | {
     name: string;
     description: string;
@@ -55,20 +42,7 @@ export declare const analyticsTools: ({
         };
         required: string[];
     };
-    handler(input: any): Promise<{
-        success: boolean;
-        data: {
-            propertyId: any;
-            streams: {
-                name: any;
-                type: any;
-                displayName: any;
-                webStreamData: any;
-            }[];
-            count: number;
-            message: string;
-        };
-    }>;
+    handler(input: any): Promise<import("../../shared/interactive-workflow.js").McpResponse>;
 } | {
     name: string;
     description: string;
@@ -480,20 +454,7 @@ export declare const readOnlyAnalyticsTools: ({
             };
         };
     };
-    handler(input: any): Promise<{
-        success: boolean;
-        data: {
-            accountId: any;
-            properties: {
-                name: any;
-                displayName: any;
-                timeZone: any;
-                currencyCode: any;
-            }[];
-            count: number;
-            message: string;
-        };
-    }>;
+    handler(input: any): Promise<import("../../shared/interactive-workflow.js").McpResponse>;
 } | {
     name: string;
     description: string;
@@ -507,20 +468,7 @@ export declare const readOnlyAnalyticsTools: ({
         };
         required: string[];
     };
-    handler(input: any): Promise<{
-        success: boolean;
-        data: {
-            propertyId: any;
-            streams: {
-                name: any;
-                type: any;
-                displayName: any;
-                webStreamData: any;
-            }[];
-            count: number;
-            message: string;
-        };
-    }>;
+    handler(input: any): Promise<import("../../shared/interactive-workflow.js").McpResponse>;
 } | {
     name: string;
     description: string;
