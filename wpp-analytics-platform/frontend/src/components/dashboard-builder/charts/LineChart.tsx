@@ -1,83 +1,52 @@
 'use client';
 
 /**
- * Line Chart - Dataset-Based (NEW ARCHITECTURE)
+ * Line Chart - Dataset-Based (ECHARTS VERSION)
  *
- * Shows trends over time or continuous data using registered datasets.
- * Queries: GET /api/datasets/[id]/query with caching
- * Supports global filters via useGlobalFilters hook
+ * Plug-and-play line chart using ECharts rendering engine.
+ * Perfect for trends over time or continuous data.
  */
 
-import { useQuery } from '@tanstack/react-query';
+import ReactECharts from 'echarts-for-react';
 import { Loader2 } from 'lucide-react';
 import { ComponentConfig } from '@/types/dashboard-builder';
-import { formatMetricValue } from '@/lib/utils/metric-formatter';
-import { standardizeDimensionValue } from '@/lib/utils/data-formatter';
+import { DASHBOARD_THEME } from '@/lib/themes/dashboard-theme';
 import { formatChartLabel } from '@/lib/utils/label-formatter';
-import { useCascadedFilters } from '@/hooks/useCascadedFilters';
 import { usePageData } from '@/hooks/usePageData';
 import { useCurrentPageId } from '@/store/dashboardStore';
+import { useCascadedFilters } from '@/hooks/useCascadedFilters';
 import { getChartDefaults, resolveSortField } from '@/lib/defaults/chart-defaults';
-import {
-  Line,
-  LineChart as RechartsLineChart,
-  CartesianGrid,
-  Legend,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts';
+import type { EChartsOption } from 'echarts';
 
 export interface LineChartProps extends Partial<ComponentConfig> {
   smooth?: boolean;
   showDots?: boolean;
-  strokeWidth?: number;
   sortBy?: string;
   sortDirection?: 'ASC' | 'DESC';
   limit?: number;
 }
 
-export const LineChart: React.FC<LineChartProps> = ({
-  // Data props
-  id: componentId,
-  dataset_id,
-  dimension = null,
-  metrics = [],
-  dateRange,
+export const LineChart: React.FC<LineChartProps> = (props) => {
+  const theme = DASHBOARD_THEME.charts;
 
-  // Display props
-  title = 'Line Chart',
-  showTitle = true,
-  titleFontFamily = 'roboto',
-  titleFontSize = '16',
-  titleFontWeight = '600',
-  titleColor = '#111827',
-  titleBackgroundColor = 'transparent',
-  titleAlignment = 'left',
+  const {
+    id: componentId,
+    dataset_id,
+    metrics = [],
+    dimension,
+    title = 'Line Chart',
+    showTitle = true,
+    showLegend = true,
+    chartColors = ['#191D63', '#1E8E3E', '#fac858', '#ee6666', '#73c0de', '#3ba272'],
+    smooth = true,
+    showDots = false,
+    style,
+    sortBy,
+    sortDirection,
+    limit,
+    ...rest
+  } = props;
 
-  // Background & Border
-  backgroundColor = '#ffffff',
-  showBorder = true,
-  borderColor = '#e0e0e0',
-  borderWidth = 1,
-  borderRadius = 8,
-  padding = 16,
-
-  // Chart appearance
-  showLegend = true,
-  chartColors = ['#191D63', '#1E8E3E', '#fac858', '#ee6666', '#73c0de', '#3ba272'],
-
-  // Line specific
-  smooth = true,
-  showDots = true,
-  strokeWidth = 2,
-  sortBy,
-  sortDirection,
-  limit,
-
-  ...rest
-}) => {
   const currentPageId = useCurrentPageId();
 
   // Apply professional defaults
@@ -86,21 +55,21 @@ export const LineChart: React.FC<LineChartProps> = ({
   const finalSortDirection = sortDirection || defaults.sortDirection;
   const finalLimit = limit !== undefined ? limit : defaults.limit;
 
-  // Use cascaded filters (Global → Page → Component)
+  // Use cascaded filters
   const { filters: cascadedFilters } = useCascadedFilters({
     pageId: currentPageId || undefined,
     componentId,
-    componentConfig: { id: componentId, dataset_id, dimension, metrics, dateRange, ...rest },
-    dateDimension: dimension || 'date',
+    componentConfig: props,
+    dateDimension: 'date',
   });
 
-  // Use page-aware data fetching (only loads when page is active)
+  // Fetch data
   const { data, isLoading, error } = usePageData({
     pageId: currentPageId || 'default',
     componentId: componentId || 'linechart',
     datasetId: dataset_id || '',
     metrics,
-    dimensions: dimension ? [dimension] : [],
+    dimensions: dimension ? [dimension] : undefined,
     filters: cascadedFilters,
     enabled: !!dataset_id && metrics.length > 0 && !!dimension && !!currentPageId,
     chartType: 'line_chart',
@@ -109,27 +78,20 @@ export const LineChart: React.FC<LineChartProps> = ({
     limit: finalLimit !== null ? finalLimit : undefined,
   });
 
+  // Container styling
   const containerStyle: React.CSSProperties = {
-    backgroundColor,
-    border: showBorder ? `${borderWidth}px solid ${borderColor}` : 'none',
-    borderRadius: `${borderRadius}px`,
-    padding: `${padding}px`,
-    boxShadow: showBorder ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
-  };
-
-  const titleStyle: React.CSSProperties = {
-    fontFamily: titleFontFamily,
-    fontSize: `${titleFontSize}px`,
-    fontWeight: titleFontWeight,
-    color: titleColor,
-    backgroundColor: titleBackgroundColor,
-    textAlign: titleAlignment as any,
-    marginBottom: '12px'
+    backgroundColor: style?.backgroundColor || theme.backgroundColor,
+    border: `${theme.borderWidth} solid ${theme.borderColor}`,
+    borderRadius: style?.borderRadius || theme.borderRadius,
+    padding: theme.padding,
+    boxShadow: theme.boxShadow,
+    opacity: DASHBOARD_THEME.global.opacity,
+    color: style?.textColor
   };
 
   if (isLoading) {
     return (
-      <div style={containerStyle} className="flex items-center justify-center min-h-[300px]">
+      <div style={containerStyle} className="flex items-center justify-center min-h-[400px]">
         <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
       </div>
     );
@@ -137,112 +99,103 @@ export const LineChart: React.FC<LineChartProps> = ({
 
   if (error) {
     return (
-      <div style={containerStyle} className="flex flex-col items-center justify-center min-h-[300px] gap-2">
+      <div style={containerStyle} className="flex flex-col items-center justify-center min-h-[400px] gap-2">
         <p className="text-sm text-red-600">Failed to load data</p>
         <p className="text-xs text-muted-foreground">{error.message}</p>
       </div>
     );
   }
 
-  // Extract comparison data
+  // Extract data
   const currentData = data?.data?.current || data?.data || [];
   const comparisonData = data?.data?.comparison || [];
   const hasComparison = comparisonData.length > 0;
 
   if (currentData.length === 0) {
     return (
-      <div style={containerStyle} className="flex items-center justify-center min-h-[300px]">
+      <div style={containerStyle} className="flex items-center justify-center min-h-[400px]">
         <p className="text-sm text-muted-foreground">No data available</p>
       </div>
     );
   }
 
-  // Transform data for Recharts - standardize dimension values
-  const transformedData = currentData.map((row: any, index: number) => {
-    const result: any = {
-      name: dimension ? standardizeDimensionValue(row[dimension], dimension) : 'Value',
-    };
+  // Transform to ECharts format
+  const categories = currentData.map((row: any) => formatChartLabel(row[dimension || '']));
 
-    // Add current metrics
-    metrics.forEach((metric) => {
-      result[metric] = Number(row[metric]) || 0;
-    });
+  // Build series for each metric
+  const series = metrics.map((metric, index) => ({
+    name: formatChartLabel(metric),
+    type: 'line' as const,
+    smooth,
+    showSymbol: showDots,
+    data: currentData.map((row: any) => Number(row[metric]) || 0),
+    lineStyle: { width: 2 },
+    itemStyle: { color: chartColors[index % chartColors.length] }
+  }));
 
-    // Add comparison metrics if available
-    if (hasComparison && comparisonData[index]) {
-      metrics.forEach((metric) => {
-        result[`${metric}_prev`] = Number(comparisonData[index][metric]) || 0;
+  // Add comparison series
+  if (hasComparison) {
+    metrics.forEach((metric, index) => {
+      series.push({
+        name: `${formatChartLabel(metric)} (Previous)`,
+        type: 'line' as const,
+        smooth,
+        showSymbol: showDots,
+        data: comparisonData.map((row: any) => Number(row[metric]) || 0),
+        lineStyle: { width: 2, type: 'dashed' as const },
+        itemStyle: { color: chartColors[index % chartColors.length], opacity: 0.7 }
       });
-    }
+    });
+  }
 
-    return result;
-  });
-
-  const CustomTooltip = ({ active, payload }: any) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-3">
-          <p className="font-semibold text-sm mb-1">{payload[0].payload.name}</p>
-          {payload.map((entry: any, index: number) => (
-            <p key={index} className="text-xs" style={{ color: entry.color }}>
-              {formatChartLabel(entry.name)}: {formatMetricValue(entry.value, entry.name.toLowerCase(), [], 'gsc')}
-            </p>
-          ))}
-        </div>
-      );
-    }
-    return null;
+  // ECharts option - PLUG AND PLAY!
+  const option: EChartsOption = {
+    backgroundColor: '#ffffff',
+    title: showTitle ? {
+      text: title,
+      left: 'center',
+      textStyle: { fontSize: 16, fontWeight: 600, color: '#111827' }
+    } : undefined,
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'line' }
+    },
+    legend: {
+      show: showLegend,
+      bottom: 0,
+      data: series.map(s => s.name),
+      formatter: (name: string) => formatChartLabel(name),
+      textStyle: { color: '#666', fontSize: 12 }
+    },
+    grid: {
+      left: '60px',
+      right: '30px',
+      top: showTitle ? '60px' : '30px',
+      bottom: showLegend ? '60px' : '30px',
+      containLabel: false
+    },
+    xAxis: {
+      type: 'category',
+      data: categories,
+      axisLine: { lineStyle: { color: '#e0e0e0' } },
+      axisLabel: { color: '#666', fontSize: 11, rotate: categories.length > 15 ? 45 : 0 }
+    },
+    yAxis: {
+      type: 'value',
+      axisLine: { lineStyle: { color: '#e0e0e0' } },
+      axisLabel: { color: '#666', fontSize: 11 },
+      splitLine: { lineStyle: { color: '#f5f5f5', type: 'dashed' as const } }
+    },
+    series: series
   };
 
   return (
     <div style={containerStyle}>
-      {showTitle && <div style={titleStyle}>{title}</div>}
-      <ResponsiveContainer width="100%" height={300}>
-        <RechartsLineChart
-          data={transformedData}
-          margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
-        >
-          <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-          <XAxis
-            dataKey="name"
-            tick={{ fontSize: 11, fill: '#666' }}
-            tickFormatter={(value) => formatChartLabel(value)}
-            angle={-45}
-            textAnchor="end"
-            height={80}
-          />
-          <YAxis tick={{ fontSize: 11, fill: '#666' }} />
-          <Tooltip content={<CustomTooltip />} />
-          {showLegend && <Legend wrapperStyle={{ fontSize: '11px' }} formatter={(value) => formatChartLabel(value)} />}
-          {/* Current period lines */}
-          {metrics.map((metric, index) => (
-            <Line
-              key={metric}
-              type={smooth ? 'monotone' : 'linear'}
-              dataKey={metric}
-              stroke={chartColors[index % chartColors.length]}
-              strokeWidth={strokeWidth}
-              dot={showDots}
-              activeDot={{ r: 6 }}
-              name={formatChartLabel(metric)}
-            />
-          ))}
-
-          {/* Comparison period lines (dashed) */}
-          {hasComparison && metrics.map((metric, index) => (
-            <Line
-              key={`${metric}_prev`}
-              type={smooth ? 'monotone' : 'linear'}
-              dataKey={`${metric}_prev`}
-              stroke={chartColors[index % chartColors.length]}
-              strokeWidth={strokeWidth}
-              strokeDasharray="5 5"
-              dot={false}
-              name={`${formatChartLabel(metric)} (Previous)`}
-            />
-          ))}
-        </RechartsLineChart>
-      </ResponsiveContainer>
+      <ReactECharts
+        option={option}
+        style={{ height: '400px', width: '100%' }}
+        opts={{ renderer: 'svg' }}
+      />
     </div>
   );
 };

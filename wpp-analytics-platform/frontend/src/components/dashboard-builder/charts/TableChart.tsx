@@ -13,7 +13,7 @@ import { Loader2, ChevronUp, ChevronDown, ChevronsUpDown, ChevronLeft, ChevronRi
 import { ComponentConfig } from '@/types/dashboard-builder';
 import { formatMetricValue } from '@/lib/utils/metric-formatter';
 import { standardizeDimensionValue } from '@/lib/utils/data-formatter';
-import { formatColumnHeader } from '@/lib/utils/label-formatter';
+import { formatColumnHeader, formatChartLabel } from '@/lib/utils/label-formatter';
 import { useState, useMemo } from 'react';
 import { useCascadedFilters } from '@/hooks/useCascadedFilters';
 import { useCurrentPageId } from '@/store/dashboardStore';
@@ -290,7 +290,7 @@ export const TableChart: React.FC<TableChartProps> = (props) => {
                     {col.isDimension ? (
                       // Dimension value
                       <span title={row[col.key]}>
-                        {standardizeDimensionValue(row[col.key], dimension || '')}
+                        {formatChartLabel(standardizeDimensionValue(row[col.key], dimension || ''))}
                       </span>
                     ) : col.isChange ? (
                       // Change badge

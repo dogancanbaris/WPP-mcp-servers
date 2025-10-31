@@ -21,7 +21,6 @@ import { useCascadedFilters } from '@/hooks/useCascadedFilters';
 import { usePageData } from '@/hooks/usePageData';
 import { useCurrentPageId } from '@/store/dashboardStore';
 import { getChartDefaults, resolveSortField } from '@/lib/defaults/chart-defaults';
-import { formatChartLabel } from '@/lib/utils/label-formatter';
 
 export interface SunburstChartProps extends Partial<ComponentConfig> {
   /** Hierarchy levels (dimensions) */
@@ -131,7 +130,8 @@ export const SunburstChart: React.FC<SunburstChartProps> = (props) => {
       let currentLevel = tree;
 
       dimensions.forEach((dim, index) => {
-        const dimValue = row[dim];
+        const dimValueRaw = row[dim];
+        const dimValue = formatChartLabel(dimValueRaw); // Capitalize for consistent storage
         let child = currentLevel.children?.find((c: any) => c.name === dimValue);
 
         if (!child) {

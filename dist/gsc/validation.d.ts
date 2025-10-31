@@ -22,12 +22,12 @@ export declare const SearchAnalyticsQuerySchema: z.ZodObject<{
     property: string;
     searchType: "web" | "image" | "video" | "news";
     rowLimit: number;
-    dimensions?: ("device" | "country" | "query" | "page" | "searchType" | "appearance")[] | undefined;
+    dimensions?: ("query" | "page" | "country" | "device" | "searchType" | "appearance")[] | undefined;
 }, {
     startDate: string;
     endDate: string;
     property: string;
-    dimensions?: ("device" | "country" | "query" | "page" | "searchType" | "appearance")[] | undefined;
+    dimensions?: ("query" | "page" | "country" | "device" | "searchType" | "appearance")[] | undefined;
     searchType?: "web" | "image" | "video" | "news" | undefined;
     rowLimit?: number | undefined;
 }>;

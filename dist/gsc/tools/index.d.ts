@@ -1528,391 +1528,6 @@ export declare const allTools: ({
     inputSchema: {
         type: "object";
         properties: {};
-    };
-    handler(_input: any): Promise<{
-        success: boolean;
-        data: {
-            datasets: {
-                id: any;
-                friendlyName: any;
-                location: any;
-                creationTime: any;
-            }[];
-            count: number;
-            message: string;
-        };
-    }>;
-} | {
-    name: string;
-    description: string;
-    inputSchema: {
-        type: "object";
-        properties: {
-            datasetId: {
-                type: string;
-                description: string;
-            };
-            location: {
-                type: string;
-                description: string;
-            };
-            description: {
-                type: string;
-                description: string;
-            };
-            confirmationToken: {
-                type: string;
-            };
-        };
-        required: string[];
-    };
-    handler(input: any): Promise<{
-        success: boolean;
-        requiresApproval: boolean;
-        preview: string;
-        confirmationToken: string;
-        data?: undefined;
-    } | {
-        success: boolean;
-        data: {
-            datasetId: any;
-            location: any;
-            message: string;
-        };
-        requiresApproval?: undefined;
-        preview?: undefined;
-        confirmationToken?: undefined;
-    }>;
-} | {
-    name: string;
-    description: string;
-    inputSchema: {
-        type: "object";
-        properties: {
-            sql: {
-                type: string;
-                description: string;
-            };
-            maxResults: {
-                type: string;
-                description: string;
-            };
-        };
-        required: string[];
-    };
-    handler(input: any): Promise<{
-        success: boolean;
-        data: {
-            rows: any[];
-            rowCount: number;
-            jobId: string | undefined;
-            message: string;
-        };
-    }>;
-} | {
-    name: string;
-    description: string;
-    inputSchema: {
-        type: "object";
-        properties: {
-            accountId: {
-                type: string;
-                description: string;
-            };
-        };
-        required: string[];
-    };
-    handler(input: any): Promise<{
-        success: boolean;
-        data: {
-            accountId: any;
-            locations: {
-                name: any;
-                locationId: any;
-                title: any;
-                address: any;
-                websiteUri: any;
-                phoneNumbers: any;
-                categories: any;
-            }[];
-            count: number;
-            message: string;
-        };
-    }>;
-} | {
-    name: string;
-    description: string;
-    inputSchema: {
-        type: "object";
-        properties: {
-            locationName: {
-                type: string;
-                description: string;
-            };
-        };
-        required: string[];
-    };
-    handler(input: any): Promise<{
-        success: boolean;
-        data: {
-            location: import("googleapis").mybusinessbusinessinformation_v1.Schema$Location;
-            message: string;
-        };
-    }>;
-} | {
-    name: string;
-    description: string;
-    inputSchema: {
-        type: "object";
-        properties: {
-            locationName: {
-                type: string;
-                description: string;
-            };
-            updates: {
-                type: string;
-                description: string;
-                properties: {
-                    title: {
-                        type: string;
-                    };
-                    websiteUri: {
-                        type: string;
-                    };
-                    phoneNumbers: {
-                        type: string;
-                    };
-                    regularHours: {
-                        type: string;
-                    };
-                };
-            };
-            confirmationToken: {
-                type: string;
-                description: string;
-            };
-        };
-        required: string[];
-    };
-    handler(input: any): Promise<{
-        success: boolean;
-        requiresApproval: boolean;
-        preview: string;
-        confirmationToken: string;
-        data?: undefined;
-    } | {
-        success: boolean;
-        data: {
-            locationName: any;
-            updatedFields: string[];
-            message: string;
-        };
-        requiresApproval?: undefined;
-        preview?: undefined;
-        confirmationToken?: undefined;
-    }>;
-} | {
-    name: string;
-    description: string;
-    inputSchema: {
-        type: "object";
-        properties: {
-            origin: {
-                type: string;
-                description: string;
-            };
-            formFactor: {
-                type: string;
-                enum: string[];
-                description: string;
-            };
-        };
-        required: string[];
-    };
-    handler(input: any): Promise<{
-        success: boolean;
-        data: {
-            message: string;
-            lcp?: {
-                p75: number;
-                good: number;
-                needsImprovement: number;
-                poor: number;
-            };
-            inp?: {
-                p75: number;
-                good: number;
-                needsImprovement: number;
-                poor: number;
-            };
-            cls?: {
-                p75: number;
-                good: number;
-                needsImprovement: number;
-                poor: number;
-            };
-            fcp?: {
-                p75: number;
-                good: number;
-                needsImprovement: number;
-                poor: number;
-            };
-            ttfb?: {
-                p75: number;
-                good: number;
-                needsImprovement: number;
-                poor: number;
-            };
-            collectionPeriod?: {
-                start: string;
-                end: string;
-            };
-            origin: any;
-            formFactor: any;
-        };
-    }>;
-} | {
-    name: string;
-    description: string;
-    inputSchema: {
-        type: "object";
-        properties: {
-            url: {
-                type: string;
-                description: string;
-            };
-            formFactor: {
-                type: string;
-                enum: string[];
-                description: string;
-            };
-        };
-        required: string[];
-    };
-    handler(input: any): Promise<{
-        success: boolean;
-        data: {
-            message: string;
-            lcp?: {
-                p75: number;
-                good: number;
-                needsImprovement: number;
-                poor: number;
-            };
-            inp?: {
-                p75: number;
-                good: number;
-                needsImprovement: number;
-                poor: number;
-            };
-            cls?: {
-                p75: number;
-                good: number;
-                needsImprovement: number;
-                poor: number;
-            };
-            fcp?: {
-                p75: number;
-                good: number;
-                needsImprovement: number;
-                poor: number;
-            };
-            ttfb?: {
-                p75: number;
-                good: number;
-                needsImprovement: number;
-                poor: number;
-            };
-            collectionPeriod?: {
-                start: string;
-                end: string;
-            };
-            url: any;
-            formFactor: any;
-        };
-    }>;
-} | {
-    name: string;
-    description: string;
-    inputSchema: {
-        type: "object";
-        properties: {
-            origin: {
-                type: string;
-                description: string;
-            };
-            formFactor: {
-                type: string;
-                enum: string[];
-                description: string;
-            };
-        };
-        required: string[];
-    };
-    handler(input: any): Promise<{
-        success: boolean;
-        data: {
-            origin: any;
-            formFactor: any;
-            history: import("../../crux/types.js").HistoricalRecord;
-            collectionPeriods: import("../../crux/types.js").CollectionPeriod[];
-            message: string;
-        };
-    }>;
-} | {
-    name: string;
-    description: string;
-    inputSchema: {
-        type: "object";
-        properties: {
-            url: {
-                type: string;
-                description: string;
-            };
-            formFactor: {
-                type: string;
-                enum: string[];
-                description: string;
-            };
-        };
-        required: string[];
-    };
-    handler(input: any): Promise<{
-        success: boolean;
-        data: {
-            url: any;
-            formFactor: any;
-            history: import("../../crux/types.js").HistoricalRecord;
-            collectionPeriods: import("../../crux/types.js").CollectionPeriod[];
-            message: string;
-        };
-    }>;
-} | {
-    name: string;
-    description: string;
-    inputSchema: {
-        type: "object";
-        properties: {
-            origin: {
-                type: string;
-                description: string;
-            };
-            url: {
-                type: string;
-                description: string;
-            };
-        };
-    };
-    handler(input: any): Promise<{
-        success: boolean;
-        data: any;
-    }>;
-} | {
-    name: string;
-    description: string;
-    inputSchema: {
-        type: "object";
-        properties: {};
         required: never[];
     };
     handler(_input: any): Promise<{
@@ -2151,6 +1766,391 @@ export declare const allTools: ({
     handler(input: any): Promise<{
         success: boolean;
         data: any;
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            origin: {
+                type: string;
+                description: string;
+            };
+            formFactor: {
+                type: string;
+                enum: string[];
+                description: string;
+            };
+        };
+        required: string[];
+    };
+    handler(input: any): Promise<{
+        success: boolean;
+        data: {
+            message: string;
+            lcp?: {
+                p75: number;
+                good: number;
+                needsImprovement: number;
+                poor: number;
+            };
+            inp?: {
+                p75: number;
+                good: number;
+                needsImprovement: number;
+                poor: number;
+            };
+            cls?: {
+                p75: number;
+                good: number;
+                needsImprovement: number;
+                poor: number;
+            };
+            fcp?: {
+                p75: number;
+                good: number;
+                needsImprovement: number;
+                poor: number;
+            };
+            ttfb?: {
+                p75: number;
+                good: number;
+                needsImprovement: number;
+                poor: number;
+            };
+            collectionPeriod?: {
+                start: string;
+                end: string;
+            };
+            origin: any;
+            formFactor: any;
+        };
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            url: {
+                type: string;
+                description: string;
+            };
+            formFactor: {
+                type: string;
+                enum: string[];
+                description: string;
+            };
+        };
+        required: string[];
+    };
+    handler(input: any): Promise<{
+        success: boolean;
+        data: {
+            message: string;
+            lcp?: {
+                p75: number;
+                good: number;
+                needsImprovement: number;
+                poor: number;
+            };
+            inp?: {
+                p75: number;
+                good: number;
+                needsImprovement: number;
+                poor: number;
+            };
+            cls?: {
+                p75: number;
+                good: number;
+                needsImprovement: number;
+                poor: number;
+            };
+            fcp?: {
+                p75: number;
+                good: number;
+                needsImprovement: number;
+                poor: number;
+            };
+            ttfb?: {
+                p75: number;
+                good: number;
+                needsImprovement: number;
+                poor: number;
+            };
+            collectionPeriod?: {
+                start: string;
+                end: string;
+            };
+            url: any;
+            formFactor: any;
+        };
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            origin: {
+                type: string;
+                description: string;
+            };
+            formFactor: {
+                type: string;
+                enum: string[];
+                description: string;
+            };
+        };
+        required: string[];
+    };
+    handler(input: any): Promise<{
+        success: boolean;
+        data: {
+            origin: any;
+            formFactor: any;
+            history: import("../../crux/types.js").HistoricalRecord;
+            collectionPeriods: import("../../crux/types.js").CollectionPeriod[];
+            message: string;
+        };
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            url: {
+                type: string;
+                description: string;
+            };
+            formFactor: {
+                type: string;
+                enum: string[];
+                description: string;
+            };
+        };
+        required: string[];
+    };
+    handler(input: any): Promise<{
+        success: boolean;
+        data: {
+            url: any;
+            formFactor: any;
+            history: import("../../crux/types.js").HistoricalRecord;
+            collectionPeriods: import("../../crux/types.js").CollectionPeriod[];
+            message: string;
+        };
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            origin: {
+                type: string;
+                description: string;
+            };
+            url: {
+                type: string;
+                description: string;
+            };
+        };
+    };
+    handler(input: any): Promise<{
+        success: boolean;
+        data: any;
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            accountId: {
+                type: string;
+                description: string;
+            };
+        };
+        required: string[];
+    };
+    handler(input: any): Promise<{
+        success: boolean;
+        data: {
+            accountId: any;
+            locations: {
+                name: any;
+                locationId: any;
+                title: any;
+                address: any;
+                websiteUri: any;
+                phoneNumbers: any;
+                categories: any;
+            }[];
+            count: number;
+            message: string;
+        };
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            locationName: {
+                type: string;
+                description: string;
+            };
+        };
+        required: string[];
+    };
+    handler(input: any): Promise<{
+        success: boolean;
+        data: {
+            location: import("googleapis").mybusinessbusinessinformation_v1.Schema$Location;
+            message: string;
+        };
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            locationName: {
+                type: string;
+                description: string;
+            };
+            updates: {
+                type: string;
+                description: string;
+                properties: {
+                    title: {
+                        type: string;
+                    };
+                    websiteUri: {
+                        type: string;
+                    };
+                    phoneNumbers: {
+                        type: string;
+                    };
+                    regularHours: {
+                        type: string;
+                    };
+                };
+            };
+            confirmationToken: {
+                type: string;
+                description: string;
+            };
+        };
+        required: string[];
+    };
+    handler(input: any): Promise<{
+        success: boolean;
+        requiresApproval: boolean;
+        preview: string;
+        confirmationToken: string;
+        data?: undefined;
+    } | {
+        success: boolean;
+        data: {
+            locationName: any;
+            updatedFields: string[];
+            message: string;
+        };
+        requiresApproval?: undefined;
+        preview?: undefined;
+        confirmationToken?: undefined;
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {};
+    };
+    handler(_input: any): Promise<{
+        success: boolean;
+        data: {
+            datasets: {
+                id: any;
+                friendlyName: any;
+                location: any;
+                creationTime: any;
+            }[];
+            count: number;
+            message: string;
+        };
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            datasetId: {
+                type: string;
+                description: string;
+            };
+            location: {
+                type: string;
+                description: string;
+            };
+            description: {
+                type: string;
+                description: string;
+            };
+            confirmationToken: {
+                type: string;
+            };
+        };
+        required: string[];
+    };
+    handler(input: any): Promise<{
+        success: boolean;
+        requiresApproval: boolean;
+        preview: string;
+        confirmationToken: string;
+        data?: undefined;
+    } | {
+        success: boolean;
+        data: {
+            datasetId: any;
+            location: any;
+            message: string;
+        };
+        requiresApproval?: undefined;
+        preview?: undefined;
+        confirmationToken?: undefined;
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            sql: {
+                type: string;
+                description: string;
+            };
+            maxResults: {
+                type: string;
+                description: string;
+            };
+        };
+        required: string[];
+    };
+    handler(input: any): Promise<{
+        success: boolean;
+        data: {
+            rows: any[];
+            rowCount: number;
+            jobId: string | undefined;
+            message: string;
+        };
     }>;
 } | {
     name: string;
@@ -2981,202 +2981,6 @@ export declare const readTools: ({
     description: string;
     inputSchema: {
         type: "object";
-        properties: {
-            origin: {
-                type: string;
-                description: string;
-            };
-            formFactor: {
-                type: string;
-                enum: string[];
-                description: string;
-            };
-        };
-        required: string[];
-    };
-    handler(input: any): Promise<{
-        success: boolean;
-        data: {
-            message: string;
-            lcp?: {
-                p75: number;
-                good: number;
-                needsImprovement: number;
-                poor: number;
-            };
-            inp?: {
-                p75: number;
-                good: number;
-                needsImprovement: number;
-                poor: number;
-            };
-            cls?: {
-                p75: number;
-                good: number;
-                needsImprovement: number;
-                poor: number;
-            };
-            fcp?: {
-                p75: number;
-                good: number;
-                needsImprovement: number;
-                poor: number;
-            };
-            ttfb?: {
-                p75: number;
-                good: number;
-                needsImprovement: number;
-                poor: number;
-            };
-            collectionPeriod?: {
-                start: string;
-                end: string;
-            };
-            origin: any;
-            formFactor: any;
-        };
-    }>;
-} | {
-    name: string;
-    description: string;
-    inputSchema: {
-        type: "object";
-        properties: {
-            url: {
-                type: string;
-                description: string;
-            };
-            formFactor: {
-                type: string;
-                enum: string[];
-                description: string;
-            };
-        };
-        required: string[];
-    };
-    handler(input: any): Promise<{
-        success: boolean;
-        data: {
-            message: string;
-            lcp?: {
-                p75: number;
-                good: number;
-                needsImprovement: number;
-                poor: number;
-            };
-            inp?: {
-                p75: number;
-                good: number;
-                needsImprovement: number;
-                poor: number;
-            };
-            cls?: {
-                p75: number;
-                good: number;
-                needsImprovement: number;
-                poor: number;
-            };
-            fcp?: {
-                p75: number;
-                good: number;
-                needsImprovement: number;
-                poor: number;
-            };
-            ttfb?: {
-                p75: number;
-                good: number;
-                needsImprovement: number;
-                poor: number;
-            };
-            collectionPeriod?: {
-                start: string;
-                end: string;
-            };
-            url: any;
-            formFactor: any;
-        };
-    }>;
-} | {
-    name: string;
-    description: string;
-    inputSchema: {
-        type: "object";
-        properties: {
-            origin: {
-                type: string;
-                description: string;
-            };
-            formFactor: {
-                type: string;
-                enum: string[];
-                description: string;
-            };
-        };
-        required: string[];
-    };
-    handler(input: any): Promise<{
-        success: boolean;
-        data: {
-            origin: any;
-            formFactor: any;
-            history: import("../../crux/types.js").HistoricalRecord;
-            collectionPeriods: import("../../crux/types.js").CollectionPeriod[];
-            message: string;
-        };
-    }>;
-} | {
-    name: string;
-    description: string;
-    inputSchema: {
-        type: "object";
-        properties: {
-            url: {
-                type: string;
-                description: string;
-            };
-            formFactor: {
-                type: string;
-                enum: string[];
-                description: string;
-            };
-        };
-        required: string[];
-    };
-    handler(input: any): Promise<{
-        success: boolean;
-        data: {
-            url: any;
-            formFactor: any;
-            history: import("../../crux/types.js").HistoricalRecord;
-            collectionPeriods: import("../../crux/types.js").CollectionPeriod[];
-            message: string;
-        };
-    }>;
-} | {
-    name: string;
-    description: string;
-    inputSchema: {
-        type: "object";
-        properties: {
-            origin: {
-                type: string;
-                description: string;
-            };
-            url: {
-                type: string;
-                description: string;
-            };
-        };
-    };
-    handler(input: any): Promise<{
-        success: boolean;
-        data: any;
-    }>;
-} | {
-    name: string;
-    description: string;
-    inputSchema: {
-        type: "object";
         properties: {};
         required: never[];
     };
@@ -3342,6 +3146,202 @@ export declare const readTools: ({
             };
         };
         required: string[];
+    };
+    handler(input: any): Promise<{
+        success: boolean;
+        data: any;
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            origin: {
+                type: string;
+                description: string;
+            };
+            formFactor: {
+                type: string;
+                enum: string[];
+                description: string;
+            };
+        };
+        required: string[];
+    };
+    handler(input: any): Promise<{
+        success: boolean;
+        data: {
+            message: string;
+            lcp?: {
+                p75: number;
+                good: number;
+                needsImprovement: number;
+                poor: number;
+            };
+            inp?: {
+                p75: number;
+                good: number;
+                needsImprovement: number;
+                poor: number;
+            };
+            cls?: {
+                p75: number;
+                good: number;
+                needsImprovement: number;
+                poor: number;
+            };
+            fcp?: {
+                p75: number;
+                good: number;
+                needsImprovement: number;
+                poor: number;
+            };
+            ttfb?: {
+                p75: number;
+                good: number;
+                needsImprovement: number;
+                poor: number;
+            };
+            collectionPeriod?: {
+                start: string;
+                end: string;
+            };
+            origin: any;
+            formFactor: any;
+        };
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            url: {
+                type: string;
+                description: string;
+            };
+            formFactor: {
+                type: string;
+                enum: string[];
+                description: string;
+            };
+        };
+        required: string[];
+    };
+    handler(input: any): Promise<{
+        success: boolean;
+        data: {
+            message: string;
+            lcp?: {
+                p75: number;
+                good: number;
+                needsImprovement: number;
+                poor: number;
+            };
+            inp?: {
+                p75: number;
+                good: number;
+                needsImprovement: number;
+                poor: number;
+            };
+            cls?: {
+                p75: number;
+                good: number;
+                needsImprovement: number;
+                poor: number;
+            };
+            fcp?: {
+                p75: number;
+                good: number;
+                needsImprovement: number;
+                poor: number;
+            };
+            ttfb?: {
+                p75: number;
+                good: number;
+                needsImprovement: number;
+                poor: number;
+            };
+            collectionPeriod?: {
+                start: string;
+                end: string;
+            };
+            url: any;
+            formFactor: any;
+        };
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            origin: {
+                type: string;
+                description: string;
+            };
+            formFactor: {
+                type: string;
+                enum: string[];
+                description: string;
+            };
+        };
+        required: string[];
+    };
+    handler(input: any): Promise<{
+        success: boolean;
+        data: {
+            origin: any;
+            formFactor: any;
+            history: import("../../crux/types.js").HistoricalRecord;
+            collectionPeriods: import("../../crux/types.js").CollectionPeriod[];
+            message: string;
+        };
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            url: {
+                type: string;
+                description: string;
+            };
+            formFactor: {
+                type: string;
+                enum: string[];
+                description: string;
+            };
+        };
+        required: string[];
+    };
+    handler(input: any): Promise<{
+        success: boolean;
+        data: {
+            url: any;
+            formFactor: any;
+            history: import("../../crux/types.js").HistoricalRecord;
+            collectionPeriods: import("../../crux/types.js").CollectionPeriod[];
+            message: string;
+        };
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            origin: {
+                type: string;
+                description: string;
+            };
+            url: {
+                type: string;
+                description: string;
+            };
+        };
     };
     handler(input: any): Promise<{
         success: boolean;

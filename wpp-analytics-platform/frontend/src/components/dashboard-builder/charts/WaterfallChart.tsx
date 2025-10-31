@@ -1,38 +1,29 @@
 'use client';
 
 /**
- * WaterfallChart Component - Dataset-Based
+ * Waterfall Chart - Dataset-Based (ECHARTS VERSION)
  *
- * NEW ARCHITECTURE:
- * - Queries registered dataset via /api/datasets/[id]/query
- * - Backend handles caching, BigQuery connection
- * - Recharts-based waterfall chart for incremental analysis
- * - Multi-page support with cascaded filters (Global → Page → Component)
+ * Plug-and-play waterfall chart using ECharts rendering engine.
+ * Shows cumulative effect of sequential positive/negative values.
  */
 
+import ReactECharts from 'echarts-for-react';
 import { Loader2 } from 'lucide-react';
-import {
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  Cell
-} from 'recharts';
 import { ComponentConfig } from '@/types/dashboard-builder';
 import { DASHBOARD_THEME } from '@/lib/themes/dashboard-theme';
-import { useCascadedFilters } from '@/hooks/useCascadedFilters';
+import { formatChartLabel } from '@/lib/utils/label-formatter';
 import { usePageData } from '@/hooks/usePageData';
 import { useCurrentPageId } from '@/store/dashboardStore';
+import { useCascadedFilters } from '@/hooks/useCascadedFilters';
 import { getChartDefaults, resolveSortField } from '@/lib/defaults/chart-defaults';
-import { formatChartLabel } from '@/lib/utils/label-formatter';
+import type { EChartsOption } from 'echarts';
 
 export interface WaterfallChartProps extends Partial<ComponentConfig> {
   categoryField?: string;
   valueField?: string;
+  sortBy?: string;
+  sortDirection?: 'ASC' | 'DESC';
+  limit?: number;
 }
 
 export const WaterfallChart: React.FC<WaterfallChartProps> = (props) => {
@@ -42,144 +33,183 @@ export const WaterfallChart: React.FC<WaterfallChartProps> = (props) => {
     id: componentId,
     dataset_id,
     metrics = [],
-    dimensions = [],
+    dimension,
     title = 'Waterfall Chart',
     showTitle = true,
-    categoryField = dimensions[0],
+    showLegend = true,
+    categoryField = dimension,
     valueField = metrics[0],
+    style,
+    sortBy,
+    sortDirection,
+    limit,
     ...rest
   } = props;
 
-  // Apply professional defaults
-  const defaults = getChartDefaults('waterfall');
-  const finalSortBy = props.sortBy || resolveSortField(defaults.sortBy, metrics, dimensions[0]);
-  const finalSortDirection = props.sortDirection || defaults.sortDirection;
-  const finalLimit = props.limit !== undefined ? props.limit : defaults.limit;
-
   const currentPageId = useCurrentPageId();
 
-  // Use cascaded filters (Global → Page → Component)
+  const defaults = getChartDefaults('waterfall');
+  const finalSortBy = sortBy || resolveSortField(defaults.sortBy, metrics, dimension || undefined);
+  const finalSortDirection = sortDirection || defaults.sortDirection;
+  const finalLimit = limit !== undefined ? limit : defaults.limit;
+
   const { filters: cascadedFilters } = useCascadedFilters({
     pageId: currentPageId || undefined,
     componentId,
     componentConfig: props,
-    dateDimension: dimensions[0] || 'date',
+    dateDimension: 'date',
   });
 
-  // Use page-aware data fetching (only loads when page is active)
   const { data, isLoading, error } = usePageData({
     pageId: currentPageId || 'default',
     componentId: componentId || 'waterfall',
     datasetId: dataset_id || '',
     metrics,
-    dimensions,
+    dimensions: dimension ? [dimension] : undefined,
     filters: cascadedFilters,
-    enabled: !!dataset_id && metrics.length > 0 && dimensions.length > 0 && !!currentPageId,
+    enabled: !!dataset_id && metrics.length > 0 && !!dimension && !!currentPageId,
     chartType: 'waterfall',
     sortBy: finalSortBy,
     sortDirection: finalSortDirection,
-    limit: finalLimit,
+    limit: finalLimit !== null ? finalLimit : undefined,
   });
 
-  // Container styling
   const containerStyle: React.CSSProperties = {
-    width: '100%',
-    height: '100%',
-    minHeight: '400px',
-    backgroundColor: theme.backgroundColor,
-    borderRadius: theme.borderRadius,
+    backgroundColor: style?.backgroundColor || theme.backgroundColor,
+    border: `${theme.borderWidth} solid ${theme.borderColor}`,
+    borderRadius: style?.borderRadius || theme.borderRadius,
     padding: theme.padding,
-    display: 'flex',
-    flexDirection: 'column'
+    boxShadow: theme.boxShadow,
+    opacity: DASHBOARD_THEME.global.opacity,
+    color: style?.textColor
   };
 
-  // Loading state
   if (isLoading) {
     return (
-      <div style={containerStyle} className="flex items-center justify-center">
+      <div style={containerStyle} className="flex items-center justify-center min-h-[400px]">
         <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
-  // Error state
   if (error) {
     return (
-      <div style={containerStyle} className="flex flex-col items-center justify-center gap-2">
+      <div style={containerStyle} className="flex flex-col items-center justify-center min-h-[400px] gap-2">
         <p className="text-sm text-red-600">Failed to load data</p>
         <p className="text-xs text-muted-foreground">{error.message}</p>
       </div>
     );
   }
 
-  // Extract comparison data
   const currentData = data?.data?.current || data?.data || [];
-  const comparisonData = data?.data?.comparison || [];
-  const hasComparison = comparisonData.length > 0;
 
-  // No data state
   if (currentData.length === 0) {
     return (
-      <div style={containerStyle} className="flex items-center justify-center">
+      <div style={containerStyle} className="flex items-center justify-center min-h-[400px]">
         <p className="text-sm text-muted-foreground">No data available</p>
       </div>
     );
   }
 
-  // Transform data for waterfall chart (cumulative calculation)
+  // Transform to waterfall format (cumulative bars)
+  const categories = currentData.map((row: any) => formatChartLabel(row[categoryField || '']));
+  const values = currentData.map((row: any) => Number(row[valueField]) || 0);
+
+  // Calculate cumulative positions for waterfall effect
   let cumulative = 0;
-  const waterfallData = currentData.map((row: any, index: number) => {
-    const value = parseFloat(row[valueField]) || 0;
+  const waterfallData = values.map((value, index) => {
     const start = cumulative;
     cumulative += value;
-
     return {
-      name: row[categoryField] || `Category ${index + 1}`,
       value: Math.abs(value),
-      start: start,
-      end: cumulative,
-      fill: value >= 0 ? DASHBOARD_THEME.colors.wppGreen : DASHBOARD_THEME.colors.wppRed,
+      start,
       isPositive: value >= 0
     };
   });
 
+  // Helper data for transparent bars (to create waterfall effect)
+  const helperData = waterfallData.map(d => d.start);
+  const actualData = waterfallData.map(d => d.value);
+
+  const option: EChartsOption = {
+    backgroundColor: '#ffffff',
+    title: showTitle ? {
+      text: title,
+      left: 'center',
+      textStyle: { fontSize: 16, fontWeight: 600, color: '#111827' }
+    } : undefined,
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' },
+      formatter: (params: any) => {
+        const dataIndex = params[0].dataIndex;
+        const value = values[dataIndex];
+        const total = waterfallData[dataIndex].start + value;
+        return `${categories[dataIndex]}<br/>Change: ${value >= 0 ? '+' : ''}${value}<br/>Total: ${total}`;
+      }
+    },
+    legend: {
+      show: false
+    },
+    grid: {
+      left: '80px',
+      right: '30px',
+      top: showTitle ? '60px' : '30px',
+      bottom: '30px'
+    },
+    xAxis: {
+      type: 'category',
+      data: categories,
+      axisLine: { lineStyle: { color: '#e0e0e0' } },
+      axisLabel: { color: '#666', fontSize: 11, rotate: 45 }
+    },
+    yAxis: {
+      type: 'value',
+      axisLine: { lineStyle: { color: '#e0e0e0' } },
+      axisLabel: { color: '#666', fontSize: 11 },
+      splitLine: { lineStyle: { color: '#f5f5f5', type: 'dashed' as const } }
+    },
+    series: [
+      {
+        // Transparent helper bars to create waterfall effect
+        name: 'Helper',
+        type: 'bar',
+        stack: 'total',
+        itemStyle: { color: 'transparent' },
+        data: helperData
+      },
+      {
+        // Actual visible bars
+        name: formatChartLabel(valueField),
+        type: 'bar',
+        stack: 'total',
+        data: actualData,
+        itemStyle: {
+          color: (params: any) => {
+            return waterfallData[params.dataIndex].isPositive
+              ? DASHBOARD_THEME.colors.wppGreen
+              : DASHBOARD_THEME.colors.wppRed;
+          }
+        },
+        label: {
+          show: true,
+          position: 'inside',
+          formatter: (params: any) => {
+            const value = values[params.dataIndex];
+            return value >= 0 ? `+${value}` : `${value}`;
+          }
+        }
+      }
+    ]
+  };
+
   return (
     <div style={containerStyle}>
-      {showTitle && (
-        <h3 style={{
-          fontSize: '16px',
-          fontWeight: 'bold',
-          color: theme.textColor,
-          marginBottom: '16px',
-          textAlign: 'center'
-        }}>
-          {title}
-        </h3>
-      )}
-      <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={waterfallData}>
-          <CartesianGrid strokeDasharray="3 3" stroke={theme.gridColor} />
-          <XAxis dataKey="name" stroke={theme.axisColor} />
-          <YAxis stroke={theme.axisColor} />
-          <Tooltip
-            contentStyle={{
-              backgroundColor: theme.tooltipBackground,
-              border: `1px solid ${theme.borderColor}`,
-              borderRadius: '4px'
-            }}
-            formatter={(value: any, name: string, props: any) => {
-              const item = props.payload;
-              return [`${item.isPositive ? '+' : '-'}${value}`, `Change (Total: ${item.end})`];
-            }}
-          />
-            <Legend formatter={(value) => formatChartLabel(value)} />
-          <Bar dataKey="value" stackId="a">
-            {waterfallData.map((entry: any, index: number) => (
-              <Cell key={`cell-${index}`} fill={entry.fill} />
-            ))}
-          </Bar>
-        </BarChart>
-      </ResponsiveContainer>
+      <ReactECharts
+        option={option}
+        style={{ height: '400px', width: '100%' }}
+        opts={{ renderer: 'svg' }}
+      />
     </div>
   );
 };

@@ -144,13 +144,17 @@ export const HeatmapChart: React.FC<HeatmapChartProps> = (props) => {
   }
 
   // Extract unique x and y axis values
-  const xAxisData = Array.from(new Set(currentData.map((row: any) => row[xAxisDimension])));
-  const yAxisData = Array.from(new Set(currentData.map((row: any) => row[yAxisDimension])));
+  const xAxisDataRaw = Array.from(new Set(currentData.map((row: any) => row[xAxisDimension])));
+  const yAxisDataRaw = Array.from(new Set(currentData.map((row: any) => row[yAxisDimension])));
+
+  // Capitalized versions for display
+  const xAxisData = xAxisDataRaw.map(v => formatChartLabel(String(v)));
+  const yAxisData = yAxisDataRaw.map(v => formatChartLabel(String(v)));
 
   // Transform to heatmap format: [xIndex, yIndex, value]
   const heatmapData = currentData.map((row: any) => [
-    xAxisData.indexOf(row[xAxisDimension]),
-    yAxisData.indexOf(row[yAxisDimension]),
+    xAxisDataRaw.indexOf(row[xAxisDimension]),
+    yAxisDataRaw.indexOf(row[yAxisDimension]),
     Number(row[metrics[0]]) || 0
   ]);
 
@@ -161,8 +165,8 @@ export const HeatmapChart: React.FC<HeatmapChartProps> = (props) => {
         const compValue = Number(comparisonData[index]?.[metrics[0]]) || 0;
         const delta = currentValue - compValue;
         return [
-          xAxisData.indexOf(row[xAxisDimension]),
-          yAxisData.indexOf(row[yAxisDimension]),
+          xAxisDataRaw.indexOf(row[xAxisDimension]),
+          yAxisDataRaw.indexOf(row[yAxisDimension]),
           delta
         ];
       })

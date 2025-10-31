@@ -304,7 +304,7 @@ export const TimeSeriesChart: React.FC<TimeSeriesChartProps> = (props) => {
   // Current period series
   metrics.forEach((metric, index) => {
     const s: any = {
-      name: metric.charAt(0).toUpperCase() + metric.slice(1),
+      name: formatChartLabel(metric),
       type: 'line',
       smooth: true,
       data: (xAxisDates ? alignedCurrent : currentData).map((row: any) => getMetricValue(row, metric)),
@@ -320,7 +320,7 @@ export const TimeSeriesChart: React.FC<TimeSeriesChartProps> = (props) => {
   if ((xAxisDates ? alignedComparison : comparisonData).length > 0) {
     metrics.forEach((metric, index) => {
       const s: any = {
-        name: `${metric.charAt(0).toUpperCase() + metric.slice(1)} (Previous)`,
+        name: `${formatChartLabel(metric)} (Previous)`,
         type: 'line',
         smooth: true,
         data: (xAxisDates ? alignedComparison : comparisonData).map((row: any) => getMetricValue(row, metric)),

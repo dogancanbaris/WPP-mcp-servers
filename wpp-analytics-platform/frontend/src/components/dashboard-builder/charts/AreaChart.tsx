@@ -1,33 +1,22 @@
 'use client';
 
 /**
- * Area Chart - Dataset-Based (NEW ARCHITECTURE)
+ * Area Chart - Dataset-Based (ECHARTS VERSION)
  *
- * Shows trends with filled areas using registered datasets.
- * Queries: GET /api/datasets/[id]/query with caching
- * Supports global filters via useGlobalFilters hook
+ * Plug-and-play area chart using ECharts rendering engine.
+ * Shows trends with filled areas for visual emphasis.
  */
 
-import { useQuery } from '@tanstack/react-query';
+import ReactECharts from 'echarts-for-react';
 import { Loader2 } from 'lucide-react';
 import { ComponentConfig } from '@/types/dashboard-builder';
-import { formatMetricValue } from '@/lib/utils/metric-formatter';
-import { standardizeDimensionValue } from '@/lib/utils/data-formatter';
+import { DASHBOARD_THEME } from '@/lib/themes/dashboard-theme';
 import { formatChartLabel } from '@/lib/utils/label-formatter';
-import { useCascadedFilters } from '@/hooks/useCascadedFilters';
 import { usePageData } from '@/hooks/usePageData';
 import { useCurrentPageId } from '@/store/dashboardStore';
+import { useCascadedFilters } from '@/hooks/useCascadedFilters';
 import { getChartDefaults, resolveSortField } from '@/lib/defaults/chart-defaults';
-import {
-  Area,
-  AreaChart as RechartsAreaChart,
-  CartesianGrid,
-  Legend,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts';
+import type { EChartsOption } from 'echarts';
 
 export interface AreaChartProps extends Partial<ComponentConfig> {
   smooth?: boolean;
@@ -38,69 +27,48 @@ export interface AreaChartProps extends Partial<ComponentConfig> {
   limit?: number;
 }
 
-export const AreaChart: React.FC<AreaChartProps> = ({
-  // Data props
-  id: componentId,
-  dataset_id,
-  dimension = null,
-  metrics = [],
-  dateRange,
+export const AreaChart: React.FC<AreaChartProps> = (props) => {
+  const theme = DASHBOARD_THEME.charts;
 
-  // Display props
-  title = 'Area Chart',
-  showTitle = true,
-  titleFontFamily = 'roboto',
-  titleFontSize = '16',
-  titleFontWeight = '600',
-  titleColor = '#111827',
-  titleBackgroundColor = 'transparent',
-  titleAlignment = 'left',
+  const {
+    id: componentId,
+    dataset_id,
+    metrics = [],
+    dimension,
+    title = 'Area Chart',
+    showTitle = true,
+    showLegend = true,
+    chartColors = ['#191D63', '#1E8E3E', '#fac858', '#ee6666', '#73c0de', '#3ba272'],
+    smooth = true,
+    stacked = false,
+    fillOpacity = 0.6,
+    style,
+    sortBy,
+    sortDirection,
+    limit,
+    ...rest
+  } = props;
 
-  // Background & Border
-  backgroundColor = '#ffffff',
-  showBorder = true,
-  borderColor = '#e0e0e0',
-  borderWidth = 1,
-  borderRadius = 8,
-  padding = 16,
-
-  // Chart appearance
-  showLegend = true,
-  chartColors = ['#191D63', '#1E8E3E', '#fac858', '#ee6666', '#73c0de', '#3ba272'],
-
-  // Area specific
-  smooth = true,
-  stacked = false,
-  fillOpacity = 0.6,
-  sortBy,
-  sortDirection,
-  limit,
-
-  ...rest
-}) => {
   const currentPageId = useCurrentPageId();
 
-  // Apply professional defaults
   const defaults = getChartDefaults('area_chart');
   const finalSortBy = sortBy || resolveSortField(defaults.sortBy, metrics, dimension || undefined);
   const finalSortDirection = sortDirection || defaults.sortDirection;
   const finalLimit = limit !== undefined ? limit : defaults.limit;
 
-  // Use cascaded filters (Global → Page → Component)
   const { filters: cascadedFilters } = useCascadedFilters({
     pageId: currentPageId || undefined,
     componentId,
-    componentConfig: { id: componentId, dataset_id, dimension, metrics, dateRange, ...rest },
-    dateDimension: dimension || 'date',
+    componentConfig: props,
+    dateDimension: 'date',
   });
 
-  // Use page-aware data fetching (only loads when page is active)
   const { data, isLoading, error } = usePageData({
     pageId: currentPageId || 'default',
     componentId: componentId || 'areachart',
     datasetId: dataset_id || '',
     metrics,
-    dimensions: dimension ? [dimension] : [],
+    dimensions: dimension ? [dimension] : undefined,
     filters: cascadedFilters,
     enabled: !!dataset_id && metrics.length > 0 && !!dimension && !!currentPageId,
     chartType: 'area_chart',
@@ -110,26 +78,18 @@ export const AreaChart: React.FC<AreaChartProps> = ({
   });
 
   const containerStyle: React.CSSProperties = {
-    backgroundColor,
-    border: showBorder ? `${borderWidth}px solid ${borderColor}` : 'none',
-    borderRadius: `${borderRadius}px`,
-    padding: `${padding}px`,
-    boxShadow: showBorder ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
-  };
-
-  const titleStyle: React.CSSProperties = {
-    fontFamily: titleFontFamily,
-    fontSize: `${titleFontSize}px`,
-    fontWeight: titleFontWeight,
-    color: titleColor,
-    backgroundColor: titleBackgroundColor,
-    textAlign: titleAlignment as any,
-    marginBottom: '12px'
+    backgroundColor: style?.backgroundColor || theme.backgroundColor,
+    border: `${theme.borderWidth} solid ${theme.borderColor}`,
+    borderRadius: style?.borderRadius || theme.borderRadius,
+    padding: theme.padding,
+    boxShadow: theme.boxShadow,
+    opacity: DASHBOARD_THEME.global.opacity,
+    color: style?.textColor
   };
 
   if (isLoading) {
     return (
-      <div style={containerStyle} className="flex items-center justify-center min-h-[300px]">
+      <div style={containerStyle} className="flex items-center justify-center min-h-[400px]">
         <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
       </div>
     );
@@ -137,120 +97,100 @@ export const AreaChart: React.FC<AreaChartProps> = ({
 
   if (error) {
     return (
-      <div style={containerStyle} className="flex flex-col items-center justify-center min-h-[300px] gap-2">
+      <div style={containerStyle} className="flex flex-col items-center justify-center min-h-[400px] gap-2">
         <p className="text-sm text-red-600">Failed to load data</p>
         <p className="text-xs text-muted-foreground">{error.message}</p>
       </div>
     );
   }
 
-  // Extract comparison data
   const currentData = data?.data?.current || data?.data || [];
   const comparisonData = data?.data?.comparison || [];
   const hasComparison = comparisonData.length > 0;
 
   if (currentData.length === 0) {
     return (
-      <div style={containerStyle} className="flex items-center justify-center min-h-[300px]">
+      <div style={containerStyle} className="flex items-center justify-center min-h-[400px]">
         <p className="text-sm text-muted-foreground">No data available</p>
       </div>
     );
   }
 
-  // Transform data for Recharts - standardize dimension values
-  const transformedData = currentData.map((row: any, index: number) => {
-    const result: any = {
-      name: dimension ? standardizeDimensionValue(row[dimension], dimension) : 'Value',
-    };
+  // Transform to ECharts format
+  const categories = currentData.map((row: any) => formatChartLabel(row[dimension || '']));
 
-    // Add current metrics
-    metrics.forEach((metric) => {
-      result[metric] = Number(row[metric]) || 0;
-    });
+  // Build series (line with areaStyle)
+  const series = metrics.map((metric, index) => ({
+    name: formatChartLabel(metric),
+    type: 'line' as const,
+    smooth,
+    areaStyle: { opacity: fillOpacity },
+    data: currentData.map((row: any) => Number(row[metric]) || 0),
+    lineStyle: { width: 2 },
+    itemStyle: { color: chartColors[index % chartColors.length] }
+  }));
 
-    // Add comparison metrics if available
-    if (hasComparison && comparisonData[index]) {
-      metrics.forEach((metric) => {
-        result[`${metric}_prev`] = Number(comparisonData[index][metric]) || 0;
+  if (hasComparison) {
+    metrics.forEach((metric, index) => {
+      series.push({
+        name: `${formatChartLabel(metric)} (Previous)`,
+        type: 'line' as const,
+        smooth,
+        areaStyle: { opacity: fillOpacity * 0.5 },
+        data: comparisonData.map((row: any) => Number(row[metric]) || 0),
+        lineStyle: { width: 2, type: 'dashed' as const },
+        itemStyle: { color: chartColors[index % chartColors.length], opacity: 0.7 }
       });
-    }
+    });
+  }
 
-    return result;
-  });
-
-  const CustomTooltip = ({ active, payload }: any) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-3">
-          <p className="font-semibold text-sm mb-1">{payload[0].payload.name}</p>
-          {payload.map((entry: any, index: number) => (
-            <p key={index} className="text-xs" style={{ color: entry.color }}>
-              {formatChartLabel(entry.name)}: {formatMetricValue(entry.value, entry.name.toLowerCase(), [], 'gsc')}
-            </p>
-          ))}
-        </div>
-      );
-    }
-    return null;
+  const option: EChartsOption = {
+    backgroundColor: '#ffffff',
+    title: showTitle ? {
+      text: title,
+      left: 'center',
+      textStyle: { fontSize: 16, fontWeight: 600, color: '#111827' }
+    } : undefined,
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'cross' }
+    },
+    legend: {
+      show: showLegend,
+      bottom: 0,
+      data: series.map(s => s.name),
+      formatter: (name: string) => formatChartLabel(name),
+      textStyle: { color: '#666', fontSize: 12 }
+    },
+    grid: {
+      left: '60px',
+      right: '30px',
+      top: showTitle ? '60px' : '30px',
+      bottom: showLegend ? '60px' : '30px'
+    },
+    xAxis: {
+      type: 'category',
+      data: categories,
+      boundaryGap: false,
+      axisLine: { lineStyle: { color: '#e0e0e0' } },
+      axisLabel: { color: '#666', fontSize: 11 }
+    },
+    yAxis: {
+      type: 'value',
+      axisLine: { lineStyle: { color: '#e0e0e0' } },
+      axisLabel: { color: '#666', fontSize: 11 },
+      splitLine: { lineStyle: { color: '#f5f5f5', type: 'dashed' as const } }
+    },
+    series: series
   };
 
   return (
     <div style={containerStyle}>
-      {showTitle && <div style={titleStyle}>{title}</div>}
-      <ResponsiveContainer width="100%" height={300}>
-        <RechartsAreaChart
-          data={transformedData}
-          margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
-        >
-          <defs>
-            {metrics.map((metric, index) => (
-              <linearGradient key={metric} id={`color${index}`} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor={chartColors[index % chartColors.length]} stopOpacity={0.8} />
-                <stop offset="95%" stopColor={chartColors[index % chartColors.length]} stopOpacity={0.1} />
-              </linearGradient>
-            ))}
-          </defs>
-          <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-          <XAxis
-            dataKey="name"
-            tick={{ fontSize: 11, fill: '#666' }}
-            tickFormatter={(value) => formatChartLabel(value)}
-            angle={-45}
-            textAnchor="end"
-            height={80}
-          />
-          <YAxis tick={{ fontSize: 11, fill: '#666' }} />
-          <Tooltip content={<CustomTooltip />} />
-          {showLegend && <Legend wrapperStyle={{ fontSize: '11px' }} formatter={(value) => formatChartLabel(value)} />}
-          {/* Current period areas */}
-          {metrics.map((metric, index) => (
-            <Area
-              key={metric}
-              type={smooth ? 'monotone' : 'linear'}
-              dataKey={metric}
-              stroke={chartColors[index % chartColors.length]}
-              fill={`url(#color${index})`}
-              fillOpacity={fillOpacity}
-              stackId={stacked ? 'stack' : undefined}
-              name={formatChartLabel(metric)}
-            />
-          ))}
-
-          {/* Comparison period areas (dashed, lower opacity) */}
-          {hasComparison && metrics.map((metric, index) => (
-            <Area
-              key={`${metric}_prev`}
-              type={smooth ? 'monotone' : 'linear'}
-              dataKey={`${metric}_prev`}
-              stroke={chartColors[index % chartColors.length]}
-              strokeDasharray="5 5"
-              fill={`url(#color${index})`}
-              fillOpacity={fillOpacity * 0.3}
-              name={`${formatChartLabel(metric)} (Previous)`}
-            />
-          ))}
-        </RechartsAreaChart>
-      </ResponsiveContainer>
+      <ReactECharts
+        option={option}
+        style={{ height: '400px', width: '100%' }}
+        opts={{ renderer: 'svg' }}
+      />
     </div>
   );
 };

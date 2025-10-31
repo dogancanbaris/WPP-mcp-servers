@@ -1,85 +1,58 @@
 'use client';
 
 /**
- * Bar Chart - Dataset-Based (NEW ARCHITECTURE)
+ * Bar Chart - Dataset-Based (ECHARTS VERSION)
  *
- * Shows categorical data with horizontal or vertical bars using registered datasets.
- * Queries: GET /api/datasets/[id]/query with caching
- * Supports global filters via useGlobalFilters hook
+ * Plug-and-play bar chart using ECharts rendering engine.
+ * Supports both vertical and horizontal orientations.
+ *
+ * NEW ARCHITECTURE:
+ * - Pure ECharts (no Recharts)
+ * - Queries registered dataset via /api/datasets/[id]/query
+ * - Backend handles caching, BigQuery connection
+ * - Multi-page support with cascaded filters
  */
 
-import { useQuery } from '@tanstack/react-query';
+import ReactECharts from 'echarts-for-react';
 import { Loader2 } from 'lucide-react';
 import { ComponentConfig } from '@/types/dashboard-builder';
-import { formatMetricValue } from '@/lib/utils/metric-formatter';
-import { standardizeDimensionValue } from '@/lib/utils/data-formatter';
-import { formatChartLabel } from '@/lib/utils/label-formatter';
+import { DASHBOARD_THEME } from '@/lib/themes/dashboard-theme';
+import { formatChartLabel, truncateAxisLabel } from '@/lib/utils/label-formatter';
 import { usePageData } from '@/hooks/usePageData';
 import { useCurrentPageId } from '@/store/dashboardStore';
 import { useCascadedFilters } from '@/hooks/useCascadedFilters';
 import { getChartDefaults, resolveSortField } from '@/lib/defaults/chart-defaults';
-import {
-  Bar,
-  BarChart as RechartsBarChart,
-  CartesianGrid,
-  Legend,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts';
+import type { EChartsOption } from 'echarts';
 
 export interface BarChartProps extends Partial<ComponentConfig> {
   orientation?: 'vertical' | 'horizontal';
-  barSize?: number;
-  stacked?: boolean;
+  barWidth?: string | number;
   sortBy?: string;
   sortDirection?: 'ASC' | 'DESC';
   limit?: number;
 }
 
-export const BarChart: React.FC<BarChartProps> = ({
-  // Component ID
-  id: componentId,
+export const BarChart: React.FC<BarChartProps> = (props) => {
+  const theme = DASHBOARD_THEME.charts;
 
-  // Data props
-  dataset_id,
-  dimension = null,
-  metrics = [],
-  dateRange,
+  const {
+    id: componentId,
+    dataset_id,
+    metrics = [],
+    dimension,
+    title = 'Bar Chart',
+    showTitle = true,
+    showLegend = true,
+    chartColors = ['#191D63', '#1E8E3E', '#fac858', '#ee6666', '#73c0de', '#3ba272'],
+    orientation = 'vertical',
+    barWidth = '60%',
+    style,
+    sortBy,
+    sortDirection,
+    limit,
+    ...rest
+  } = props;
 
-  // Display props
-  title = 'Bar Chart',
-  showTitle = true,
-  titleFontFamily = 'roboto',
-  titleFontSize = '16',
-  titleFontWeight = '600',
-  titleColor = '#111827',
-  titleBackgroundColor = 'transparent',
-  titleAlignment = 'left',
-
-  // Background & Border
-  backgroundColor = '#ffffff',
-  showBorder = true,
-  borderColor = '#e0e0e0',
-  borderWidth = 1,
-  borderRadius = 8,
-  padding = 16,
-
-  // Chart appearance
-  showLegend = true,
-  chartColors = ['#191D63', '#1E8E3E', '#fac858', '#ee6666', '#73c0de', '#3ba272'],
-
-  // Bar specific
-  orientation = 'vertical',
-  barSize = 20,
-  stacked = false,
-  sortBy,
-  sortDirection,
-  limit,
-
-  ...rest
-}) => {
   const currentPageId = useCurrentPageId();
 
   // Apply professional defaults
@@ -88,15 +61,15 @@ export const BarChart: React.FC<BarChartProps> = ({
   const finalSortDirection = sortDirection || defaults.sortDirection;
   const finalLimit = limit !== undefined ? limit : defaults.limit;
 
-  // Use cascaded filters (Global → Page → Component)
+  // Use cascaded filters
   const { filters: cascadedFilters } = useCascadedFilters({
     pageId: currentPageId || undefined,
     componentId,
-    componentConfig: { id: componentId, dimension, metrics, dateRange, ...rest },
+    componentConfig: props,
     dateDimension: 'date',
   });
 
-  // Use page-aware data fetching (only loads when page is active)
+  // Fetch data
   const { data, isLoading, error } = usePageData({
     pageId: currentPageId || 'default',
     componentId: componentId || 'barchart',
@@ -111,154 +84,154 @@ export const BarChart: React.FC<BarChartProps> = ({
     limit: finalLimit !== null ? finalLimit : undefined,
   });
 
+  // Container styling - responsive to column width
   const containerStyle: React.CSSProperties = {
-    backgroundColor,
-    border: showBorder ? `${borderWidth}px solid ${borderColor}` : 'none',
-    borderRadius: `${borderRadius}px`,
-    padding: `${padding}px`,
-    boxShadow: showBorder ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+    backgroundColor: style?.backgroundColor || theme.backgroundColor,
+    border: `${theme.borderWidth} solid ${theme.borderColor}`,
+    borderRadius: style?.borderRadius || theme.borderRadius,
+    padding: theme.padding,
+    boxShadow: theme.boxShadow,
+    opacity: DASHBOARD_THEME.global.opacity,
+    color: style?.textColor,
+    minHeight: '400px',  // Minimum height for charts
+    height: '100%',      // Fill container
+    display: 'flex',
+    flexDirection: 'column'
   };
 
-  const titleStyle: React.CSSProperties = {
-    fontFamily: titleFontFamily,
-    fontSize: `${titleFontSize}px`,
-    fontWeight: titleFontWeight,
-    color: titleColor,
-    backgroundColor: titleBackgroundColor,
-    textAlign: titleAlignment as any,
-    marginBottom: '12px'
-  };
-
+  // Loading state
   if (isLoading) {
     return (
-      <div style={containerStyle} className="flex items-center justify-center min-h-[300px]">
+      <div style={containerStyle} className="flex items-center justify-center min-h-[400px]">
         <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
+  // Error state
   if (error) {
     return (
-      <div style={containerStyle} className="flex flex-col items-center justify-center min-h-[300px] gap-2">
+      <div style={containerStyle} className="flex flex-col items-center justify-center min-h-[400px] gap-2">
         <p className="text-sm text-red-600">Failed to load data</p>
         <p className="text-xs text-muted-foreground">{error.message}</p>
       </div>
     );
   }
 
-  // Extract comparison data
+  // Extract data
   const currentData = data?.data?.current || data?.data || [];
   const comparisonData = data?.data?.comparison || [];
   const hasComparison = comparisonData.length > 0;
 
   if (currentData.length === 0) {
     return (
-      <div style={containerStyle} className="flex items-center justify-center min-h-[300px]">
+      <div style={containerStyle} className="flex items-center justify-center min-h-[400px]">
         <p className="text-sm text-muted-foreground">No data available</p>
       </div>
     );
   }
 
-  // Transform data for Recharts - align comparison by category name
-  const compByName: Record<string, any> = {};
+  // Transform to ECharts format with capitalized labels
+  const categories = currentData.map((row: any) => formatChartLabel(row[dimension || '']));
+
+  // Build series data for each metric
+  const series = metrics.map((metric, index) => ({
+    name: formatChartLabel(metric),
+    type: 'bar' as const,
+    data: currentData.map((row: any) => Number(row[metric]) || 0),
+    itemStyle: {
+      color: chartColors[index % chartColors.length]
+    }
+  }));
+
+  // Add comparison series if available
   if (hasComparison) {
-    comparisonData.forEach((row: any) => {
-      const key = dimension ? standardizeDimensionValue(row[dimension], dimension) : 'Value';
-      compByName[key] = row;
+    metrics.forEach((metric, index) => {
+      series.push({
+        name: `${formatChartLabel(metric)} (Previous)`,
+        type: 'bar' as const,
+        data: comparisonData.map((row: any) => Number(row[metric]) || 0),
+        itemStyle: {
+          color: chartColors[index % chartColors.length],
+          opacity: 0.4
+        }
+      });
     });
   }
 
-  const transformedData = currentData.map((row: any) => {
-    const name = dimension ? standardizeDimensionValue(row[dimension], dimension) : 'Value';
-    const result: any = { name };
-
-    // Current metrics
-    metrics.forEach((metric) => {
-      result[metric] = Number(row[metric]) || 0;
-    });
-
-    // Comparison metrics aligned by name
-    if (hasComparison) {
-      const prevRow = compByName[name];
-      metrics.forEach((metric) => {
-        result[`${metric}_prev`] = prevRow ? (Number(prevRow[metric]) || 0) : 0;
-      });
-    }
-
-    return result;
-  });
-
-  const CustomTooltip = ({ active, payload }: any) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-3">
-          <p className="font-semibold text-sm mb-1">{payload[0].payload.name}</p>
-          {payload.map((entry: any, index: number) => (
-            <p key={index} className="text-xs" style={{ color: entry.color }}>
-              {formatChartLabel(entry.name)}: {formatMetricValue(entry.value, entry.name.toLowerCase(), [], 'gsc')}
-            </p>
-          ))}
-        </div>
-      );
-    }
-    return null;
+  // Build ECharts option - PLUG AND PLAY!
+  const option: EChartsOption = {
+    backgroundColor: '#ffffff',
+    title: showTitle ? {
+      text: title,
+      left: 'center',
+      textStyle: { fontSize: 16, fontWeight: 600, color: '#111827' }
+    } : undefined,
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' }
+    },
+    legend: {
+      show: showLegend,
+      bottom: 0,
+      data: series.map(s => s.name),
+      formatter: (name: string) => formatChartLabel(name),
+      textStyle: { color: '#666', fontSize: 12 }
+    },
+    grid: {
+      left: orientation === 'horizontal' ? '200px' : '80px',  // More space for Y-axis labels
+      right: '40px',
+      top: showTitle ? '80px' : '40px',
+      bottom: showLegend ? '140px' : '120px',  // Even more space for rotated X-axis labels
+      containLabel: false  // Let labels extend outside grid
+    },
+    // VERTICAL bars: categories on X, values on Y
+    // HORIZONTAL bars: values on X, categories on Y
+    xAxis: orientation === 'vertical' ? {
+      type: 'category',
+      data: categories,
+      axisLine: { lineStyle: { color: '#e0e0e0' } },
+      axisLabel: {
+        color: '#666',
+        fontSize: 10,
+        rotate: 45,
+        interval: 'auto',  // Auto-space labels to prevent overlap
+        margin: 15,  // Space between labels and axis
+        formatter: (value: string) => truncateAxisLabel(value, 18)  // Truncate long labels
+      }
+    } : {
+      type: 'value',
+      axisLine: { lineStyle: { color: '#e0e0e0' } },
+      axisLabel: { color: '#666', fontSize: 11 },
+      splitLine: { lineStyle: { color: '#f5f5f5', type: 'dashed' as const } }
+    },
+    yAxis: orientation === 'vertical' ? {
+      type: 'value',
+      axisLine: { lineStyle: { color: '#e0e0e0' } },
+      axisLabel: { color: '#666', fontSize: 11 },
+      splitLine: { lineStyle: { color: '#f5f5f5', type: 'dashed' as const } }
+    } : {
+      type: 'category',
+      data: categories,
+      axisLine: { lineStyle: { color: '#e0e0e0' } },
+      axisLabel: {
+        color: '#666',
+        fontSize: 10,
+        interval: 'auto',  // Auto-space labels
+        margin: 10,  // Space between labels and bars
+        formatter: (value: string) => truncateAxisLabel(value, 35)  // Truncate long URLs
+      }
+    },
+    series: series
   };
 
   return (
     <div style={containerStyle}>
-      {showTitle && <div style={titleStyle}>{title}</div>}
-      <ResponsiveContainer width="100%" height={300}>
-        <RechartsBarChart
-          data={transformedData}
-          layout={orientation === 'horizontal' ? 'horizontal' : 'vertical'}
-          margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
-        >
-          <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-          {orientation === 'vertical' ? (
-            <>
-              <XAxis
-                dataKey="name"
-                tick={{ fontSize: 11, fill: '#666' }}
-                tickFormatter={(value) => formatChartLabel(value)}
-                angle={-45}
-                textAnchor="end"
-                height={80}
-              />
-              <YAxis tick={{ fontSize: 11, fill: '#666' }} />
-            </>
-          ) : (
-            <>
-              <XAxis type="number" tick={{ fontSize: 11, fill: '#666' }} />
-              <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: '#666' }} tickFormatter={(value) => formatChartLabel(value)} width={100} />
-            </>
-          )}
-          <Tooltip content={<CustomTooltip />} />
-          {showLegend && <Legend wrapperStyle={{ fontSize: '11px' }} formatter={(value) => formatChartLabel(value)} />}
-          {/* Current period bars */}
-          {metrics.map((metric, index) => (
-            <Bar
-              key={metric}
-              dataKey={metric}
-              fill={chartColors[index % chartColors.length]}
-              stackId={stacked ? 'stack' : undefined}
-              maxBarSize={barSize}
-              name={formatChartLabel(metric)}
-            />
-          ))}
-
-          {/* Comparison period bars (semi-transparent) */}
-          {hasComparison && metrics.map((metric, index) => (
-            <Bar
-              key={`${metric}_prev`}
-              dataKey={`${metric}_prev`}
-              fill={chartColors[index % chartColors.length]}
-              fillOpacity={0.4}
-              maxBarSize={barSize}
-              name={`${formatChartLabel(metric)} (Previous)`}
-            />
-          ))}
-        </RechartsBarChart>
-      </ResponsiveContainer>
+      <ReactECharts
+        option={option}
+        style={{ flex: 1, width: '100%' }}  // Flex to fill container
+        opts={{ renderer: 'svg' }}
+      />
     </div>
   );
 };

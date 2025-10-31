@@ -82,15 +82,18 @@ export const StackedColumnChart: React.FC<StackedColumnChartProps> = (props) => 
     dateDimension: 'date',
   });
 
+  // Extract actual dimension for API
+  const actualDimension = dimension || dimensions?.[0];
+
   // Use page-aware data fetching (only loads when page is active)
   const { data, isLoading, error } = usePageData({
     pageId: currentPageId || 'default',
     componentId: componentId || 'stacked-column',
     datasetId: dataset_id || '',
     metrics,
-    dimensions,
+    dimensions: actualDimension ? [actualDimension] : undefined,
     filters: cascadedFilters,
-    enabled: !!dataset_id && metrics.length > 0 && !!currentPageId,
+    enabled: !!dataset_id && metrics.length > 0 && !!actualDimension && !!currentPageId,
     chartType: 'stacked_column',
     sortBy: finalSortBy,
     sortDirection: finalSortDirection,
@@ -140,8 +143,7 @@ export const StackedColumnChart: React.FC<StackedColumnChartProps> = (props) => 
     );
   }
 
-  // Extract dimension (support both singular and plural props)
-  const actualDimension = dimension || dimensions?.[0];
+  // Use actualDimension defined above (line 86)
   const categories = currentData.map((row: any) => formatChartLabel(row[actualDimension]));
   const series = seriesConfig || metrics.map(m => ({ key: m, name: formatChartLabel(m) }));
 

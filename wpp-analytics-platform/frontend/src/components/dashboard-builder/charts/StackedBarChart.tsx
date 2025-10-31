@@ -80,15 +80,18 @@ export const StackedBarChart: React.FC<StackedBarChartProps> = (props) => {
     dateDimension: 'date',
   });
 
+  // Extract actual dimension for API
+  const actualDimension = dimension || dimensions?.[0];
+
   // Use page-aware data fetching (only loads when page is active)
   const { data, isLoading, error } = usePageData({
     pageId: currentPageId || 'default',
     componentId: componentId || 'stacked-bar',
     datasetId: dataset_id || '',
     metrics,
-    dimensions,
+    dimensions: actualDimension ? [actualDimension] : undefined,
     filters: cascadedFilters,
-    enabled: !!dataset_id && metrics.length > 0 && !!currentPageId,
+    enabled: !!dataset_id && metrics.length > 0 && !!actualDimension && !!currentPageId,
     chartType: 'stacked_bar',
     sortBy: finalSortBy,
     sortDirection: finalSortDirection,
@@ -138,8 +141,7 @@ export const StackedBarChart: React.FC<StackedBarChartProps> = (props) => {
     );
   }
 
-  // Extract dimension (support both singular and plural props)
-  const actualDimension = dimension || dimensions?.[0];
+  // Use actualDimension defined above (line 84)
   const categories = currentData.map((row: any) => formatChartLabel(row[actualDimension]));
   const series = seriesConfig || metrics.map(m => ({ key: m, name: formatChartLabel(m) }));
 
@@ -269,7 +271,13 @@ export const StackedBarChart: React.FC<StackedBarChartProps> = (props) => {
     };
   })();
 
-  console.log('[StackedBarChart] Data loaded:', currentData.length, 'categories');
+  console.log('[StackedBarChart] Debug:', {
+    categories: categories.length,
+    series: series.length,
+    metrics,
+    sampleData: currentData[0],
+    seriesNames: series.map(s => s.name)
+  });
 
   return (
     <div style={containerStyle}>

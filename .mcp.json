@@ -3,10 +3,12 @@
     "wpp-digital-marketing": {
       "command": "node",
       "args": [
-        "/home/dogancanbaris/projects/MCP Servers/dist/gsc/server.js"
+        "/home/dogancanbaris/projects/MCP Servers/dist/router/server.js"
       ],
       "env": {
-        "MCP_TRANSPORT": "stdio"
+        "MCP_TRANSPORT": "stdio",
+        "GOOGLE_BACKEND_URL": "http://localhost:3100/mcp",
+        "ENABLE_GOOGLE": "true"
       }
     },
     "chrome-devtools": {

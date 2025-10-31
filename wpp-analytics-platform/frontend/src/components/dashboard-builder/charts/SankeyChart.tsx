@@ -19,7 +19,6 @@ import { useCascadedFilters } from '@/hooks/useCascadedFilters';
 import { usePageData } from '@/hooks/usePageData';
 import { useCurrentPageId } from '@/store/dashboardStore';
 import { getChartDefaults, resolveSortField } from '@/lib/defaults/chart-defaults';
-import { formatChartLabel } from '@/lib/utils/label-formatter';
 
 export interface SankeyChartProps extends Partial<ComponentConfig> {
   sourceField?: string;

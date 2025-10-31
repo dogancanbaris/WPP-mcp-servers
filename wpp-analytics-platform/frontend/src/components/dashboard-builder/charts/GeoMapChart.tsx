@@ -30,7 +30,6 @@ import { usePageData } from '@/hooks/usePageData';
 import { useCurrentPageId } from '@/store/dashboardStore';
 import { useCascadedFilters } from '@/hooks/useCascadedFilters';
 import { getChartDefaults, resolveSortField } from '@/lib/defaults/chart-defaults';
-import { formatChartLabel } from '@/lib/utils/label-formatter';
 
 export interface GeoMapDataPoint {
   /** Region/city name (must match GeoJSON feature name) */
@@ -166,7 +165,7 @@ export const GeoMapChart: React.FC<GeoMapChartProps> = (props) => {
     const metricName = metrics[0];
 
     return apiData.data.map((row: any) => ({
-      name: row[locationDimension],
+      name: formatChartLabel(row[locationDimension]),
       value: row[metricName] || 0,
       metadata: row
     }));

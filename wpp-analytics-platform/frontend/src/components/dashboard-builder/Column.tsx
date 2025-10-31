@@ -47,6 +47,15 @@ const widthLabels: Record<ColumnWidth, string> = {
   '3/4': 'Three Quarters',
 };
 
+const minHeightClasses: Record<ColumnWidth, string> = {
+  '1/1': 'min-h-[500px]',  // Full width = tallest
+  '1/2': 'min-h-[450px]',  // Half width
+  '1/3': 'min-h-[400px]',  // Third width
+  '2/3': 'min-h-[450px]',  // Two thirds
+  '1/4': 'min-h-[350px]',  // Quarter = shortest
+  '3/4': 'min-h-[480px]',  // Three quarters
+};
+
 interface ComponentItemProps {
   component: ComponentConfig;
   columnId: string;
@@ -265,6 +274,7 @@ export const Column: React.FC<ColumnProps> = ({
         className={cn(
           "relative group p-0", // Changed p-2 to p-0, components control their own padding
           widthClasses[width],
+          component && minHeightClasses[width],  // ADD: Responsive min-height when component exists
           "border rounded-lg transition-all duration-200",
           component ? (
             "border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900"

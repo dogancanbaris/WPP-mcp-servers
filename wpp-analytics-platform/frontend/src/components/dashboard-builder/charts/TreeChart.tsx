@@ -21,7 +21,6 @@ import { useCascadedFilters } from '@/hooks/useCascadedFilters';
 import { usePageData } from '@/hooks/usePageData';
 import { useCurrentPageId } from '@/store/dashboardStore';
 import { getChartDefaults, resolveSortField } from '@/lib/defaults/chart-defaults';
-import { formatChartLabel } from '@/lib/utils/label-formatter';
 
 export interface TreeChartProps extends Partial<ComponentConfig> {
   /** Hierarchy dimensions (parent -> child) */
@@ -142,7 +141,8 @@ export const TreeChart: React.FC<TreeChartProps> = (props) => {
       let currentLevel = tree;
 
       dimensions.forEach((dim, index) => {
-        const dimValue = row[dim];
+        const dimValueRaw = row[dim];
+        const dimValue = formatChartLabel(dimValueRaw); // Capitalize for consistent storage
         let child = currentLevel.children?.find((c: any) => c.name === dimValue);
 
         if (!child) {

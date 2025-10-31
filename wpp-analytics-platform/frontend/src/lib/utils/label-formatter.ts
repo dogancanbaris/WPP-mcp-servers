@@ -18,8 +18,9 @@
  * - "cost_per_click" → "Cost Per Click"
  * - "session_duration" → "Session Duration"
  * - "totalRevenue" → "Total Revenue"
+ * - "meditation tools for beginners" → "Meditation Tools For..."
  */
-export function formatChartLabel(label: string): string {
+export function formatChartLabel(label: string, maxLength?: number): string {
   if (!label) return '';
 
   // Known acronyms - keep uppercase
@@ -50,7 +51,14 @@ export function formatChartLabel(label: string): string {
       return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
     });
 
-  return words.join(' ');
+  const formatted = words.join(' ');
+
+  // Apply truncation if maxLength specified
+  if (maxLength && formatted.length > maxLength) {
+    return formatted.substring(0, maxLength - 3) + '...';
+  }
+
+  return formatted;
 }
 
 /**
@@ -58,6 +66,19 @@ export function formatChartLabel(label: string): string {
  */
 export function formatChartLabels(labels: string[]): string[] {
   return labels.map(formatChartLabel);
+}
+
+/**
+ * Truncate label for axis display (prevents overlap/cutoff)
+ *
+ * Examples:
+ * - "meditation tools for beginners" → "Meditation Tools..."
+ * - "https://example.com/very/long/path" → "Https://Example.Com..."
+ */
+export function truncateAxisLabel(label: string, maxLength: number = 25): string {
+  const formatted = formatChartLabel(label);
+  if (formatted.length <= maxLength) return formatted;
+  return formatted.substring(0, maxLength - 3) + '...';
 }
 
 /**
