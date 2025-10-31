@@ -8,6 +8,7 @@
  */
 
 import ReactECharts from 'echarts-for-react';
+import { useRef } from 'react';
 import { Loader2 } from 'lucide-react';
 import { ComponentConfig } from '@/types/dashboard-builder';
 import { DASHBOARD_THEME } from '@/lib/themes/dashboard-theme';
@@ -16,6 +17,7 @@ import { usePageData } from '@/hooks/usePageData';
 import { useCurrentPageId } from '@/store/dashboardStore';
 import { useCascadedFilters } from '@/hooks/useCascadedFilters';
 import { getChartDefaults, resolveSortField } from '@/lib/defaults/chart-defaults';
+import { useChartResize } from '@/hooks/useChartResize';
 import type { EChartsOption } from 'echarts';
 
 export interface LineChartProps extends Partial<ComponentConfig> {
@@ -24,10 +26,42 @@ export interface LineChartProps extends Partial<ComponentConfig> {
   sortBy?: string;
   sortDirection?: 'ASC' | 'DESC';
   limit?: number;
+  containerSize?: { width: number; height: number };
+}
+
+/**
+ * Calculate dynamic grid padding based on container size
+ * Ensures all chart elements (labels, legend, axes) remain visible
+ */
+function calculateDynamicGrid(
+  containerSize: { width: number; height: number } | undefined,
+  showLegend: boolean,
+  useDualAxis: boolean
+) {
+  const width = containerSize?.width || 600;
+  const height = containerSize?.height || 400;
+
+  const leftPx = Math.min(Math.max(40, width * 0.08), width * 0.15);
+  const rightPx = useDualAxis
+    ? Math.min(Math.max(50, width * 0.08), width * 0.15)
+    : Math.min(Math.max(30, width * 0.05), width * 0.10);
+  const topPx = Math.min(Math.max(30, height * 0.08), height * 0.12);
+  const bottomPx = showLegend
+    ? Math.min(Math.max(60, height * 0.15), height * 0.25)
+    : Math.min(Math.max(30, height * 0.08), height * 0.12);
+
+  return {
+    left: leftPx,
+    right: rightPx,
+    top: topPx,
+    bottom: bottomPx,
+    containLabel: true,
+  };
 }
 
 export const LineChart: React.FC<LineChartProps> = (props) => {
   const theme = DASHBOARD_THEME.charts;
+  const chartRef = useRef<ReactECharts>(null);
 
   const {
     id: componentId,
@@ -44,10 +78,13 @@ export const LineChart: React.FC<LineChartProps> = (props) => {
     sortBy,
     sortDirection,
     limit,
+    containerSize,
     ...rest
   } = props;
 
   const currentPageId = useCurrentPageId();
+
+  useChartResize(chartRef, containerSize);
 
   // Apply professional defaults
   const defaults = getChartDefaults('line_chart');
@@ -165,36 +202,47 @@ export const LineChart: React.FC<LineChartProps> = (props) => {
       bottom: 0,
       data: series.map(s => s.name),
       formatter: (name: string) => formatChartLabel(name),
-      textStyle: { color: '#666', fontSize: 12 }
+      textStyle: {
+        color: '#666',
+        fontSize: Math.max(10, Math.min(12, (containerSize?.width || 600) / 60))
+      }
     },
-    grid: {
-      left: '60px',
-      right: '30px',
-      top: showTitle ? '60px' : '30px',
-      bottom: showLegend ? '60px' : '30px',
-      containLabel: false
-    },
+    grid: calculateDynamicGrid(containerSize, showLegend, false),
     xAxis: {
       type: 'category',
       data: categories,
       axisLine: { lineStyle: { color: '#e0e0e0' } },
-      axisLabel: { color: '#666', fontSize: 11, rotate: categories.length > 15 ? 45 : 0 }
+      axisLabel: {
+        color: '#666',
+        fontSize: Math.max(9, Math.min(11, (containerSize?.width || 600) / 70)),
+        rotate: containerSize && containerSize.width < 300 ? 45 : 0
+      }
     },
     yAxis: {
       type: 'value',
       axisLine: { lineStyle: { color: '#e0e0e0' } },
-      axisLabel: { color: '#666', fontSize: 11 },
+      axisLabel: {
+        color: '#666',
+        fontSize: Math.max(9, Math.min(11, (containerSize?.width || 600) / 70))
+      },
       splitLine: { lineStyle: { color: '#f5f5f5', type: 'dashed' as const } }
     },
     series: series
   };
 
+  const chartHeight = containerSize?.height
+    ? `${containerSize.height - (showTitle ? 40 : 0)}px`
+    : '400px';
+
   return (
     <div style={containerStyle}>
       <ReactECharts
+        ref={chartRef}
         option={option}
-        style={{ height: '400px', width: '100%' }}
+        style={{ height: chartHeight, width: '100%' }}
         opts={{ renderer: 'svg' }}
+        notMerge={false}
+        lazyUpdate={true}
       />
     </div>
   );

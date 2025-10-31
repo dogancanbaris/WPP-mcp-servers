@@ -9,6 +9,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import ReactECharts from 'echarts-for-react';
+import { useRef } from 'react';
 import { getEChartsTheme } from '@/lib/themes/echarts-theme';
 import { Loader2 } from 'lucide-react';
 import { ComponentConfig } from '@/types/dashboard-builder';
@@ -17,15 +18,51 @@ import { formatChartLabel } from '@/lib/utils/label-formatter';
 import { useCascadedFilters } from '@/hooks/useCascadedFilters';
 import { useCurrentPageId } from '@/store/dashboardStore';
 import { getChartDefaults } from '@/lib/defaults/chart-defaults';
+import { useChartResize } from '@/hooks/useChartResize';
 
 export interface PieChartProps extends Partial<ComponentConfig> {
   pieRadius?: string | [string, string];
   pieCenter?: [string, string];
   showLabel?: boolean;
   labelPosition?: 'outside' | 'inside' | 'center';
+  containerSize?: { width: number; height: number };
+}
+
+/**
+ * Calculate dynamic grid padding based on container size
+ * Ensures all chart elements (labels, legend, axes) remain visible
+ */
+function calculateDynamicGrid(
+  containerSize: { width: number; height: number } | undefined,
+  showLegend: boolean,
+  useDualAxis: boolean
+) {
+  const width = containerSize?.width || 600;
+  const height = containerSize?.height || 400;
+
+  // Calculate responsive padding (minimum pixels, maximum percentage)
+  const leftPx = Math.min(Math.max(40, width * 0.08), width * 0.15);
+  const rightPx = useDualAxis
+    ? Math.min(Math.max(50, width * 0.08), width * 0.15)
+    : Math.min(Math.max(30, width * 0.05), width * 0.10);
+  const topPx = Math.min(Math.max(30, height * 0.08), height * 0.12);
+  const bottomPx = showLegend
+    ? Math.min(Math.max(60, height * 0.15), height * 0.25)
+    : Math.min(Math.max(30, height * 0.08), height * 0.12);
+
+  return {
+    left: leftPx,
+    right: rightPx,
+    top: topPx,
+    bottom: bottomPx,
+    containLabel: true, // CRITICAL - keeps all labels visible
+  };
 }
 
 export const PieChart: React.FC<PieChartProps> = (props) => {
+  // Chart ref for ResizeObserver
+  const chartRef = useRef<ReactECharts>(null);
+
   const {
     // Component ID
     id: componentId,
@@ -63,6 +100,7 @@ export const PieChart: React.FC<PieChartProps> = (props) => {
     pieCenter = ['50%', '50%'],
     showLabel = true,
     labelPosition = 'outside',
+    containerSize,
 
     ...rest
   } = props;
@@ -72,6 +110,9 @@ export const PieChart: React.FC<PieChartProps> = (props) => {
   const finalLimit = props.limit !== undefined ? props.limit : defaults.limit;
 
   const currentPageId = useCurrentPageId();
+
+  // Enable auto-resize when container changes
+  useChartResize(chartRef, containerSize);
 
   // Use cascaded filters (Global → Page → Component)
   const { filters: cascadedFilters } = useCascadedFilters({
@@ -185,18 +226,14 @@ export const PieChart: React.FC<PieChartProps> = (props) => {
       formatter: (name: string) => formatChartLabel(name),
       textStyle: {
         color: '#374151',  // Darker for better readability
-        fontSize: 12       // Larger for professional appearance
+        fontSize: Math.max(10, Math.min(12, (containerSize?.width || 600) / 60))
       },
       pageIconSize: 12,
       pageTextStyle: {
-        fontSize: 12
+        fontSize: Math.max(10, Math.min(12, (containerSize?.width || 600) / 60))
       }
     },
-    grid: {
-      bottom: '25%',  // More space for legend
-      top: '10%',
-      containLabel: true
-    },
+    grid: calculateDynamicGrid(containerSize, showLegend, false),
     series: hasComparison ? [
       // Current period pie (left)
       {
@@ -264,10 +301,22 @@ export const PieChart: React.FC<PieChartProps> = (props) => {
     ]
   };
 
+  // Use container size for responsive height, or default
+  const chartHeight = containerSize?.height
+    ? `${containerSize.height - (showTitle ? 40 : 0)}px`
+    : '300px';
+
   return (
     <div style={containerStyle}>
       {showTitle && <div style={titleStyle}>{title}</div>}
-      <ReactECharts option={option} style={{ height: '300px', width: '100%' }} />
+      <ReactECharts
+        ref={chartRef}
+        option={option}
+        style={{ height: chartHeight, width: '100%' }}
+        opts={{ renderer: 'svg' }}
+        notMerge={false}
+        lazyUpdate={true}
+      />
     </div>
   );
 };

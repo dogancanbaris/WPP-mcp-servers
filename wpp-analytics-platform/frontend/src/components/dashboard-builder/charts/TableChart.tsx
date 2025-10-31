@@ -14,14 +14,21 @@ import { ComponentConfig } from '@/types/dashboard-builder';
 import { formatMetricValue } from '@/lib/utils/metric-formatter';
 import { standardizeDimensionValue } from '@/lib/utils/data-formatter';
 import { formatColumnHeader, formatChartLabel } from '@/lib/utils/label-formatter';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useCascadedFilters } from '@/hooks/useCascadedFilters';
 import { useCurrentPageId } from '@/store/dashboardStore';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { getChartDefaults, resolveSortField } from '@/lib/defaults/chart-defaults';
 
-export interface TableChartProps extends Partial<ComponentConfig> {}
+export interface TableChartProps extends Partial<ComponentConfig> {
+  /**
+   * Number of rows to display per page
+   * Default: 10 (from chart-defaults.ts)
+   * Can be overridden per component
+   */
+  rowsPerPage?: number;
+}
 
 type SortDirection = 'asc' | 'desc' | null;
 
@@ -69,7 +76,8 @@ export const TableChart: React.FC<TableChartProps> = (props) => {
 
   // Apply professional defaults
   const defaults = getChartDefaults('table');
-  const pageSize = props.pageSize || defaults.pageSize || 100;
+  // Support both rowsPerPage (new) and pageSize (legacy) prop names
+  const pageSize = props.rowsPerPage || props.pageSize || defaults.pageSize || 10;
   const showPagination = props.showPagination !== false; // Default true
 
   // Pagination state
@@ -159,6 +167,11 @@ export const TableChart: React.FC<TableChartProps> = (props) => {
     }));
     setCurrentPage(0); // Reset to first page when sorting changes
   };
+
+  // Reset pagination when filters change
+  useEffect(() => {
+    setCurrentPage(0);
+  }, [cascadedFilters]);
 
   // Pagination calculations
   const totalCount = data?.metadata?.totalCount || 0;
@@ -313,38 +326,42 @@ export const TableChart: React.FC<TableChartProps> = (props) => {
       </div>
 
       {/* Pagination Controls */}
-      {showPagination && totalPages > 1 && (
+      {showPagination && totalCount > 0 && (
         <div className="flex items-center justify-between px-4 py-3 border-t-2 border-gray-200 bg-gray-50">
           <div className="text-sm font-medium text-gray-700">
-            Showing <span className="font-semibold text-gray-900">{startRow}-{endRow}</span> of{' '}
+            Showing <span className="font-semibold text-gray-900">{startRow.toLocaleString()}-{endRow.toLocaleString()}</span> of{' '}
             <span className="font-semibold text-gray-900">{totalCount.toLocaleString()}</span> rows
           </div>
-          <div className="flex items-center gap-3">
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-1 font-medium"
-              disabled={currentPage === 0}
-              onClick={() => setCurrentPage(p => Math.max(0, p - 1))}
-            >
-              <ChevronLeft className="w-4 h-4" />
-              Previous
-            </Button>
-            <span className="text-sm font-medium text-gray-700 px-2">
-              Page <span className="font-semibold text-gray-900">{currentPage + 1}</span> of{' '}
-              <span className="font-semibold text-gray-900">{totalPages}</span>
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-1 font-medium"
-              disabled={currentPage >= totalPages - 1 || !data?.metadata?.hasMore}
-              onClick={() => setCurrentPage(p => p + 1)}
-            >
-              Next
-              <ChevronRight className="w-4 h-4" />
-            </Button>
-          </div>
+          {totalPages > 1 && (
+            <div className="flex items-center gap-3">
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1 font-medium"
+                disabled={currentPage === 0}
+                onClick={() => setCurrentPage(p => Math.max(0, p - 1))}
+                title="Go to previous page"
+              >
+                <ChevronLeft className="w-4 h-4" />
+                Previous
+              </Button>
+              <span className="text-sm font-medium text-gray-700 px-2 min-w-[80px] text-center">
+                Page <span className="font-semibold text-gray-900">{currentPage + 1}</span> of{' '}
+                <span className="font-semibold text-gray-900">{totalPages}</span>
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1 font-medium"
+                disabled={currentPage >= totalPages - 1 || !data?.metadata?.hasMore}
+                onClick={() => setCurrentPage(p => p + 1)}
+                title="Go to next page"
+              >
+                Next
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+            </div>
+          )}
         </div>
       )}
     </div>
