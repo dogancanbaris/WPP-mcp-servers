@@ -150,9 +150,9 @@ export const FunnelChart: React.FC<FunnelChartProps> = ({
     );
   }
 
-  // Transform to ECharts funnel format with standardized names
+  // Transform to ECharts funnel format with capitalized names
   const funnelData = currentData.map((row: any, idx: number) => ({
-    name: standardizeDimensionValue(row[dimension || ''], dimension || ''),
+    name: formatChartLabel(standardizeDimensionValue(row[dimension || ''], dimension || '')),
     value: Number(row[metrics[0]]),
     itemStyle: { color: chartColors[idx % chartColors.length] }
   }));
@@ -160,7 +160,7 @@ export const FunnelChart: React.FC<FunnelChartProps> = ({
   // For funnel charts with comparison, show % change in labels
   const comparisonFunnelData = hasComparison
     ? comparisonData.map((row: any, idx: number) => ({
-        name: standardizeDimensionValue(row[dimension || ''], dimension || ''),
+        name: formatChartLabel(standardizeDimensionValue(row[dimension || ''], dimension || '')),
         value: Number(row[metrics[0]]),
         itemStyle: { color: chartColors[idx % chartColors.length], opacity: 0.5 }
       }))

@@ -132,7 +132,7 @@ export const TreemapChart: React.FC<TreemapChartProps> = (props) => {
       : null;
 
     return {
-      name: row[labelField] || 'Unknown',
+      name: formatChartLabel(row[labelField] || 'Unknown'),
       value: currentValue,
       percentChange
     };

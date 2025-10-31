@@ -166,8 +166,12 @@ export const SankeyChart: React.FC<SankeyChartProps> = (props) => {
         emphasis: {
           focus: 'adjacency'
         },
-        data: Array.from(nodes).map(name => ({ name })),
-        links: links,
+        data: Array.from(nodes).map(name => ({ name: formatChartLabel(name) })),
+        links: links.map(link => ({
+          ...link,
+          source: formatChartLabel(link.source),
+          target: formatChartLabel(link.target)
+        })),
         lineStyle: {
           color: 'gradient',
           curveness: 0.5
