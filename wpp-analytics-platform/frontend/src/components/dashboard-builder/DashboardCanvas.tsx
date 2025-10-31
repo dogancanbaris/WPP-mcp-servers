@@ -1,14 +1,15 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
 import { useDashboardStore, useCurrentPage } from '@/store/dashboardStore';
 import { CanvasContainer } from './CanvasContainer';
 import { CanvasComponent } from './CanvasComponent';
+import { AlignmentGuides } from './AlignmentGuides';
 import { rowColumnToAbsolute } from '@/lib/utils/layout-converter';
 import { cn } from '@/lib/utils';
-import type { ComponentType } from '@/types/dashboard-builder';
+import type { ComponentType, CanvasComponent as CanvasComponentType } from '@/types/dashboard-builder';
 
 interface DashboardCanvasProps {
   dashboardId: string;
@@ -43,9 +44,14 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
     selectComponent,
     toggleLock,
     convertToCanvas,
+    bringToFront,
+    sendToBack,
   } = useDashboardStore();
 
   const currentPage = useCurrentPage();
+
+  // Track active component for alignment guides
+  const [activeCanvasComponent, setActiveCanvasComponent] = useState<CanvasComponentType | null>(null);
 
   // Auto-convert rows to canvas if needed
   useEffect(() => {
@@ -61,6 +67,7 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
 
   const handlePositionChange = (id: string, x: number, y: number) => {
     moveComponentAbsolute(id, x, y);
+    setActiveCanvasComponent(null); // Clear guides after drag
   };
 
   const handleSizeChange = (
@@ -71,6 +78,25 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
     y: number
   ) => {
     resizeComponent(id, width, height, x, y);
+
+    // Update active component for live guides during resize
+    const updatedComp = canvasComponents.find(c => c.id === id);
+    if (updatedComp) {
+      setActiveCanvasComponent({
+        ...updatedComp,
+        x,
+        y,
+        width,
+        height,
+      });
+    }
+  };
+
+  const handleDragStart = (id: string) => {
+    const comp = canvasComponents.find(c => c.id === id);
+    if (comp) {
+      setActiveCanvasComponent(comp);
+    }
   };
 
   const handleRemove = (id: string) => {
@@ -112,6 +138,16 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
         isEditing={isEditing}
         zoom={zoom}
       >
+        {/* Alignment Guides */}
+        {isEditing && (
+          <AlignmentGuides
+            activeComponent={activeCanvasComponent}
+            allComponents={canvasComponents}
+            canvasWidth={pageCanvasWidth}
+            tolerance={2}
+          />
+        )}
+
         {/* Render Canvas Components */}
         {canvasComponents.map((canvasComp) => (
           <CanvasComponent
@@ -124,6 +160,7 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
               height: canvasComp.height,
             }}
             component={canvasComp.component}
+            zIndex={canvasComp.zIndex || 0}
             isEditing={isEditing}
             isSelected={canvasComp.component.id === selectedComponentId}
             onPositionChange={handlePositionChange}
@@ -131,6 +168,9 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
             onRemove={handleRemove}
             onSelect={handleSelect}
             onToggleLock={handleToggleLock}
+            onBringToFront={bringToFront}
+            onSendToBack={sendToBack}
+            onDragStart={handleDragStart}
           />
         ))}
 

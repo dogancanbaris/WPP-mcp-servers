@@ -8,7 +8,7 @@
 export const DASHBOARD_THEME = {
   // Header Section
   header: {
-    backgroundColor: '#ffffff', // WHITE background
+    backgroundColor: 'transparent', // TRANSPARENT - canvas shows through
     textColor: '#191D63', // WPP Blue text
     fontSize: '34px', // Large and prominent
     fontWeight: '800', // Extra bold
@@ -23,7 +23,7 @@ export const DASHBOARD_THEME = {
 
   // Date Indicator
   dateIndicator: {
-    backgroundColor: '#ffffff',
+    backgroundColor: 'transparent', // TRANSPARENT
     textColor: '#191D63',
     fontSize: '15px', // Slightly smaller
     fontWeight: '600',
@@ -35,7 +35,7 @@ export const DASHBOARD_THEME = {
 
   // Description/Executive Summary
   description: {
-    backgroundColor: '#f8f9fa',
+    backgroundColor: 'transparent', // TRANSPARENT
     textColor: '#5f6368',
     fontSize: '13px',
     fontWeight: '400',
@@ -48,7 +48,7 @@ export const DASHBOARD_THEME = {
 
   // Scorecard KPIs
   scorecard: {
-    backgroundColor: '#ffffff',
+    backgroundColor: 'transparent', // TRANSPARENT
     borderColor: '#e5e7eb',
     borderWidth: '1px',
     borderRadius: '8px',
@@ -81,7 +81,7 @@ export const DASHBOARD_THEME = {
 
   // Charts
   charts: {
-    backgroundColor: '#ffffff',
+    backgroundColor: 'transparent', // TRANSPARENT
     borderColor: '#e5e7eb',
     borderWidth: '1px',
     borderRadius: '8px',
@@ -91,7 +91,7 @@ export const DASHBOARD_THEME = {
     // Time Series specific
     timeSeries: {
       height: '400px',
-      backgroundColor: '#ffffff', // NOT black!
+      backgroundColor: 'transparent', // TRANSPARENT
       dualAxis: true, // Enable for different scales (clicks vs impressions)
       gridColor: '#f0f0f0',
       axisColor: '#666666',
@@ -127,7 +127,7 @@ export const DASHBOARD_THEME = {
     opacity: 1.0, // 100% opacity, no translucency
     backdropFilter: 'none',
     fontFamily: "'Inter', system-ui, -apple-system, sans-serif",
-    backgroundColor: '#ffffff',
+    backgroundColor: 'transparent', // TRANSPARENT - canvas shows through
     textColor: '#111827'
   },
 

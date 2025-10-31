@@ -15,6 +15,7 @@ export interface AbsolutePosition {
 export interface CanvasComponent extends AbsolutePosition {
   id: string;
   component: ComponentConfig;
+  zIndex?: number; // Z-index for layering (higher = front)
 }
 
 // Component types available in the dashboard

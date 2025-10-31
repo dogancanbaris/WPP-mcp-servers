@@ -268,9 +268,31 @@ export async function extractOAuthToken(input: any): Promise<string | null> {
 
 /**
  * Extract OAuth refresh token from tool input (for Google Ads)
+ *
+ * TEMPORARY HACK: Until OMA is connected, load refresh token from file
+ * Once OMA is integrated, it will pass __refreshToken in every request
  */
 export function extractRefreshToken(input: any): string | null {
-  return input.__refreshToken || null;
+  // If OMA provides refresh token, use it
+  if (input.__refreshToken) {
+    return input.__refreshToken;
+  }
+
+  // TEMPORARY: Load from file until OMA connected (DEV MODE)
+  try {
+    const tokensPath = '/home/dogancanbaris/projects/MCP Servers/config/gsc-tokens.json';
+    const tokensData = fs.readFileSync(tokensPath, 'utf8');
+    const tokens = JSON.parse(tokensData);
+
+    logger.debug('[extractRefreshToken] Loaded refresh token from file for development');
+
+    return tokens.refreshToken || null;
+  } catch (error: any) {
+    logger.error('[extractRefreshToken] Failed to load refresh token from file', {
+      error: error.message
+    });
+    return null;
+  }
 }
 
 logger.info('OAuth client factory initialized');

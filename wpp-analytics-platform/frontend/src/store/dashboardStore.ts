@@ -117,6 +117,8 @@ interface DashboardStore {
   resizeComponent: (canvasId: string, width: number, height: number, x: number, y: number) => void;
   convertToCanvas: () => void;
   convertToRowColumn: () => void;
+  bringToFront: (canvasId: string) => void;
+  sendToBack: (canvasId: string) => void;
 
   // Actions - History
   undo: () => void;
@@ -1633,6 +1635,77 @@ export const useDashboardStore = create<DashboardStore>()(
             pages: state.config.pages.map(page =>
               page.id === currentPageId
                 ? { ...page, rows }
+                : page
+            )
+          }
+        });
+
+        get().autoSave();
+      },
+
+      // Z-index management for layering
+      bringToFront: (canvasId: string) => {
+        const state = get();
+        const currentPageId = state.currentPageId;
+
+        if (!state.config.pages || !currentPageId) return;
+
+        const currentPage = state.config.pages.find(p => p.id === currentPageId);
+        if (!currentPage?.components) return;
+
+        get().addToHistory();
+
+        // Find highest z-index
+        const maxZ = Math.max(0, ...currentPage.components.map(c => c.zIndex || 0));
+
+        set({
+          config: {
+            ...state.config,
+            pages: state.config.pages.map(page =>
+              page.id === currentPageId
+                ? {
+                    ...page,
+                    components: page.components!.map(comp =>
+                      comp.id === canvasId
+                        ? { ...comp, zIndex: maxZ + 1 }
+                        : comp
+                    )
+                  }
+                : page
+            )
+          }
+        });
+
+        get().autoSave();
+      },
+
+      sendToBack: (canvasId: string) => {
+        const state = get();
+        const currentPageId = state.currentPageId;
+
+        if (!state.config.pages || !currentPageId) return;
+
+        const currentPage = state.config.pages.find(p => p.id === currentPageId);
+        if (!currentPage?.components) return;
+
+        get().addToHistory();
+
+        // Find lowest z-index
+        const minZ = Math.min(0, ...currentPage.components.map(c => c.zIndex || 0));
+
+        set({
+          config: {
+            ...state.config,
+            pages: state.config.pages.map(page =>
+              page.id === currentPageId
+                ? {
+                    ...page,
+                    components: page.components!.map(comp =>
+                      comp.id === canvasId
+                        ? { ...comp, zIndex: minZ - 1 }
+                        : comp
+                    )
+                  }
                 : page
             )
           }

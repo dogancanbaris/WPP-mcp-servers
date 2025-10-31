@@ -361,21 +361,26 @@ export const TimeSeriesChart: React.FC<TimeSeriesChartProps> = (props) => {
     legend: {
       show: showLegend,
       bottom: 0,
-      textStyle: { color: '#666', fontSize: 12 }
+      type: 'scroll', // Scroll if too many items
+      textStyle: { color: '#666', fontSize: Math.max(10, Math.min(12, (containerSize?.width || 600) / 60)) }
     },
     grid: {
-      left: '60px',
-      right: useDualAxis ? '60px' : '30px',
-      bottom: showLegend ? '60px' : '30px',
-      top: '30px',
-      containLabel: false
+      left: '8%', // Percentage-based for responsiveness
+      right: useDualAxis ? '8%' : '5%',
+      bottom: showLegend ? '15%' : '8%',
+      top: '8%',
+      containLabel: true // CRITICAL - keeps labels inside bounds
     },
     xAxis: {
       type: 'category',
       data: (xAxisDates ? xAxisDates : currentData.map((row: any) => row[dimension])),
       boundaryGap: false,
       axisLine: { lineStyle: { color: '#e0e0e0', width: 1 } },
-      axisLabel: { color: '#666', fontSize: 11 }
+      axisLabel: {
+        color: '#666',
+        fontSize: Math.max(9, Math.min(11, (containerSize?.width || 600) / 70)),
+        rotate: containerSize && containerSize.width < 300 ? 45 : 0 // Rotate labels if narrow
+      }
     },
     yAxis: useDualAxis ? [
       {
@@ -383,7 +388,10 @@ export const TimeSeriesChart: React.FC<TimeSeriesChartProps> = (props) => {
         name: 'Clicks',
         position: 'left',
         axisLine: { show: true, lineStyle: { color: chartColors[0] } },
-        axisLabel: { color: '#666', fontSize: 11 },
+        axisLabel: {
+          color: '#666',
+          fontSize: Math.max(9, Math.min(11, (containerSize?.width || 600) / 70))
+        },
         splitLine: { lineStyle: { color: '#f5f5f5', type: 'dashed' } }
       },
       {
@@ -391,13 +399,19 @@ export const TimeSeriesChart: React.FC<TimeSeriesChartProps> = (props) => {
         name: 'Impressions',
         position: 'right',
         axisLine: { show: true, lineStyle: { color: chartColors[1] } },
-        axisLabel: { color: '#666', fontSize: 11 },
+        axisLabel: {
+          color: '#666',
+          fontSize: Math.max(9, Math.min(11, (containerSize?.width || 600) / 70))
+        },
         splitLine: { show: false }
       }
     ] : {
       type: 'value',
       axisLine: { lineStyle: { color: '#e0e0e0' } },
-      axisLabel: { color: '#666', fontSize: 11 },
+      axisLabel: {
+        color: '#666',
+        fontSize: Math.max(9, Math.min(11, (containerSize?.width || 600) / 70))
+      },
       splitLine: { lineStyle: { color: '#f5f5f5', type: 'dashed' } }
     },
     series

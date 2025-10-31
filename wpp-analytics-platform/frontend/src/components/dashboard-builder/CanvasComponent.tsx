@@ -21,6 +21,8 @@ interface CanvasComponentProps {
   position: AbsolutePosition;
   /** Component configuration */
   component: ComponentConfig;
+  /** Z-index for layering */
+  zIndex?: number;
   /** Edit mode enables drag/resize */
   isEditing?: boolean;
   /** Whether component is selected */
@@ -35,6 +37,11 @@ interface CanvasComponentProps {
   onSelect: (id: string) => void;
   /** Callback when lock state changes */
   onToggleLock?: (id: string) => void;
+  /** Callback when z-index changes */
+  onBringToFront?: (id: string) => void;
+  onSendToBack?: (id: string) => void;
+  /** Callback when drag starts (for alignment guides) */
+  onDragStart?: (id: string) => void;
 }
 
 /**
@@ -81,6 +88,7 @@ const CanvasComponentInner: React.FC<CanvasComponentProps> = ({
   id,
   position,
   component,
+  zIndex = 0,
   isEditing = true,
   isSelected = false,
   onPositionChange,
@@ -88,6 +96,9 @@ const CanvasComponentInner: React.FC<CanvasComponentProps> = ({
   onRemove,
   onSelect,
   onToggleLock,
+  onBringToFront,
+  onSendToBack,
+  onDragStart,
 }) => {
   const isLocked = component.locked || false;
 
@@ -114,9 +125,16 @@ const CanvasComponentInner: React.FC<CanvasComponentProps> = ({
         ? '0 4px 12px rgba(0, 0, 0, 0.15)'
         : 'none', // No shadow unless selected
       transition: 'border-color 200ms, box-shadow 200ms',
+      zIndex, // Apply z-index for layering
     }),
-    [isSelected, isEditing]
+    [isSelected, isEditing, zIndex]
   );
+
+  const handleDragStart = useCallback(() => {
+    if (onDragStart) {
+      onDragStart(id);
+    }
+  }, [id, onDragStart]);
 
   const handleDragStop = useCallback((_e: any, d: { x: number; y: number }) => {
     onPositionChange(id, d.x, d.y);
@@ -159,6 +177,7 @@ const CanvasComponentInner: React.FC<CanvasComponentProps> = ({
     <Rnd
       size={{ width: position.width, height: position.height }}
       position={{ x: position.x, y: position.y }}
+      onDragStart={handleDragStart}
       onDragStop={handleDragStop}
       onResize={handleResize} // Live resize preview
       onResizeStop={handleResizeStop}
@@ -272,6 +291,17 @@ const CanvasComponentInner: React.FC<CanvasComponentProps> = ({
                 </DropdownMenuItem>
               )}
               <DropdownMenuSeparator />
+              {onBringToFront && (
+                <DropdownMenuItem onClick={() => onBringToFront(id)}>
+                  Bring to Front
+                </DropdownMenuItem>
+              )}
+              {onSendToBack && (
+                <DropdownMenuItem onClick={() => onSendToBack(id)}>
+                  Send to Back
+                </DropdownMenuItem>
+              )}
+              {(onBringToFront || onSendToBack) && <DropdownMenuSeparator />}
               <DropdownMenuItem
                 onClick={() => onRemove(id)}
                 className="text-red-600 dark:text-red-400"

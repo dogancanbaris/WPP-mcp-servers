@@ -2606,5 +2606,15 @@
       "totalProperties": 9,
       "discoveredProperties": 9
     }
+  },
+  {
+    "timestamp": "2025-10-31T17:45:14.143Z",
+    "user": "user",
+    "action": "list_properties",
+    "property": "system",
+    "operationType": "read",
+    "result": "failure",
+    "details": {},
+    "errorMessage": "OAuth token required for Google Search Console API access"
   }
 ]
