@@ -67,7 +67,7 @@ export const createBudgetTool = {
                 description: 'Confirmation token from dry-run preview (optional - if not provided, will show preview)',
             },
         },
-        required: ['customerId', 'name', 'dailyAmountDollars'],
+        required: [], // Make optional for discovery
     },
     async handler(input) {
         try {
@@ -83,6 +83,66 @@ export const createBudgetTool = {
             }
             // Create Google Ads client with user's refresh token
             const client = createGoogleAdsClientFromRefreshToken(refreshToken, developerToken);
+            // ═══ STEP 1: ACCOUNT DISCOVERY ═══
+            if (!customerId) {
+                const resourceNames = await client.listAccessibleAccounts();
+                const accounts = resourceNames.map((rn) => ({
+                    resourceName: rn,
+                    customerId: extractCustomerId(rn),
+                }));
+                return formatDiscoveryResponse({
+                    step: '1/4',
+                    title: 'SELECT GOOGLE ADS ACCOUNT',
+                    items: accounts,
+                    itemFormatter: (a, i) => `${i + 1}. Customer ID: ${a.customerId}`,
+                    prompt: 'Which account do you want to create a budget for?',
+                    nextParam: 'customerId',
+                    emoji: '💰',
+                });
+            }
+            // ═══ STEP 2: BUDGET NAME GUIDANCE ═══
+            if (!name) {
+                const guidanceText = `💰 BUDGET NAME (Step 2/4)
+
+Enter a descriptive budget name:
+
+**Examples:**
+- "Q1 2025 Campaign Budget"
+- "Brand Campaign - $50/day"
+- "Product Launch Budget"
+
+**Best Practices:**
+- Include campaign purpose or name
+- Optionally include daily amount for quick reference
+- Keep it descriptive and clear
+
+What should the budget be named?`;
+                return injectGuidance({ customerId }, guidanceText);
+            }
+            // ═══ STEP 3: AMOUNT SPECIFICATION ═══
+            if (!dailyAmountDollars) {
+                const guidanceText = `💵 DAILY BUDGET AMOUNT (Step 3/4)
+
+Enter the daily budget amount in dollars:
+
+**Examples:**
+- For small test campaigns: 10-25
+- For standard campaigns: 50-100
+- For aggressive campaigns: 200+
+
+**Planning Tips:**
+- Calculate: (Target CPA × Desired conversions/day)
+- Start conservative for new campaigns
+- Consider search volume and competition
+- Allow 2-3x target CPA for testing phase
+
+**Minimum:** Usually $1/day
+**Format:** Enter as a number (e.g., "50" for $50/day)
+
+What should the daily budget be (in dollars)?`;
+                return injectGuidance({ customerId, name }, guidanceText);
+            }
+            // ═══ STEP 4: DRY-RUN PREVIEW (existing approval flow) ═══
             const amountMicros = amountToMicros(dailyAmountDollars);
             // Build dry-run preview
             const approvalEnforcer = getApprovalEnforcer();

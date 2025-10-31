@@ -2,12 +2,13 @@
  * MCP Tools for Google Ads Keyword Write Operations
  */
 
-import { amountToMicros } from '../validation.js';
+import { amountToMicros, extractCustomerId } from '../validation.js';
 import { getLogger } from '../../shared/logger.js';
 import { getApprovalEnforcer, DryRunResultBuilder } from '../../shared/approval-enforcer.js';
 import { detectAndEnforceVagueness } from '../../shared/vagueness-detector.js';
 import { extractRefreshToken } from '../../shared/oauth-client-factory.js';
 import { createGoogleAdsClientFromRefreshToken } from '../client.js';
+import { formatDiscoveryResponse, injectGuidance } from '../../shared/interactive-workflow.js';
 
 const logger = getLogger('ads.tools.keywords');
 
@@ -115,7 +116,7 @@ export const addKeywordsTool = {
         description: 'Confirmation token from dry-run preview (optional - if not provided, will show preview)',
       },
     },
-    required: ['customerId', 'adGroupId', 'keywords'],
+    required: [], // Make optional for discovery
   },
   async handler(input: any) {
     try {
@@ -135,6 +136,110 @@ export const addKeywordsTool = {
       // Create Google Ads client with user's refresh token
       const client = createGoogleAdsClientFromRefreshToken(refreshToken, developerToken);
 
+      // ═══ STEP 1: ACCOUNT DISCOVERY ═══
+      if (!customerId) {
+        const resourceNames = await client.listAccessibleAccounts();
+        const accounts = resourceNames.map((rn) => ({
+          resourceName: rn,
+          customerId: extractCustomerId(rn),
+        }));
+
+        return formatDiscoveryResponse({
+          step: '1/4',
+          title: 'SELECT GOOGLE ADS ACCOUNT',
+          items: accounts,
+          itemFormatter: (a, i) => `${i + 1}. Customer ID: ${a.customerId}`,
+          prompt: 'Which account contains the ad group?',
+          nextParam: 'customerId',
+          emoji: '🔑',
+        });
+      }
+
+      // ═══ STEP 2: AD GROUP DISCOVERY ═══
+      if (!adGroupId) {
+        const campaigns = await client.listCampaigns(customerId);
+
+        if (campaigns.length === 0) {
+          const guidanceText = `⚠️ NO CAMPAIGNS FOUND (Step 2/4)
+
+This account has no campaigns. You must create a campaign and ad group before adding keywords.
+
+**Next Steps:**
+1. Use create_campaign to create a campaign
+2. Create an ad group in that campaign
+3. Then return here to add keywords`;
+
+          return injectGuidance({ customerId }, guidanceText);
+        }
+
+        // For simplicity, show campaigns and ask user to provide ad group ID
+        const guidanceText = `🎯 AD GROUP SELECTION (Step 2/4)
+
+This account has ${campaigns.length} campaign(s).
+
+**To add keywords, you need an ad group ID.**
+
+**How to find ad group IDs:**
+1. Use list_campaigns to see all campaigns
+2. Each campaign contains ad groups
+3. Identify the ad group ID where you want to add keywords
+
+**Alternatively:**
+- If you know the ad group ID, provide it now as: adGroupId
+
+**Note:** Ad group listing tool not yet implemented. You need to provide the ad group ID directly.
+
+What is the ad group ID?`;
+
+        return injectGuidance({ customerId }, guidanceText);
+      }
+
+      // ═══ STEP 3: KEYWORD INPUT GUIDANCE ═══
+      if (!keywords || keywords.length === 0) {
+        const guidanceText = `🔑 KEYWORD SPECIFICATION (Step 3/4)
+
+Enter the keywords you want to add:
+
+**Format:**
+\`\`\`json
+{
+  "keywords": [
+    {
+      "text": "running shoes",
+      "matchType": "PHRASE",
+      "maxCpcDollars": 2.50
+    },
+    {
+      "text": "nike running shoes",
+      "matchType": "EXACT",
+      "maxCpcDollars": 3.00
+    }
+  ]
+}
+\`\`\`
+
+**Match Types:**
+- **EXACT**: [keyword] - Only exact searches (most control, lowest reach)
+- **PHRASE**: "keyword" - Searches containing phrase (balanced)
+- **BROAD**: keyword - Related searches (least control, highest reach)
+
+**Best Practices:**
+- Start with EXACT and PHRASE match
+- Set conservative max CPC bids
+- Limit to 10-20 keywords per batch for easier management
+- Group related keywords together
+
+**Max CPC (optional but recommended):**
+- Set per-keyword bid limit
+- Prevents overspending on expensive clicks
+- Example: 2.50 for $2.50 max per click
+
+How many keywords do you want to add? Provide keywords array.`;
+
+        return injectGuidance({ customerId, adGroupId }, guidanceText);
+      }
+
+      // ═══ STEP 4: DRY-RUN PREVIEW (existing approval flow) ═══
       // Vagueness detection - ensure specific IDs
       detectAndEnforceVagueness({
         operation: 'add_keywords',
@@ -371,7 +476,7 @@ export const addNegativeKeywordsTool = {
         description: 'Confirmation token from dry-run preview (optional - if not provided, will show preview)',
       },
     },
-    required: ['customerId', 'campaignId', 'keywords'],
+    required: [], // Make all optional for discovery
   },
   async handler(input: any) {
     try {
@@ -390,6 +495,94 @@ export const addNegativeKeywordsTool = {
 
       // Create Google Ads client with user's refresh token
       const client = createGoogleAdsClientFromRefreshToken(refreshToken, developerToken);
+
+      // ═══ STEP 1: ACCOUNT DISCOVERY ═══
+      if (!customerId) {
+        logger.info('Account discovery mode - listing accessible accounts');
+        const resourceNames = await client.listAccessibleAccounts();
+        const accounts = resourceNames.map((rn) => ({
+          resourceName: rn,
+          customerId: extractCustomerId(rn),
+        }));
+
+        return formatDiscoveryResponse({
+          step: '1/3',
+          title: 'SELECT GOOGLE ADS ACCOUNT',
+          items: accounts,
+          itemFormatter: (a, i) =>
+            `${i + 1}. Customer ID: ${a.customerId}\n   Resource: ${a.resourceName}`,
+          prompt: 'Which account?',
+          nextParam: 'customerId',
+          emoji: '🏢',
+        });
+      }
+
+      // ═══ STEP 2: CAMPAIGN DISCOVERY ═══
+      if (!campaignId) {
+        logger.info('Campaign discovery mode', { customerId });
+        const campaigns = await client.listCampaigns(customerId);
+
+        return formatDiscoveryResponse({
+          step: '2/3',
+          title: 'SELECT CAMPAIGN FOR NEGATIVE KEYWORDS',
+          items: campaigns,
+          itemFormatter: (c, i) => {
+            const campaign = c.campaign;
+            return `${i + 1}. ${campaign?.name || 'N/A'}
+   ID: ${campaign?.id}
+   Status: ${campaign?.status}
+   Type: ${campaign?.advertising_channel_type}`;
+          },
+          prompt: 'Which campaign should receive negative keywords?',
+          nextParam: 'campaignId',
+          context: { customerId },
+          emoji: '📊',
+        });
+      }
+
+      // ═══ STEP 3: KEYWORD INPUT GUIDANCE ═══
+      if (!keywords || keywords.length === 0) {
+        const guidanceText = `📝 PROVIDE NEGATIVE KEYWORDS (Step 3/3)
+
+**Current Context:**
+- Account: ${customerId}
+- Campaign: ${campaignId}
+
+**💡 NEGATIVE KEYWORD EXAMPLES:**
+
+**Common Money-Saving Negatives:**
+- "free" - Block free-seekers
+- "cheap" - Block bargain hunters (if premium product)
+- "download" - Block software downloaders
+- "jobs" - Block job seekers
+- "careers" - Block recruitment searchers
+- "how to make" - Block DIY tutorials (if selling products)
+
+**Match Type Guide:**
+- EXACT [-keyword] - Most precise, blocks exact matches only
+- PHRASE [-"keyword"] - Balanced, blocks phrase + close variants (RECOMMENDED)
+- BROAD [-keyword] - Aggressive, blocks all variations (use carefully)
+
+**Format:**
+Provide as array of objects with "text" and "matchType":
+\`\`\`json
+{
+  "keywords": [
+    { "text": "free", "matchType": "PHRASE" },
+    { "text": "cheap", "matchType": "PHRASE" },
+    { "text": "jobs", "matchType": "EXACT" }
+  ]
+}
+\`\`\`
+
+**What parameter to provide next?**
+- keywords (array of {text, matchType})`;
+
+        return injectGuidance(
+          { customerId, campaignId },
+          guidanceText
+        );
+      }
 
       // Vagueness detection
       detectAndEnforceVagueness({

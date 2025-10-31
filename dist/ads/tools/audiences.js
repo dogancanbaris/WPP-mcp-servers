@@ -7,33 +7,15 @@ import { getApprovalEnforcer, DryRunResultBuilder } from '../../shared/approval-
 import { detectAndEnforceVagueness } from '../../shared/vagueness-detector.js';
 import { extractRefreshToken } from '../../shared/oauth-client-factory.js';
 import { createGoogleAdsClientFromRefreshToken } from '../client.js';
+import { formatDiscoveryResponse, injectGuidance, formatNextSteps, formatNumber } from '../../shared/interactive-workflow.js';
+import { extractCustomerId } from '../validation.js';
 const logger = getLogger('ads.tools.audiences');
 /**
  * List user lists (remarketing audiences)
  */
 export const listUserListsTool = {
     name: 'list_user_lists',
-    description: `List all remarketing lists and audiences in Google Ads account.
-
-💡 AGENT GUIDANCE - REMARKETING LISTS:
-
-📊 WHAT ARE USER LISTS:
-- Remarketing lists of users who visited your site/app
-- Used for remarketing campaigns (show ads to past visitors)
-- Can be based on: pages visited, actions taken, time on site
-- Requires remarketing tag installed on website
-
-🎯 USE CASES:
-- "Show me all remarketing lists"
-- "Which audiences are largest?"
-- "What's the membership duration for cart abandoners list?"
-
-📋 WHAT YOU'LL GET:
-- User list name and ID
-- List size (number of users)
-- Membership duration (how long users stay in list)
-- Match rate (how many users matched)
-- Status (open/closed)`,
+    description: 'List all remarketing lists and audiences in Google Ads account.',
     inputSchema: {
         type: 'object',
         properties: {
@@ -42,11 +24,10 @@ export const listUserListsTool = {
                 description: 'Customer ID (10 digits)',
             },
         },
-        required: ['customerId'],
+        required: [],
     },
     async handler(input) {
         try {
-            const { customerId } = input;
             // Extract OAuth tokens from request
             const refreshToken = extractRefreshToken(input);
             if (!refreshToken) {
@@ -58,6 +39,23 @@ export const listUserListsTool = {
             }
             // Create Google Ads client with user's refresh token
             const client = createGoogleAdsClientFromRefreshToken(refreshToken, developerToken);
+            // Account discovery
+            if (!input.customerId) {
+                const resourceNames = await client.listAccessibleAccounts();
+                const accounts = resourceNames.map((rn) => ({
+                    resourceName: rn,
+                    customerId: extractCustomerId(rn),
+                }));
+                return formatDiscoveryResponse({
+                    step: '1/2',
+                    title: 'SELECT GOOGLE ADS ACCOUNT',
+                    items: accounts,
+                    itemFormatter: (a, i) => `${i + 1}. Customer ID: ${a.customerId}`,
+                    prompt: 'Which account would you like to list remarketing lists for?',
+                    nextParam: 'customerId',
+                });
+            }
+            const { customerId } = input;
             const customer = client.getCustomer(customerId);
             logger.info('Listing user lists', { customerId });
             const query = `
@@ -90,15 +88,66 @@ export const listUserListsTool = {
                         : undefined,
                 });
             }
-            return {
-                success: true,
-                data: {
-                    customerId,
-                    userLists,
-                    count: userLists.length,
-                    message: `Found ${userLists.length} user list(s)`,
-                },
-            };
+            // Calculate summary stats
+            const byType = userLists.reduce((acc, l) => {
+                acc[l.type] = (acc[l.type] || 0) + 1;
+                return acc;
+            }, {});
+            const totalDisplay = userLists.reduce((sum, l) => sum + l.sizeForDisplay, 0);
+            const totalSearch = userLists.reduce((sum, l) => sum + l.sizeForSearch, 0);
+            const avgMatchRate = userLists.filter(l => l.matchRate).length > 0
+                ? userLists.filter(l => l.matchRate).reduce((sum, l) => sum + (l.matchRate || 0), 0) / userLists.filter(l => l.matchRate).length
+                : 0;
+            // Inject rich guidance into response
+            const guidanceText = `📊 REMARKETING LISTS (USER LISTS)
+
+**Account:** ${customerId}
+**Total Lists:** ${userLists.length}
+
+📋 LIST BREAKDOWN:
+${Object.entries(byType).map(([type, count]) => `• ${type}: ${count} list(s)`).join('\n')}
+
+📈 AUDIENCE SUMMARY:
+• Total Users (Display Network): ${formatNumber(totalDisplay)}
+• Total Users (Search Network): ${formatNumber(totalSearch)}
+• Average Match Rate: ${avgMatchRate.toFixed(1)}%
+
+🎯 USER LISTS IN THIS ACCOUNT:
+${userLists.slice(0, 10).map((l, i) => `${i + 1}. ${l.name} (${l.type})
+   • ID: ${l.id}
+   • Size: ${formatNumber(l.sizeForDisplay)} (Display), ${formatNumber(l.sizeForSearch)} (Search)
+   • Membership: ${l.membershipDays} days${l.matchRate ? `\n   • Match Rate: ${l.matchRate.toFixed(1)}%` : ''}`).join('\n\n')}${userLists.length > 10 ? `\n\n... and ${userLists.length - 10} more` : ''}
+
+💡 USER LIST TYPES EXPLAINED:
+- **RULE_BASED:** Users who match URL/action rules (website visitors)
+- **CRM_BASED:** Uploaded customer lists (email/phone)
+- **LOGICAL:** Combination of other lists (AND/OR/NOT logic)
+- **SIMILAR:** Lookalike audiences (Google finds similar users)
+
+🎯 REMARKETING BEST PRACTICES:
+✅ **For Display:** Need 100+ users to serve ads
+✅ **For Search:** Need 1,000+ users to serve ads
+⏱️ **Membership Duration:** 7-30 days for recent visitors, 90-180 days for converters
+📊 **Match Rate:** 30-60% typical for emails, 20-40% for phones
+
+${userLists.some(l => l.sizeForDisplay < 100) ? `⚠️  Some lists below minimum size (100 users for Display)` : '✅ All lists meet minimum size requirements'}
+${userLists.some(l => l.sizeForSearch < 1000) ? `⚠️  Some lists below minimum size (1,000 users for Search)` : ''}
+
+${formatNextSteps([
+                'Create new remarketing list: use create_user_list',
+                'Upload customer data: use upload_customer_match_list',
+                'Target these lists in campaigns: use create_campaign or update_campaign',
+                'Exclude converters from acquisition campaigns: add as negative audiences'
+            ])}`;
+            return injectGuidance({
+                customerId,
+                userLists,
+                count: userLists.length,
+                byType,
+                totalDisplay,
+                totalSearch,
+                avgMatchRate: avgMatchRate.toFixed(1),
+            }, guidanceText);
         }
         catch (error) {
             logger.error('Failed to list user lists', error);
@@ -166,7 +215,7 @@ export const createUserListTool = {
                 description: 'Confirmation token from dry-run preview (optional - if not provided, will show preview)',
             },
         },
-        required: ['customerId', 'name'],
+        required: [], // Make all optional for discovery
     },
     async handler(input) {
         try {
@@ -182,7 +231,81 @@ export const createUserListTool = {
             }
             // Create Google Ads client with user's refresh token
             const client = createGoogleAdsClientFromRefreshToken(refreshToken, developerToken);
+            // ═══ STEP 1: ACCOUNT DISCOVERY ═══
+            if (!customerId) {
+                logger.info('Account discovery mode - listing accessible accounts');
+                const resourceNames = await client.listAccessibleAccounts();
+                const accounts = resourceNames.map((rn) => ({
+                    resourceName: rn,
+                    customerId: extractCustomerId(rn),
+                }));
+                return formatDiscoveryResponse({
+                    step: '1/3',
+                    title: 'SELECT GOOGLE ADS ACCOUNT',
+                    items: accounts,
+                    itemFormatter: (a, i) => `${i + 1}. Customer ID: ${a.customerId}\n   Resource: ${a.resourceName}`,
+                    prompt: 'Which account should have this user list?',
+                    nextParam: 'customerId',
+                    emoji: '🏢',
+                });
+            }
             const customer = client.getCustomer(customerId);
+            // ═══ STEP 2: LIST NAME INPUT ═══
+            if (!name) {
+                const guidanceText = `📝 NAME YOUR USER LIST (Step 2/3)
+
+**Current Context:**
+- Account: ${customerId}
+
+**💡 USER LIST NAMING BEST PRACTICES:**
+
+**Common Naming Patterns:**
+- "All Website Visitors - 30 Days"
+- "Cart Abandoners - 7 Days"
+- "Product Viewers - 14 Days"
+- "Past Customers - 90 Days"
+- "Newsletter Subscribers"
+- "High-Value Customers (>$500)"
+
+**Naming Tips:**
+- Include behavior/segment description
+- Include membership duration
+- Make it descriptive for reporting
+- Use consistent naming convention
+
+**Examples by Use Case:**
+- Remarketing: "Site Visitors - Last 30 Days"
+- Exclusion: "Converters - Last 90 Days (Exclude)"
+- Upsell: "Low-Tier Customers - Active"
+- Re-engagement: "Lapsed Customers - 180+ Days"
+
+**What parameter to provide next?**
+- name (string, descriptive name)`;
+                return injectGuidance({ customerId }, guidanceText);
+            }
+            // ═══ STEP 3: MEMBERSHIP DURATION GUIDANCE ═══
+            if (!membershipDays) {
+                const durations = [
+                    { days: 7, desc: 'Very recent visitors (small, highly relevant)' },
+                    { days: 14, desc: 'Recent visitors (good for cart abandonment)' },
+                    { days: 30, desc: 'Standard duration (recommended for most)' },
+                    { days: 60, desc: 'Extended reach (larger audience)' },
+                    { days: 90, desc: 'Long-term visitors (maximum relevance window)' },
+                    { days: 180, desc: 'Very long-term (for customer retention)' },
+                    { days: 540, desc: 'Maximum allowed (1.5 years)' },
+                ];
+                return formatDiscoveryResponse({
+                    step: '3/3',
+                    title: 'SELECT MEMBERSHIP DURATION',
+                    items: durations,
+                    itemFormatter: (d, i) => `${i + 1}. ${d.days} days
+   ${d.desc}`,
+                    prompt: 'How long should users stay in this list?',
+                    nextParam: 'membershipDays',
+                    context: { customerId, name },
+                    emoji: '⏱️',
+                });
+            }
             // Vagueness detection
             detectAndEnforceVagueness({
                 operation: 'create_user_list',
@@ -332,7 +455,7 @@ export const uploadCustomerMatchListTool = {
                 description: 'Confirmation token from dry-run preview (optional - if not provided, will show preview)',
             },
         },
-        required: ['customerId', 'userListId', 'customers'],
+        required: [], // Make all optional for discovery
     },
     async handler(input) {
         try {
@@ -348,7 +471,167 @@ export const uploadCustomerMatchListTool = {
             }
             // Create Google Ads client with user's refresh token
             const client = createGoogleAdsClientFromRefreshToken(refreshToken, developerToken);
+            // ═══ STEP 1: ACCOUNT DISCOVERY ═══
+            if (!customerId) {
+                logger.info('Account discovery mode - listing accessible accounts');
+                const resourceNames = await client.listAccessibleAccounts();
+                const accounts = resourceNames.map((rn) => ({
+                    resourceName: rn,
+                    customerId: extractCustomerId(rn),
+                }));
+                return formatDiscoveryResponse({
+                    step: '1/3',
+                    title: 'SELECT GOOGLE ADS ACCOUNT',
+                    items: accounts,
+                    itemFormatter: (a, i) => `${i + 1}. Customer ID: ${a.customerId}\n   Resource: ${a.resourceName}`,
+                    prompt: 'Which account?',
+                    nextParam: 'customerId',
+                    emoji: '🏢',
+                });
+            }
             const customer = client.getCustomer(customerId);
+            // ═══ STEP 2: USER LIST DISCOVERY ═══
+            if (!userListId) {
+                logger.info('User list discovery mode', { customerId });
+                const query = `
+          SELECT
+            user_list.id,
+            user_list.name,
+            user_list.type,
+            user_list.size_for_display,
+            user_list.membership_life_span
+          FROM user_list
+          WHERE user_list.status != 'REMOVED'
+          ORDER BY user_list.name
+        `;
+                const results = await customer.query(query);
+                const userLists = [];
+                for (const row of results) {
+                    const list = row.user_list;
+                    userLists.push({
+                        id: String(list?.id || ''),
+                        name: String(list?.name || ''),
+                        type: String(list?.type || ''),
+                        size: parseInt(String(list?.size_for_display || 0)),
+                        membershipDays: parseInt(String(list?.membership_life_span || 30)),
+                    });
+                }
+                if (userLists.length === 0) {
+                    const guidanceText = `⚠️ NO USER LISTS FOUND
+
+**Account:** ${customerId}
+
+No user lists found. Create one first using create_user_list.
+
+**💡 NEXT STEPS:**
+1. Create user list: use create_user_list
+2. Return here to upload customer data`;
+                    return injectGuidance({ customerId }, guidanceText);
+                }
+                // Filter to CRM_BASED lists only (Customer Match requires CRM_BASED type)
+                const crmLists = userLists.filter(l => l.type === 'CRM_BASED');
+                if (crmLists.length === 0) {
+                    const guidanceText = `⚠️ NO CRM-BASED LISTS FOUND
+
+**Account:** ${customerId}
+
+Found ${userLists.length} user list(s), but none are CRM_BASED type.
+
+Customer Match requires CRM_BASED user lists. The existing lists are for website remarketing.
+
+**💡 NEXT STEPS:**
+1. Create CRM-based list: use create_user_list
+2. Ensure it's configured for Customer Match
+3. Return here to upload customer data`;
+                    return injectGuidance({ customerId }, guidanceText);
+                }
+                return formatDiscoveryResponse({
+                    step: '2/3',
+                    title: 'SELECT CRM-BASED USER LIST',
+                    items: crmLists,
+                    itemFormatter: (list, i) => `${i + 1}. ${list.name}
+   ID: ${list.id}
+   Size: ${formatNumber(list.size)} users
+   Membership: ${list.membershipDays} days`,
+                    prompt: 'Which list should receive customer data?',
+                    nextParam: 'userListId',
+                    context: { customerId },
+                    emoji: '📊',
+                });
+            }
+            // ═══ STEP 3: CUSTOMER DATA FORMAT GUIDANCE ═══
+            if (!customers || customers.length === 0) {
+                const guidanceText = `📝 PROVIDE CUSTOMER DATA (Step 3/3)
+
+**Current Context:**
+- Account: ${customerId}
+- User List: ${userListId}
+
+**💡 CUSTOMER MATCH DATA FORMAT:**
+
+**⚠️ PRIVACY & HASHING:**
+All customer data must be hashed with SHA-256 before upload. Google never sees raw emails/phones.
+
+**Required Format:**
+\`\`\`json
+{
+  "customers": [
+    {
+      "hashedEmail": "a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3",
+      "hashedPhoneNumber": "8846dcf6f44b8bcf7e9db59a4a1b1e97c0f9b41be0e44b9ad1ca9cd715fc2c6e"
+    },
+    {
+      "hashedEmail": "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4"
+    }
+  ]
+}
+\`\`\`
+
+**Normalization Rules (BEFORE hashing):**
+
+**Email:**
+1. Convert to lowercase
+2. Trim whitespace
+3. Remove dots from Gmail addresses (optional)
+4. Hash with SHA-256
+
+**Phone:**
+1. Convert to E.164 format: +[country][number]
+2. Example: +12025551234 (US), +442071234567 (UK)
+3. Remove spaces, dashes, parentheses
+4. Hash with SHA-256
+
+**JavaScript Example:**
+\`\`\`javascript
+const crypto = require('crypto');
+
+// Hash email
+const email = 'John.Smith@gmail.com';
+const normalized = email.toLowerCase().trim();
+const hashedEmail = crypto.createHash('sha256').update(normalized).digest('hex');
+
+// Hash phone
+const phone = '+12025551234';
+const hashedPhone = crypto.createHash('sha256').update(phone).digest('hex');
+\`\`\`
+
+**⚠️ IMPORTANT:**
+- Data must be hashed BEFORE sending to API
+- Match rate: 30-60% typical for emails
+- Match rate: 20-40% typical for phones
+- Min 1,000 users recommended for Display
+- Max 100,000 customers per upload
+- Must have user consent for advertising
+
+**Privacy Compliance:**
+- ✅ Ensure GDPR/CCPA compliance
+- ✅ Have user consent for advertising
+- ✅ Follow Google's Customer Match policies
+
+**What parameter to provide next?**
+- customers (array of {hashedEmail, hashedPhoneNumber} objects)`;
+                return injectGuidance({ customerId, userListId }, guidanceText);
+            }
             // Vagueness detection
             detectAndEnforceVagueness({
                 operation: 'upload_customer_match_list',
@@ -484,12 +767,77 @@ export const createAudienceTool = {
             }
             // Create Google Ads client with user's refresh token
             const client = createGoogleAdsClientFromRefreshToken(refreshToken, developerToken);
+            // STEP 1/4: Account discovery
+            if (!customerId) {
+                logger.info('Discovery: listing accessible accounts for audience creation');
+                const resourceNames = await client.listAccessibleAccounts();
+                const accounts = resourceNames.map((rn) => ({
+                    resourceName: rn,
+                    customerId: extractCustomerId(rn),
+                }));
+                if (accounts.length === 0) {
+                    throw new Error('No accessible Google Ads accounts found');
+                }
+                return formatDiscoveryResponse({
+                    step: '1/4',
+                    title: 'SELECT ACCOUNT',
+                    emoji: '👥',
+                    items: accounts,
+                    itemFormatter: (a, i) => `${i + 1}. Customer ID: ${a.customerId}\n   Resource: ${a.resourceName}`,
+                    prompt: 'Which account should this audience be created in?',
+                    nextParam: 'customerId'
+                });
+            }
+            // STEP 2/4: Audience name
+            if (!name) {
+                return injectGuidance({}, `👥 AUDIENCE NAME (Step 2/4)
+
+**Account:** ${customerId}
+
+Enter a descriptive audience name.
+
+💡 **NAMING TIPS:**
+   • Be specific: "In-Market Shoppers - Electronics"
+   • Include targeting criteria for clarity
+   • Use consistent naming across campaigns
+
+📋 **EXAMPLE NAMES:**
+   • "Website Visitors - Last 30 Days"
+   • "High-Intent Shoppers - Abandoned Cart"
+   • "Customers - Exclude from Acquisition"
+   • "In-Market - Home Improvement"
+
+What should this audience be named?`);
+            }
+            // STEP 3/4: Description (optional but recommended)
+            if (!description) {
+                return injectGuidance({}, `📝 AUDIENCE DESCRIPTION (Step 3/4)
+
+**Account:** ${customerId}
+**Name:** ${name}
+
+Enter a description for this audience (optional but recommended).
+
+💡 **DESCRIPTION TIPS:**
+   • Explain targeting criteria
+   • Note intended use (targeting vs exclusion)
+   • Include any special considerations
+
+📋 **EXAMPLE DESCRIPTIONS:**
+   • "Users who visited product pages in last 30 days"
+   • "Active shoppers researching electronics - for remarketing campaigns"
+   • "Existing customers - exclude from acquisition to avoid wasted spend"
+   • "In-market audience for targeting home improvement shoppers"
+
+You can skip this by providing an empty string, or enter a description:`);
+            }
             const customer = client.getCustomer(customerId);
             detectAndEnforceVagueness({
                 operation: 'create_audience',
                 inputText: `create audience ${name}`,
                 inputParams: { customerId, name },
             });
+            // STEP 4/4: Dry-run approval (existing logic)
             const approvalEnforcer = getApprovalEnforcer();
             const dryRunBuilder = new DryRunResultBuilder('create_audience', 'Google Ads', customerId);
             dryRunBuilder.addChange({
@@ -497,10 +845,11 @@ export const createAudienceTool = {
                 resourceId: 'new',
                 field: 'audience',
                 currentValue: 'N/A (new audience)',
-                newValue: `"${name}"`,
+                newValue: `"${name}"${description ? ` - ${description}` : ''}`,
                 changeType: 'create',
             });
-            dryRunBuilder.addRecommendation('Configure audience rules after creation');
+            dryRunBuilder.addRecommendation('Configure audience rules and targeting criteria after creation');
+            dryRunBuilder.addRecommendation('Audience must be associated with campaigns to be used for targeting');
             const dryRun = dryRunBuilder.build();
             if (!confirmationToken) {
                 const { confirmationToken: token } = await approvalEnforcer.createDryRun('create_audience', 'Google Ads', customerId, { name });
@@ -508,7 +857,11 @@ export const createAudienceTool = {
                 return {
                     success: true,
                     requiresApproval: true,
-                    preview,
+                    preview: `👥 AUDIENCE CREATION - REVIEW & CONFIRM (Step 4/4)
+
+${preview}
+
+✅ Ready to create this audience? Call this tool again with the confirmationToken to proceed.`,
                     confirmationToken: token,
                     message: 'Audience creation requires approval. Review the preview and call again with confirmationToken.',
                 };
@@ -523,15 +876,45 @@ export const createAudienceTool = {
                 const response = await customer.audiences.create([operation]);
                 return response;
             });
-            return {
-                success: true,
-                data: {
-                    customerId,
-                    audienceId: result,
-                    name,
-                    message: `✅ Audience "${name}" created successfully`,
-                },
-            };
+            const successMessage = `✅ AUDIENCE CREATED SUCCESSFULLY
+
+**Audience Details:**
+   • Name: ${name}
+   • Description: ${description || '(none)'}
+   • Audience ID: ${result}
+   • Account: ${customerId}
+
+🎯 NEXT STEPS:
+
+1. **Configure Targeting Rules:**
+   Define who should be included in this audience based on:
+   • Demographics (age, gender, location)
+   • Interests and behaviors
+   • In-market signals
+   • Custom intent URLs/apps
+
+2. **Associate with Campaigns:**
+   Add this audience to campaigns for targeting or observation:
+   • Target specific demographics
+   • Layer on top of keyword targeting
+   • Use as observation to gather insights
+
+3. **Monitor Performance:**
+   Track audience performance to optimize targeting and bids
+
+💡 **COMMON WORKFLOWS:**
+   • Create multiple audiences for A/B testing
+   • Use audiences for exclusion (avoid existing customers)
+   • Build lookalike audiences from converters
+   • Layer audiences for more precise targeting
+
+The audience is now ready to be used in your campaigns!`;
+            return injectGuidance({
+                customerId,
+                audienceId: result,
+                name,
+                description,
+            }, successMessage);
         }
         catch (error) {
             logger.error('Failed to create audience', error);

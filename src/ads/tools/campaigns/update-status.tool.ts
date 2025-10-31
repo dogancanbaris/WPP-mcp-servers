@@ -4,13 +4,14 @@
  * MCP tool for pausing, enabling, or removing campaigns.
  */
 
-import { UpdateCampaignStatusSchema } from '../../validation.js';
+import { UpdateCampaignStatusSchema, extractCustomerId } from '../../validation.js';
 import { getLogger } from '../../../shared/logger.js';
 import { getApprovalEnforcer, DryRunResultBuilder } from '../../../shared/approval-enforcer.js';
 import { detectAndEnforceVagueness } from '../../../shared/vagueness-detector.js';
 import { extractRefreshToken } from '../../../shared/oauth-client-factory.js';
 import { createGoogleAdsClientFromRefreshToken } from '../../client.js';
 import { getAuditLogger } from '../../../gsc/audit.js';
+import { formatDiscoveryResponse, injectGuidance } from '../../../shared/interactive-workflow.js';
 
 const logger = getLogger('ads.tools.campaigns.update-status');
 const audit = getAuditLogger();
@@ -91,12 +92,10 @@ export const updateCampaignStatusTool = {
         description: 'Confirmation token from dry-run preview (optional - if not provided, will show preview)',
       },
     },
-    required: ['customerId', 'campaignId', 'status'],
+    required: [], // Make optional for discovery
   },
   async handler(input: any) {
     try {
-      UpdateCampaignStatusSchema.parse(input);
-
       const { customerId, campaignId, status, confirmationToken } = input;
 
       // Extract OAuth tokens from request
@@ -112,6 +111,98 @@ export const updateCampaignStatusTool = {
 
       // Create Google Ads client with user's refresh token
       const client = createGoogleAdsClientFromRefreshToken(refreshToken, developerToken);
+
+      // ═══ STEP 1: ACCOUNT DISCOVERY ═══
+      if (!customerId) {
+        const resourceNames = await client.listAccessibleAccounts();
+        const accounts = resourceNames.map((rn) => ({
+          resourceName: rn,
+          customerId: extractCustomerId(rn),
+        }));
+
+        return formatDiscoveryResponse({
+          step: '1/4',
+          title: 'SELECT GOOGLE ADS ACCOUNT',
+          items: accounts,
+          itemFormatter: (a, i) => `${i + 1}. Customer ID: ${a.customerId}`,
+          prompt: '🚨 CRITICAL: Which account contains the campaign you want to modify?',
+          nextParam: 'customerId',
+          emoji: '⚙️',
+        });
+      }
+
+      // ═══ STEP 2: CAMPAIGN DISCOVERY ═══
+      if (!campaignId) {
+        const campaigns = await client.listCampaigns(customerId);
+
+        if (campaigns.length === 0) {
+          const guidanceText = `⚠️ NO CAMPAIGNS FOUND (Step 2/4)
+
+This account has no campaigns.
+
+**Next Steps:**
+1. Use create_campaign tool to create a campaign first
+2. Then return here to manage its status`;
+
+          return injectGuidance({ customerId }, guidanceText);
+        }
+
+        return formatDiscoveryResponse({
+          step: '2/4',
+          title: 'SELECT CAMPAIGN TO MODIFY',
+          items: campaigns,
+          itemFormatter: (c, i) => {
+            const campaign = c.campaign;
+            return `${i + 1}. ${campaign?.name || 'Unnamed Campaign'}
+   ID: ${campaign?.id}
+   Current Status: ${campaign?.status || 'UNKNOWN'}
+   Type: ${campaign?.advertising_channel_type || 'N/A'}`;
+          },
+          prompt: 'Which campaign do you want to modify?',
+          nextParam: 'campaignId',
+          context: { customerId },
+        });
+      }
+
+      // ═══ STEP 3: STATUS SELECTION ═══
+      if (!status) {
+        const campaigns = await client.listCampaigns(customerId);
+        const campaign = campaigns.find((c: any) => c.campaign.id === campaignId);
+        const currentStatus = campaign?.campaign?.status || 'UNKNOWN';
+        const campaignName = campaign?.campaign?.name || campaignId;
+
+        const guidanceText = `⚙️ SELECT NEW STATUS (Step 3/4)
+
+**Current Campaign:** ${campaignName}
+**Current Status:** ${currentStatus}
+
+**Available Status Options:**
+
+1. **ENABLED** - Start ad delivery
+   • Campaign will start spending budget immediately
+   • Ads will show to users
+   • ⚠️ Ensure ads and keywords are configured!
+
+2. **PAUSED** - Stop ad delivery
+   • All ad delivery stops immediately
+   • No traffic or conversions
+   • Budget not spent
+   • Can be re-enabled anytime
+
+3. **REMOVED** - Soft-delete campaign
+   • Campaign soft-deleted (recoverable within 30 days)
+   • All delivery stops
+   • ⚠️ Consider pausing instead for temporary deactivation
+
+**Provide:** status (one of: ENABLED, PAUSED, REMOVED)
+
+What status do you want to set?`;
+
+        return injectGuidance({ customerId, campaignId, currentStatus }, guidanceText);
+      }
+
+      // ═══ STEP 4: DRY-RUN PREVIEW (existing approval flow) ═══
+      UpdateCampaignStatusSchema.parse(input);
 
       // Vagueness detection - ensure campaignId is specific
       detectAndEnforceVagueness({

@@ -19,11 +19,8 @@ export declare const inspectUrlTool: {
                 description: string;
             };
         };
-        required: string[];
+        required: never[];
     };
-    handler(input: any): Promise<{
-        success: boolean;
-        data: any;
-    }>;
+    handler(input: any): Promise<import("../../shared/interactive-workflow.js").McpResponse>;
 };
 //# sourceMappingURL=url-inspection.d.ts.map

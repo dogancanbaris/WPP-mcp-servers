@@ -43,22 +43,8 @@ export declare const runAnalyticsReportTool: {
                 description: string;
             };
         };
-        required: string[];
+        required: never[];
     };
-    handler(input: any): Promise<{
-        success: boolean;
-        data: {
-            propertyId: any;
-            dateRange: {
-                startDate: any;
-                endDate: any;
-            };
-            dimensions: any[];
-            metrics: any[];
-            rows: import("@google-analytics/data/build/protos/protos.js").google.analytics.data.v1beta.IRow[];
-            rowCount: number;
-            message: string;
-        };
-    }>;
+    handler(input: any): Promise<import("../../../shared/interactive-workflow.js").McpResponse>;
 };
 //# sourceMappingURL=run-report.tool.d.ts.map

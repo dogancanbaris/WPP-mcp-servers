@@ -41,23 +41,7 @@ export declare const createDatasetTool: {
         };
         required: string[];
     };
-    handler(input: any): Promise<{
-        success: boolean;
-        requiresApproval: boolean;
-        preview: string;
-        confirmationToken: string;
-        data?: undefined;
-    } | {
-        success: boolean;
-        data: {
-            datasetId: any;
-            location: any;
-            message: string;
-        };
-        requiresApproval?: undefined;
-        preview?: undefined;
-        confirmationToken?: undefined;
-    }>;
+    handler(input: any): Promise<import("../shared/interactive-workflow.js").McpResponse>;
 };
 /**
  * Run BigQuery SQL query
@@ -79,20 +63,12 @@ export declare const runQueryTool: {
         };
         required: string[];
     };
-    handler(input: any): Promise<{
-        success: boolean;
-        data: {
-            rows: any[];
-            rowCount: number;
-            jobId: string | undefined;
-            message: string;
-        };
-    }>;
+    handler(input: any): Promise<import("../shared/interactive-workflow.js").McpResponse>;
 };
 /**
  * Export BigQuery tools
  */
-export declare const bigQueryTools: ({
+export declare const bigQueryTools: {
     name: string;
     description: string;
     inputSchema: {
@@ -100,72 +76,5 @@ export declare const bigQueryTools: ({
         properties: {};
     };
     handler(_input: any): Promise<import("../shared/interactive-workflow.js").McpResponse>;
-} | {
-    name: string;
-    description: string;
-    inputSchema: {
-        type: "object";
-        properties: {
-            datasetId: {
-                type: string;
-                description: string;
-            };
-            location: {
-                type: string;
-                description: string;
-            };
-            description: {
-                type: string;
-                description: string;
-            };
-            confirmationToken: {
-                type: string;
-            };
-        };
-        required: string[];
-    };
-    handler(input: any): Promise<{
-        success: boolean;
-        requiresApproval: boolean;
-        preview: string;
-        confirmationToken: string;
-        data?: undefined;
-    } | {
-        success: boolean;
-        data: {
-            datasetId: any;
-            location: any;
-            message: string;
-        };
-        requiresApproval?: undefined;
-        preview?: undefined;
-        confirmationToken?: undefined;
-    }>;
-} | {
-    name: string;
-    description: string;
-    inputSchema: {
-        type: "object";
-        properties: {
-            sql: {
-                type: string;
-                description: string;
-            };
-            maxResults: {
-                type: string;
-                description: string;
-            };
-        };
-        required: string[];
-    };
-    handler(input: any): Promise<{
-        success: boolean;
-        data: {
-            rows: any[];
-            rowCount: number;
-            jobId: string | undefined;
-            message: string;
-        };
-    }>;
-})[];
+}[];
 //# sourceMappingURL=tools.d.ts.map

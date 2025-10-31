@@ -16,25 +16,9 @@ export declare const listBiddingStrategiesTool: {
                 description: string;
             };
         };
-        required: string[];
+        required: never[];
     };
-    handler(input: any): Promise<{
-        success: boolean;
-        data: {
-            customerId: any;
-            strategies: {
-                id: string;
-                name: string;
-                type: string;
-                campaignCount: number;
-                targetCpa: number | undefined;
-                targetRoas: number | undefined;
-                status: string;
-            }[];
-            count: number;
-            message: string;
-        };
-    }>;
+    handler(input: any): Promise<import("../../shared/interactive-workflow.js").McpResponse>;
 };
 /**
  * Export bidding tools
@@ -50,24 +34,8 @@ export declare const biddingTools: {
                 description: string;
             };
         };
-        required: string[];
+        required: never[];
     };
-    handler(input: any): Promise<{
-        success: boolean;
-        data: {
-            customerId: any;
-            strategies: {
-                id: string;
-                name: string;
-                type: string;
-                campaignCount: number;
-                targetCpa: number | undefined;
-                targetRoas: number | undefined;
-                status: string;
-            }[];
-            count: number;
-            message: string;
-        };
-    }>;
+    handler(input: any): Promise<import("../../shared/interactive-workflow.js").McpResponse>;
 }[];
 //# sourceMappingURL=bidding.d.ts.map

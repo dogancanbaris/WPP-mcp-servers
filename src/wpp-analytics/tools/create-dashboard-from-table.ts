@@ -8,6 +8,7 @@
 import { getLogger } from '../../shared/logger.js';
 import { randomBytes } from 'crypto';
 import { createClient } from '@supabase/supabase-js';
+import { formatDiscoveryResponse, injectGuidance, formatSuccessSummary } from '../../shared/interactive-workflow.js';
 
 const logger = getLogger('wpp-analytics.create-dashboard-from-table');
 
@@ -81,78 +82,7 @@ const SEO_OVERVIEW_TEMPLATE = {
 
 export const createDashboardFromTableTool = {
   name: 'create_dashboard_from_table',
-  description: `Create dashboard from existing BigQuery table.
-
-**Purpose:**
-Second step in dashboard creation - creates dashboard from data already in BigQuery.
-Supports both single-page and multi-page dashboards.
-
-**WHEN TO USE MULTIPLE PAGES:**
-
-Use multi-page dashboards when:
-- Dashboard has 10+ components (split into logical pages)
-- Different audiences need different views (Overview for executives, Details for analysts)
-- Distinct data domains (Traffic, Conversions, Technical in separate pages)
-
-**SINGLE-PAGE EXAMPLE:**
-\`\`\`json
-{
-  "bigqueryTable": "project.dataset.table",
-  "title": "SEO Dashboard",
-  "template": "seo_overview",
-  "dateRange": ["2024-01-01", "2024-12-31"],
-  "platform": "gsc"
-}
-\`\`\`
-
-**MULTI-PAGE EXAMPLE:**
-\`\`\`json
-{
-  "bigqueryTable": "project.dataset.table",
-  "title": "SEO Performance Dashboard",
-  "dateRange": ["2024-01-01", "2024-12-31"],
-  "platform": "gsc",
-  "pages": [
-    {
-      "name": "Overview",
-      "template": "seo_overview_summary"
-    },
-    {
-      "name": "Query Analysis",
-      "template": "seo_queries_detail",
-      "filters": [{ "field": "impressions", "operator": "gt", "values": ["100"] }]
-    },
-    {
-      "name": "Page Performance",
-      "template": "seo_pages_detail"
-    }
-  ]
-}
-\`\`\`
-
-**FILTER HIERARCHY:**
-Filters apply at 3 levels (Component > Page > Global):
-- Global filters: Applied at dashboard level (entire dashboard)
-- Page filters: Override global for specific page
-- Component filters: Override page for specific component
-
-**BEST PRACTICES:**
-1. Start with broad filters (global date range)
-2. Add page filters for page-specific context (e.g., filter to high-traffic pages on one page)
-3. Use component filters sparingly (only when truly different from page)
-4. Keep pages focused (4-8 components per page ideal)
-5. Name pages clearly (Overview, Details, Analysis, Technical, etc.)
-
-**Parameters:**
-- bigqueryTable: Full table reference (e.g., "project.dataset.table")
-- template: Template ID (for single-page dashboards)
-- pages: Array of page configurations (for multi-page dashboards)
-- title: Dashboard title
-- dateRange: [startDate, endDate]
-- platform: Platform type ("gsc", "google_ads", "analytics")
-
-**Returns:**
-Dashboard ID, dataset ID, and URLs for viewing/editing`,
+  description: 'Create dashboard from existing BigQuery table.',
 
   inputSchema: {
     type: 'object' as const,
@@ -194,12 +124,137 @@ Dashboard ID, dataset ID, and URLs for viewing/editing`,
       template: { type: 'string', description: 'Template ID (for single-page dashboards - e.g., "seo_overview")' },
       rows: { type: 'array', description: 'Custom rows (advanced usage - if not using template)' }
     },
-    required: ['bigqueryTable', 'title', 'dateRange', 'platform']
+    required: []
   },
 
   async handler(input: any) {
     try {
-      const workspaceId = input.workspace_id || '945907d8-7e88-45c4-8fde-9db35d5f5ce2';
+      // Initialize Supabase for discovery queries
+      const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+      const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+      if (!supabaseUrl || !supabaseKey) {
+        throw new Error('Supabase credentials not configured');
+      }
+
+      const supabase = createClient(supabaseUrl, supabaseKey);
+
+      // ═══ DISCOVERY MODE: Guide step-by-step if params missing ═══
+
+      // STEP 1: Workspace Discovery
+      if (!input.workspace_id) {
+        const { data: workspaces } = await supabase
+          .from('workspaces')
+          .select('id, name')
+          .limit(20);
+
+        return formatDiscoveryResponse({
+          step: '1/5',
+          title: 'SELECT WORKSPACE',
+          items: workspaces || [],
+          itemFormatter: (w, i) => `${i + 1}. ${w.name || 'Unnamed'} (ID: ${w.id})`,
+          prompt: 'Which workspace should contain this dashboard?',
+          nextParam: 'workspace_id',
+        });
+      }
+
+      // STEP 2: BigQuery Table Discovery
+      if (!input.bigqueryTable) {
+        // Query datasets table to show available BigQuery tables
+        const { data: datasets } = await supabase
+          .from('datasets')
+          .select('id, platform, bigquery_table, created_at')
+          .eq('workspace_id', input.workspace_id)
+          .order('created_at', { ascending: false })
+          .limit(20);
+
+        if (!datasets || datasets.length === 0) {
+          return injectGuidance({}, `💾 NO BIGQUERY TABLES FOUND (Step 2/5)
+
+Workspace: ${input.workspace_id}
+
+No BigQuery tables exist yet. You need to push data first.
+
+💡 Push data to BigQuery:
+- Use: push_platform_data_to_bigquery
+
+Then return to create dashboard from the table.
+
+Or provide a BigQuery table name directly (format: "project.dataset.table")`);
+        }
+
+        return formatDiscoveryResponse({
+          step: '2/5',
+          title: 'SELECT BIGQUERY TABLE',
+          items: datasets,
+          itemFormatter: (d, i) => `${i + 1}. ${d.platform.toUpperCase()} - ${d.bigquery_table}
+   Created: ${new Date(d.created_at).toLocaleDateString()}`,
+          prompt: 'Which table contains the data for this dashboard?',
+          nextParam: 'bigqueryTable',
+          context: { workspace_id: input.workspace_id }
+        });
+      }
+
+      // STEP 3: Platform Selection
+      if (!input.platform) {
+        return injectGuidance({}, `📊 SELECT PLATFORM (Step 3/5)
+
+BigQuery Table: ${input.bigqueryTable}
+
+Which platform is this data from?
+
+**Options:**
+1. **gsc** - Google Search Console
+2. **google_ads** - Google Ads
+3. **analytics** - Google Analytics 4
+
+💡 Platform determines which chart templates and metrics are available.
+
+Provide: platform (e.g., "gsc", "google_ads", "analytics")`);
+      }
+
+      // STEP 4: Dashboard Title
+      if (!input.title) {
+        return injectGuidance({}, `📝 DASHBOARD TITLE (Step 4/5)
+
+Enter a descriptive title for this dashboard.
+
+**Examples:**
+- "Search Performance - ClientA.com"
+- "Google Ads Campaign Analysis - Q4 2025"
+- "Multi-Channel Analytics Dashboard"
+- "Weekly SEO Report"
+
+💡 Make it descriptive and include:
+- Platform name (SEO, Ads, Analytics)
+- Client/property name
+- Time period or purpose
+
+What should the dashboard be titled?`);
+      }
+
+      // STEP 5: Date Range
+      if (!input.dateRange || !Array.isArray(input.dateRange) || input.dateRange.length !== 2) {
+        return injectGuidance({}, `📅 DATE RANGE (Step 5/5)
+
+Provide date range as array: [startDate, endDate]
+
+**Quick Options:**
+- Last 7 days: ["2025-10-24", "2025-10-31"]
+- Last 30 days: ["2025-10-01", "2025-10-31"]
+- Last 90 days: ["2025-08-02", "2025-10-31"]
+
+**Custom Range:**
+Format: ["YYYY-MM-DD", "YYYY-MM-DD"]
+
+💡 Dashboard will use date presets (last7Days, last30Days) for dynamic updates.
+
+What date range should I use?`);
+      }
+
+      // ═══ EXECUTION MODE: All params provided ═══
+
+      const workspaceId = input.workspace_id;
       const dashboardId = generateUUID();
       const datasetId = generateUUID();
       const [projectId, datasetIdBq, tableId] = input.bigqueryTable.split('.');
@@ -288,20 +343,8 @@ Dashboard ID, dataset ID, and URLs for viewing/editing`,
         theme: { primaryColor: '#191D63' }
       };
 
-      // Initialize Supabase from ENV
-      const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
-      const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-      if (!supabaseUrl || !supabaseKey) {
-        return {
-          success: false,
-          error: 'Supabase credentials not configured. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY environment variables.'
-        };
-      }
-
-      const supabase = createClient(supabaseUrl, supabaseKey, {
-        auth: { persistSession: false }
-      });
+      // Supabase already initialized at top of handler for discovery
+      // Reuse the same client for execution
 
       // Insert dataset
       const { error: datasetError } = await supabase
@@ -354,14 +397,44 @@ Dashboard ID, dataset ID, and URLs for viewing/editing`,
         dataset_id: datasetId
       });
 
-      return {
-        success: true,
-        dashboard_id: dashboardId,
-        dataset_id: datasetId,
-        dashboard_url: `http://localhost:3000/dashboard/${dashboardId}/builder`,
-        view_url: `http://localhost:3000/dashboard/${dashboardId}/view`,
-        message: `Dashboard "${input.title}" created successfully! Open in browser at the URLs above.`
-      };
+      const pageCount = config.pages?.length || 1;
+      const componentCount = config.pages?.reduce((sum: number, p: any) =>
+        sum + p.rows.reduce((rowSum: number, r: any) => rowSum + r.columns.length, 0), 0
+      ) || 0;
+
+      const successText = formatSuccessSummary({
+        title: 'Dashboard Created Successfully',
+        operation: 'create_dashboard_from_table',
+        details: {
+          'Dashboard Name': input.title,
+          'Dashboard ID': dashboardId,
+          'Dataset ID': datasetId,
+          'BigQuery Table': input.bigqueryTable,
+          'Platform': input.platform.toUpperCase(),
+          'Pages': pageCount.toString(),
+          'Components': componentCount.toString(),
+          'Builder URL': `http://localhost:3000/dashboard/${dashboardId}/builder`,
+          'View URL': `http://localhost:3000/dashboard/${dashboardId}/view`,
+        },
+        nextSteps: [
+          'View dashboard: Open the View URL in browser',
+          'Edit layout: Open the Builder URL to customize',
+          'Add components: use update_dashboard_layout',
+          'Share dashboard: Configure sharing permissions',
+          'Test with filters: Dashboard includes date range control',
+        ],
+      });
+
+      return injectGuidance(
+        {
+          success: true,
+          dashboard_id: dashboardId,
+          dataset_id: datasetId,
+          dashboard_url: `http://localhost:3000/dashboard/${dashboardId}/builder`,
+          view_url: `http://localhost:3000/dashboard/${dashboardId}/view`,
+        },
+        successText
+      );
 
     } catch (error) {
       logger.error('[create_dashboard_from_table] Error:', error);

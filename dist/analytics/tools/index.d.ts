@@ -74,29 +74,14 @@ export declare const analyticsTools: ({
                 description: string;
             };
         };
-        required: string[];
+        required: never[];
     };
-    handler(input: any): Promise<{
+    handler(input: any): Promise<import("../../shared/interactive-workflow.js").McpResponse | {
         success: boolean;
         requiresApproval: boolean;
         preview: string;
         confirmationToken: string;
         message: string;
-        data?: undefined;
-    } | {
-        success: boolean;
-        data: {
-            accountId: any;
-            propertyId: any;
-            displayName: any;
-            timeZone: any;
-            currencyCode: any;
-            message: string;
-        };
-        requiresApproval?: undefined;
-        preview?: undefined;
-        confirmationToken?: undefined;
-        message?: undefined;
     }>;
 } | {
     name: string;
@@ -126,29 +111,14 @@ export declare const analyticsTools: ({
                 description: string;
             };
         };
-        required: string[];
+        required: never[];
     };
-    handler(input: any): Promise<{
+    handler(input: any): Promise<import("../../shared/interactive-workflow.js").McpResponse | {
         success: boolean;
         requiresApproval: boolean;
         preview: string;
         confirmationToken: string;
         message: string;
-        data?: undefined;
-    } | {
-        success: boolean;
-        data: {
-            propertyId: any;
-            streamId: any;
-            measurementId: any;
-            displayName: any;
-            streamType: any;
-            message: string;
-        };
-        requiresApproval?: undefined;
-        preview?: undefined;
-        confirmationToken?: undefined;
-        message?: undefined;
     }>;
 } | {
     name: string;
@@ -182,29 +152,14 @@ export declare const analyticsTools: ({
                 description: string;
             };
         };
-        required: string[];
+        required: never[];
     };
-    handler(input: any): Promise<{
+    handler(input: any): Promise<import("../../shared/interactive-workflow.js").McpResponse | {
         success: boolean;
         requiresApproval: boolean;
         preview: string;
         confirmationToken: string;
         message: string;
-        data?: undefined;
-    } | {
-        success: boolean;
-        data: {
-            propertyId: any;
-            dimensionId: any;
-            displayName: any;
-            parameterName: any;
-            scope: any;
-            message: string;
-        };
-        requiresApproval?: undefined;
-        preview?: undefined;
-        confirmationToken?: undefined;
-        message?: undefined;
     }>;
 } | {
     name: string;
@@ -239,25 +194,14 @@ export declare const analyticsTools: ({
                 description: string;
             };
         };
-        required: string[];
+        required: never[];
     };
-    handler(input: any): Promise<{
+    handler(input: any): Promise<import("../../shared/interactive-workflow.js").McpResponse | {
         success: boolean;
         requiresApproval: boolean;
         preview: string;
         confirmationToken: string;
-        data?: undefined;
-    } | {
-        success: boolean;
-        data: {
-            propertyId: any;
-            metricId: any;
-            displayName: any;
-            message: string;
-        };
-        requiresApproval?: undefined;
-        preview?: undefined;
-        confirmationToken?: undefined;
+        message: string;
     }>;
 } | {
     name: string;
@@ -276,24 +220,14 @@ export declare const analyticsTools: ({
                 type: string;
             };
         };
-        required: string[];
+        required: never[];
     };
-    handler(input: any): Promise<{
+    handler(input: any): Promise<import("../../shared/interactive-workflow.js").McpResponse | {
         success: boolean;
         requiresApproval: boolean;
         preview: string;
         confirmationToken: string;
-        data?: undefined;
-    } | {
-        success: boolean;
-        data: {
-            propertyId: any;
-            eventName: any;
-            message: string;
-        };
-        requiresApproval?: undefined;
-        preview?: undefined;
-        confirmationToken?: undefined;
+        message: string;
     }>;
 } | {
     name: string;
@@ -312,122 +246,14 @@ export declare const analyticsTools: ({
                 type: string;
             };
         };
-        required: string[];
+        required: never[];
     };
-    handler(input: any): Promise<{
+    handler(input: any): Promise<import("../../shared/interactive-workflow.js").McpResponse | {
         success: boolean;
         requiresApproval: boolean;
         preview: string;
         confirmationToken: string;
-        data?: undefined;
-    } | {
-        success: boolean;
-        data: {
-            propertyId: any;
-            googleAdsCustomerId: any;
-            linkId: any;
-            message: string;
-        };
-        requiresApproval?: undefined;
-        preview?: undefined;
-        confirmationToken?: undefined;
-    }>;
-} | {
-    name: string;
-    description: string;
-    inputSchema: {
-        type: "object";
-        properties: {
-            propertyId: {
-                type: string;
-                description: string;
-            };
-            startDate: {
-                type: string;
-                description: string;
-            };
-            endDate: {
-                type: string;
-                description: string;
-            };
-            dimensions: {
-                type: string;
-                items: {
-                    type: string;
-                };
-                description: string;
-            };
-            metrics: {
-                type: string;
-                items: {
-                    type: string;
-                };
-                description: string;
-            };
-            limit: {
-                type: string;
-                description: string;
-            };
-        };
-        required: string[];
-    };
-    handler(input: any): Promise<{
-        success: boolean;
-        data: {
-            propertyId: any;
-            dateRange: {
-                startDate: any;
-                endDate: any;
-            };
-            dimensions: any[];
-            metrics: any[];
-            rows: import("@google-analytics/data/build/protos/protos.js").google.analytics.data.v1beta.IRow[];
-            rowCount: number;
-            message: string;
-        };
-    }>;
-} | {
-    name: string;
-    description: string;
-    inputSchema: {
-        type: "object";
-        properties: {
-            propertyId: {
-                type: string;
-                description: string;
-            };
-            dimensions: {
-                type: string;
-                items: {
-                    type: string;
-                };
-                description: string;
-            };
-            metrics: {
-                type: string;
-                items: {
-                    type: string;
-                };
-                description: string;
-            };
-            limit: {
-                type: string;
-                description: string;
-            };
-        };
-        required: string[];
-    };
-    handler(input: any): Promise<{
-        success: boolean;
-        data: {
-            propertyId: any;
-            timeframe: string;
-            dimensions: any[];
-            metrics: any[];
-            rows: import("@google-analytics/data/build/protos/protos.js").google.analytics.data.v1beta.IRow[];
-            rowCount: number;
-            message: string;
-        };
+        message: string;
     }>;
 })[];
 /**
@@ -500,29 +326,14 @@ export declare const readOnlyAnalyticsTools: ({
                 description: string;
             };
         };
-        required: string[];
+        required: never[];
     };
-    handler(input: any): Promise<{
+    handler(input: any): Promise<import("../../shared/interactive-workflow.js").McpResponse | {
         success: boolean;
         requiresApproval: boolean;
         preview: string;
         confirmationToken: string;
         message: string;
-        data?: undefined;
-    } | {
-        success: boolean;
-        data: {
-            accountId: any;
-            propertyId: any;
-            displayName: any;
-            timeZone: any;
-            currencyCode: any;
-            message: string;
-        };
-        requiresApproval?: undefined;
-        preview?: undefined;
-        confirmationToken?: undefined;
-        message?: undefined;
     }>;
 } | {
     name: string;
@@ -552,29 +363,14 @@ export declare const readOnlyAnalyticsTools: ({
                 description: string;
             };
         };
-        required: string[];
+        required: never[];
     };
-    handler(input: any): Promise<{
+    handler(input: any): Promise<import("../../shared/interactive-workflow.js").McpResponse | {
         success: boolean;
         requiresApproval: boolean;
         preview: string;
         confirmationToken: string;
         message: string;
-        data?: undefined;
-    } | {
-        success: boolean;
-        data: {
-            propertyId: any;
-            streamId: any;
-            measurementId: any;
-            displayName: any;
-            streamType: any;
-            message: string;
-        };
-        requiresApproval?: undefined;
-        preview?: undefined;
-        confirmationToken?: undefined;
-        message?: undefined;
     }>;
 } | {
     name: string;
@@ -608,29 +404,14 @@ export declare const readOnlyAnalyticsTools: ({
                 description: string;
             };
         };
-        required: string[];
+        required: never[];
     };
-    handler(input: any): Promise<{
+    handler(input: any): Promise<import("../../shared/interactive-workflow.js").McpResponse | {
         success: boolean;
         requiresApproval: boolean;
         preview: string;
         confirmationToken: string;
         message: string;
-        data?: undefined;
-    } | {
-        success: boolean;
-        data: {
-            propertyId: any;
-            dimensionId: any;
-            displayName: any;
-            parameterName: any;
-            scope: any;
-            message: string;
-        };
-        requiresApproval?: undefined;
-        preview?: undefined;
-        confirmationToken?: undefined;
-        message?: undefined;
     }>;
 } | {
     name: string;
@@ -665,25 +446,14 @@ export declare const readOnlyAnalyticsTools: ({
                 description: string;
             };
         };
-        required: string[];
+        required: never[];
     };
-    handler(input: any): Promise<{
+    handler(input: any): Promise<import("../../shared/interactive-workflow.js").McpResponse | {
         success: boolean;
         requiresApproval: boolean;
         preview: string;
         confirmationToken: string;
-        data?: undefined;
-    } | {
-        success: boolean;
-        data: {
-            propertyId: any;
-            metricId: any;
-            displayName: any;
-            message: string;
-        };
-        requiresApproval?: undefined;
-        preview?: undefined;
-        confirmationToken?: undefined;
+        message: string;
     }>;
 } | {
     name: string;
@@ -702,24 +472,14 @@ export declare const readOnlyAnalyticsTools: ({
                 type: string;
             };
         };
-        required: string[];
+        required: never[];
     };
-    handler(input: any): Promise<{
+    handler(input: any): Promise<import("../../shared/interactive-workflow.js").McpResponse | {
         success: boolean;
         requiresApproval: boolean;
         preview: string;
         confirmationToken: string;
-        data?: undefined;
-    } | {
-        success: boolean;
-        data: {
-            propertyId: any;
-            eventName: any;
-            message: string;
-        };
-        requiresApproval?: undefined;
-        preview?: undefined;
-        confirmationToken?: undefined;
+        message: string;
     }>;
 } | {
     name: string;
@@ -738,122 +498,14 @@ export declare const readOnlyAnalyticsTools: ({
                 type: string;
             };
         };
-        required: string[];
+        required: never[];
     };
-    handler(input: any): Promise<{
+    handler(input: any): Promise<import("../../shared/interactive-workflow.js").McpResponse | {
         success: boolean;
         requiresApproval: boolean;
         preview: string;
         confirmationToken: string;
-        data?: undefined;
-    } | {
-        success: boolean;
-        data: {
-            propertyId: any;
-            googleAdsCustomerId: any;
-            linkId: any;
-            message: string;
-        };
-        requiresApproval?: undefined;
-        preview?: undefined;
-        confirmationToken?: undefined;
-    }>;
-} | {
-    name: string;
-    description: string;
-    inputSchema: {
-        type: "object";
-        properties: {
-            propertyId: {
-                type: string;
-                description: string;
-            };
-            startDate: {
-                type: string;
-                description: string;
-            };
-            endDate: {
-                type: string;
-                description: string;
-            };
-            dimensions: {
-                type: string;
-                items: {
-                    type: string;
-                };
-                description: string;
-            };
-            metrics: {
-                type: string;
-                items: {
-                    type: string;
-                };
-                description: string;
-            };
-            limit: {
-                type: string;
-                description: string;
-            };
-        };
-        required: string[];
-    };
-    handler(input: any): Promise<{
-        success: boolean;
-        data: {
-            propertyId: any;
-            dateRange: {
-                startDate: any;
-                endDate: any;
-            };
-            dimensions: any[];
-            metrics: any[];
-            rows: import("@google-analytics/data/build/protos/protos.js").google.analytics.data.v1beta.IRow[];
-            rowCount: number;
-            message: string;
-        };
-    }>;
-} | {
-    name: string;
-    description: string;
-    inputSchema: {
-        type: "object";
-        properties: {
-            propertyId: {
-                type: string;
-                description: string;
-            };
-            dimensions: {
-                type: string;
-                items: {
-                    type: string;
-                };
-                description: string;
-            };
-            metrics: {
-                type: string;
-                items: {
-                    type: string;
-                };
-                description: string;
-            };
-            limit: {
-                type: string;
-                description: string;
-            };
-        };
-        required: string[];
-    };
-    handler(input: any): Promise<{
-        success: boolean;
-        data: {
-            propertyId: any;
-            timeframe: string;
-            dimensions: any[];
-            metrics: any[];
-            rows: import("@google-analytics/data/build/protos/protos.js").google.analytics.data.v1beta.IRow[];
-            rowCount: number;
-            message: string;
-        };
+        message: string;
     }>;
 })[];
 //# sourceMappingURL=index.d.ts.map

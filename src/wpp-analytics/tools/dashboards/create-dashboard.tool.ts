@@ -15,6 +15,11 @@ import {
   generateDashboardId,
 } from './helpers.js';
 import { randomBytes } from 'crypto';
+import {
+  injectGuidance,
+  formatDiscoveryResponse,
+  formatSuccessSummary,
+} from '../../../shared/interactive-workflow.js';
 
 const logger = getLogger('wpp-analytics.dashboards.create');
 
@@ -873,7 +878,156 @@ without creating duplicate dataset entries, reducing storage costs:
 
   async handler(input: any) {
     try {
-      // Validate input
+      // Initialize Supabase (from ENV or parameters)
+      const supabase = input.supabaseUrl && input.supabaseKey
+        ? initSupabase(input.supabaseUrl, input.supabaseKey)
+        : initSupabaseFromEnv();
+
+      // Step 1: Workspace Discovery (if workspaceId missing)
+      if (!input.workspaceId) {
+        logger.info('create_dashboard: workspaceId missing, listing workspaces');
+
+        const { data: workspaces, error: workspaceQueryError } = await supabase
+          .from('workspaces')
+          .select('id, name, created_at')
+          .order('created_at', { ascending: false })
+          .limit(20);
+
+        if (workspaceQueryError) {
+          throw new Error(`Failed to list workspaces: ${workspaceQueryError.message}`);
+        }
+
+        if (!workspaces || workspaces.length === 0) {
+          return {
+            success: false,
+            error: 'No workspaces found. Create a workspace first.',
+          };
+        }
+
+        return formatDiscoveryResponse({
+          step: '1/3',
+          title: 'SELECT WORKSPACE',
+          items: workspaces,
+          itemFormatter: (w, i) => `${i + 1}. **${w.name}**
+   • ID: ${w.id}
+   • Created: ${new Date(w.created_at).toLocaleDateString()}`,
+          prompt: 'Which workspace should this dashboard belong to?',
+          nextParam: 'workspaceId',
+        });
+      }
+
+      // Step 2: Datasource Guidance (if datasource missing)
+      if (!input.datasource) {
+        logger.info('create_dashboard: datasource missing, providing guidance');
+
+        // List available datasets for this workspace
+        const { data: datasets, error: datasetError } = await supabase
+          .from('datasets')
+          .select('id, name, bigquery_table_id, bigquery_project_id, bigquery_dataset_id, platform_metadata')
+          .eq('workspace_id', input.workspaceId)
+          .order('created_at', { ascending: false })
+          .limit(10);
+
+        if (datasetError) {
+          // Datasets table might not exist - provide manual guidance
+          return injectGuidance(
+            {},
+            `📋 DATASOURCE REQUIRED (Step 2/3)
+
+⚠️ You must provide a **datasource** parameter.
+
+**FORMAT REQUIRED:** Full BigQuery reference
+   • ✅ Correct: "mcp-servers-475317.wpp_marketing.gsc_performance_shared"
+   • ❌ Wrong: "gsc_performance_shared"
+
+**HOW TO GET DATASOURCE:**
+
+**Option 1: Use Existing Dataset**
+   • Run: list_datasets tool with your workspace_id
+   • Copy the full BigQuery table reference from results
+   • Benefit: Reuse existing data (faster, cheaper)
+
+**Option 2: Create New Dataset**
+   • Run: push_platform_data_to_bigquery tool
+   • Pulls data from Google API to BigQuery
+   • Returns full table reference to use here
+
+**COMMON DATASOURCES:**
+   • GSC: "mcp-servers-475317.wpp_marketing.gsc_performance_shared"
+   • Google Ads: "mcp-servers-475317.wpp_marketing.ads_performance_shared"
+   • GA4: "mcp-servers-475317.wpp_marketing.ga4_sessions_shared"
+
+💡 **Provide:** datasource (full BigQuery format: project.dataset.table)`
+          );
+        }
+
+        if (datasets && datasets.length > 0) {
+          // Show available datasets
+          return formatDiscoveryResponse({
+            step: '2/3',
+            title: 'SELECT DATA SOURCE',
+            items: datasets,
+            itemFormatter: (d, i) => `${i + 1}. **${d.name}**
+   • Platform: ${d.platform_metadata?.platform || 'unknown'}
+   • Table: ${d.bigquery_project_id}.${d.bigquery_dataset_id}.${d.bigquery_table_id}`,
+            prompt: 'Choose a dataset or provide a custom BigQuery table reference',
+            nextParam: 'datasource',
+            context: { workspaceId: input.workspaceId },
+          });
+        } else {
+          // No datasets found - guide to create one
+          return injectGuidance(
+            {},
+            `📋 NO DATASETS FOUND (Step 2/3)
+
+**Workspace:** ${input.workspaceId}
+
+No existing datasets found in this workspace. You need to either:
+
+**Option 1: Pull Data First (Recommended)**
+   1. Run: push_platform_data_to_bigquery
+   2. Specify platform (gsc, ads, ga4)
+   3. Tool returns BigQuery table reference
+   4. Use that reference as 'datasource'
+
+**Option 2: Use Existing BigQuery Table**
+   • If you already have data in BigQuery
+   • Provide full reference: "project.dataset.table"
+   • Example: "mcp-servers-475317.wpp_marketing.gsc_performance_shared"
+
+💡 **Provide:** datasource (full BigQuery format: project.dataset.table)`
+          );
+        }
+      }
+
+      // Step 3: Title Guidance (if title missing)
+      if (!input.title) {
+        return injectGuidance(
+          {},
+          `📋 DASHBOARD TITLE REQUIRED (Step 3/3)
+
+**Context:**
+   • Workspace: ${input.workspaceId}
+   • Data Source: ${input.datasource}
+
+**TITLE GUIDELINES:**
+
+**Descriptive Format:**
+   • "[Property Name] - [Report Type]"
+   • Example: "Mindful Steward - GSC Performance"
+   • Example: "Q4 Campaign Dashboard"
+
+**Tips:**
+   • Include property/client name
+   • Indicate report type or focus
+   • Keep under 100 characters
+   • Make it searchable (used in list_dashboards)
+
+💡 **Provide:** title (dashboard name, 1-100 characters)`
+        );
+      }
+
+      // Validate all inputs after discovery
       const validated = CreateDashboardSchema.parse(input);
 
       logger.info('create_dashboard called', {
@@ -882,11 +1036,6 @@ without creating duplicate dataset entries, reducing storage costs:
         hasPages: !!validated.pages,
         hasRows: !!validated.rows,
       });
-
-      // Initialize Supabase (from ENV or parameters)
-      const supabase = validated.supabaseUrl && validated.supabaseKey
-        ? initSupabase(validated.supabaseUrl, validated.supabaseKey)
-        : initSupabaseFromEnv();
 
       // Get workspace (now required - no auto-creation)
       const workspaceId = validated.workspaceId;
@@ -1097,15 +1246,43 @@ without creating duplicate dataset entries, reducing storage costs:
         componentCount,
       });
 
-      return {
-        success: true,
-        dashboard_id: dashboardId,
-        dashboard_url: `/dashboard/${dashboardId}/builder`,
-        workspace_id: workspaceId,
-        page_count: pageCount,
-        component_count: componentCount,
-        created_at: new Date().toISOString(),
-      };
+      // Build rich success response
+      const successGuidance = formatSuccessSummary({
+        title: 'DASHBOARD CREATED SUCCESSFULLY',
+        operation: 'Dashboard creation',
+        details: {
+          'Dashboard ID': dashboardId,
+          'Title': validated.title,
+          'Workspace': workspaceId,
+          'Data Source': validated.datasource,
+          'Pages': pageCount.toString(),
+          'Components': componentCount.toString(),
+          'Dataset ID': finalDatasetId || 'N/A (will auto-create on first use)',
+        },
+        nextSteps: [
+          `View dashboard: Open ${'/dashboard/' + dashboardId + '/builder'} in browser`,
+          'Add components: Use update_dashboard_layout tool',
+          'View data: Dashboard will query BigQuery on open',
+          'List all: Use list_dashboards to see all dashboards',
+          finalDatasetId ? 'Table sharing enabled: Multiple dashboards can use same dataset' : 'Pull data: Use push_platform_data_to_bigquery to populate BigQuery',
+        ],
+        warnings: componentCount === 0 ? [
+          'Dashboard has no components yet - add visualizations using update_dashboard_layout or dashboard builder UI'
+        ] : undefined,
+      });
+
+      return injectGuidance(
+        {
+          dashboard_id: dashboardId,
+          dashboard_url: `/dashboard/${dashboardId}/builder`,
+          workspace_id: workspaceId,
+          page_count: pageCount,
+          component_count: componentCount,
+          dataset_id: finalDatasetId,
+          created_at: new Date().toISOString(),
+        },
+        successGuidance
+      );
     } catch (error) {
       logger.error('create_dashboard failed', { error });
 

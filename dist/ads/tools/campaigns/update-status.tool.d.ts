@@ -30,30 +30,14 @@ export declare const updateCampaignStatusTool: {
                 description: string;
             };
         };
-        required: string[];
+        required: never[];
     };
-    handler(input: any): Promise<{
+    handler(input: any): Promise<import("../../../shared/interactive-workflow.js").McpResponse | {
         success: boolean;
         requiresApproval: boolean;
         preview: string;
         confirmationToken: string;
         message: string;
-        data?: undefined;
-    } | {
-        success: boolean;
-        data: {
-            customerId: any;
-            campaignId: any;
-            campaignName: any;
-            previousStatus: any;
-            newStatus: any;
-            result: any;
-            message: string;
-        };
-        requiresApproval?: undefined;
-        preview?: undefined;
-        confirmationToken?: undefined;
-        message?: undefined;
     }>;
 };
 //# sourceMappingURL=update-status.tool.d.ts.map

@@ -9,6 +9,7 @@ import { getLogger } from '../../../shared/logger.js';
 import { GetDashboardSchema } from './schemas.js';
 import { initSupabase, initSupabaseFromEnv } from './helpers.js';
 import type { RowConfig, PageConfig } from './types.js';
+import { injectGuidance, formatDiscoveryResponse } from '../../../shared/interactive-workflow.js';
 
 const logger = getLogger('wpp-analytics.dashboards.get');
 
@@ -154,17 +155,52 @@ for updates, or verify changes after modifications.
 
   async handler(input: any) {
     try {
-      // Validate input
+      // Initialize Supabase (from ENV or parameters)
+      const supabase = input.supabaseUrl && input.supabaseKey
+        ? initSupabase(input.supabaseUrl, input.supabaseKey)
+        : initSupabaseFromEnv();
+
+      // Step 1: Dashboard Discovery (if dashboard_id not provided)
+      if (!input.dashboard_id) {
+        logger.info('get_dashboard: dashboard_id missing, listing available dashboards');
+
+        // Get all dashboards (limited to 20 for discovery)
+        const { data: dashboards, error } = await supabase
+          .from('dashboards')
+          .select('id, name, updated_at, workspace_id')
+          .order('updated_at', { ascending: false })
+          .limit(20);
+
+        if (error) {
+          throw new Error(`Failed to list dashboards: ${error.message}`);
+        }
+
+        if (!dashboards || dashboards.length === 0) {
+          return {
+            success: false,
+            error: 'No dashboards found. Create a dashboard first using create_dashboard.',
+          };
+        }
+
+        return formatDiscoveryResponse({
+          step: '1/1',
+          title: 'SELECT DASHBOARD',
+          items: dashboards,
+          itemFormatter: (d, i) => `${i + 1}. **${d.name}**
+   • ID: ${d.id}
+   • Workspace: ${d.workspace_id}
+   • Last Updated: ${new Date(d.updated_at).toLocaleDateString()}`,
+          prompt: 'Which dashboard would you like to retrieve?',
+          nextParam: 'dashboard_id',
+        });
+      }
+
+      // Validate input after discovery
       const validated = GetDashboardSchema.parse(input);
 
       logger.info('get_dashboard called', {
         dashboardId: validated.dashboard_id,
       });
-
-      // Initialize Supabase (from ENV or parameters)
-      const supabase = validated.supabaseUrl && validated.supabaseKey
-        ? initSupabase(validated.supabaseUrl, validated.supabaseKey)
-        : initSupabaseFromEnv();
 
       // Load dashboard
       const { data: dashboard, error: loadError } = await supabase
@@ -270,10 +306,45 @@ for updates, or verify changes after modifications.
         componentCount: totalComponentCount,
       });
 
-      return {
-        success: true,
-        dashboard: response,
-      };
+      // Build rich guidance response
+      const guidanceText = `📊 DASHBOARD DETAILS: ${response.name}
+
+**📌 OVERVIEW:**
+   • ID: ${response.id}
+   • Workspace: ${response.workspace_id}
+   • Data Source: ${response.datasource}
+   • Created: ${new Date(response.created_at).toLocaleDateString()}
+   • Last Updated: ${new Date(response.updated_at).toLocaleDateString()}
+
+**📐 STRUCTURE:**
+   • Pages: ${response.metadata?.page_count || 0}
+   • Rows: ${response.metadata?.row_count || 0}
+   • Components: ${response.metadata?.component_count || 0}
+   • Component Types: ${response.metadata?.component_types?.join(', ') || 'None'}
+   • Has Filters: ${response.metadata?.has_filters ? 'Yes' : 'No'}
+   • Multi-Page: ${response.metadata?.has_multi_page ? 'Yes' : 'No'}
+
+${pages.length > 0 ? `**📄 PAGES:**\n${pages.map((p: any, i: number) => `   ${i + 1}. ${p.name} (${p.rows?.length || 0} rows, ${p.filters?.length || 0} filters)`).join('\n')}` : ''}
+
+💡 WHAT YOU CAN DO NEXT:
+   • Update layout: use update_dashboard_layout
+   • View in browser: /dashboards/${response.id}
+   • Delete dashboard: use delete_dashboard
+   • List all dashboards: use list_dashboards
+
+🎯 COMPONENT INSPECTION:
+   • Full structure is in the 'dashboard' field
+   • Use component IDs for targeted updates
+   • Check pages[].rows[].columns[].component for details
+
+${response.metadata?.component_count === 0 ? '\n⚠️ **Warning:** Dashboard has no components. Add visualizations using update_dashboard_layout.\n' : ''}`;
+
+      return injectGuidance(
+        {
+          dashboard: response,
+        },
+        guidanceText
+      );
     } catch (error) {
       logger.error('get_dashboard failed', { error });
 

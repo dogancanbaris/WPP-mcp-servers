@@ -22,48 +22,7 @@ export declare const getCoreWebVitalsOriginTool: {
         };
         required: string[];
     };
-    handler(input: any): Promise<{
-        success: boolean;
-        data: {
-            message: string;
-            lcp?: {
-                p75: number;
-                good: number;
-                needsImprovement: number;
-                poor: number;
-            };
-            inp?: {
-                p75: number;
-                good: number;
-                needsImprovement: number;
-                poor: number;
-            };
-            cls?: {
-                p75: number;
-                good: number;
-                needsImprovement: number;
-                poor: number;
-            };
-            fcp?: {
-                p75: number;
-                good: number;
-                needsImprovement: number;
-                poor: number;
-            };
-            ttfb?: {
-                p75: number;
-                good: number;
-                needsImprovement: number;
-                poor: number;
-            };
-            collectionPeriod?: {
-                start: string;
-                end: string;
-            };
-            origin: any;
-            formFactor: any;
-        };
-    }>;
+    handler(input: any): Promise<import("../shared/interactive-workflow.js").McpResponse>;
 };
 /**
  * Get Core Web Vitals for a specific URL
@@ -86,48 +45,7 @@ export declare const getCoreWebVitalsUrlTool: {
         };
         required: string[];
     };
-    handler(input: any): Promise<{
-        success: boolean;
-        data: {
-            message: string;
-            lcp?: {
-                p75: number;
-                good: number;
-                needsImprovement: number;
-                poor: number;
-            };
-            inp?: {
-                p75: number;
-                good: number;
-                needsImprovement: number;
-                poor: number;
-            };
-            cls?: {
-                p75: number;
-                good: number;
-                needsImprovement: number;
-                poor: number;
-            };
-            fcp?: {
-                p75: number;
-                good: number;
-                needsImprovement: number;
-                poor: number;
-            };
-            ttfb?: {
-                p75: number;
-                good: number;
-                needsImprovement: number;
-                poor: number;
-            };
-            collectionPeriod?: {
-                start: string;
-                end: string;
-            };
-            url: any;
-            formFactor: any;
-        };
-    }>;
+    handler(input: any): Promise<import("../shared/interactive-workflow.js").McpResponse>;
 };
 /**
  * Get historical Core Web Vitals for an origin
@@ -150,16 +68,7 @@ export declare const getCwvHistoryOriginTool: {
         };
         required: string[];
     };
-    handler(input: any): Promise<{
-        success: boolean;
-        data: {
-            origin: any;
-            formFactor: any;
-            history: import("./types.js").HistoricalRecord;
-            collectionPeriods: import("./types.js").CollectionPeriod[];
-            message: string;
-        };
-    }>;
+    handler(input: any): Promise<import("../shared/interactive-workflow.js").McpResponse>;
 };
 /**
  * Get historical Core Web Vitals for a specific URL
@@ -182,16 +91,7 @@ export declare const getCwvHistoryUrlTool: {
         };
         required: string[];
     };
-    handler(input: any): Promise<{
-        success: boolean;
-        data: {
-            url: any;
-            formFactor: any;
-            history: import("./types.js").HistoricalRecord;
-            collectionPeriods: import("./types.js").CollectionPeriod[];
-            message: string;
-        };
-    }>;
+    handler(input: any): Promise<import("../shared/interactive-workflow.js").McpResponse>;
 };
 /**
  * Compare Core Web Vitals across form factors
@@ -212,10 +112,7 @@ export declare const compareCwvFormFactorsTool: {
             };
         };
     };
-    handler(input: any): Promise<{
-        success: boolean;
-        data: any;
-    }>;
+    handler(input: any): Promise<import("../shared/interactive-workflow.js").McpResponse>;
 };
 /**
  * Export all CrUX tools
@@ -238,48 +135,7 @@ export declare const cruxTools: ({
         };
         required: string[];
     };
-    handler(input: any): Promise<{
-        success: boolean;
-        data: {
-            message: string;
-            lcp?: {
-                p75: number;
-                good: number;
-                needsImprovement: number;
-                poor: number;
-            };
-            inp?: {
-                p75: number;
-                good: number;
-                needsImprovement: number;
-                poor: number;
-            };
-            cls?: {
-                p75: number;
-                good: number;
-                needsImprovement: number;
-                poor: number;
-            };
-            fcp?: {
-                p75: number;
-                good: number;
-                needsImprovement: number;
-                poor: number;
-            };
-            ttfb?: {
-                p75: number;
-                good: number;
-                needsImprovement: number;
-                poor: number;
-            };
-            collectionPeriod?: {
-                start: string;
-                end: string;
-            };
-            origin: any;
-            formFactor: any;
-        };
-    }>;
+    handler(input: any): Promise<import("../shared/interactive-workflow.js").McpResponse>;
 } | {
     name: string;
     description: string;
@@ -298,104 +154,7 @@ export declare const cruxTools: ({
         };
         required: string[];
     };
-    handler(input: any): Promise<{
-        success: boolean;
-        data: {
-            message: string;
-            lcp?: {
-                p75: number;
-                good: number;
-                needsImprovement: number;
-                poor: number;
-            };
-            inp?: {
-                p75: number;
-                good: number;
-                needsImprovement: number;
-                poor: number;
-            };
-            cls?: {
-                p75: number;
-                good: number;
-                needsImprovement: number;
-                poor: number;
-            };
-            fcp?: {
-                p75: number;
-                good: number;
-                needsImprovement: number;
-                poor: number;
-            };
-            ttfb?: {
-                p75: number;
-                good: number;
-                needsImprovement: number;
-                poor: number;
-            };
-            collectionPeriod?: {
-                start: string;
-                end: string;
-            };
-            url: any;
-            formFactor: any;
-        };
-    }>;
-} | {
-    name: string;
-    description: string;
-    inputSchema: {
-        type: "object";
-        properties: {
-            origin: {
-                type: string;
-                description: string;
-            };
-            formFactor: {
-                type: string;
-                enum: string[];
-                description: string;
-            };
-        };
-        required: string[];
-    };
-    handler(input: any): Promise<{
-        success: boolean;
-        data: {
-            origin: any;
-            formFactor: any;
-            history: import("./types.js").HistoricalRecord;
-            collectionPeriods: import("./types.js").CollectionPeriod[];
-            message: string;
-        };
-    }>;
-} | {
-    name: string;
-    description: string;
-    inputSchema: {
-        type: "object";
-        properties: {
-            url: {
-                type: string;
-                description: string;
-            };
-            formFactor: {
-                type: string;
-                enum: string[];
-                description: string;
-            };
-        };
-        required: string[];
-    };
-    handler(input: any): Promise<{
-        success: boolean;
-        data: {
-            url: any;
-            formFactor: any;
-            history: import("./types.js").HistoricalRecord;
-            collectionPeriods: import("./types.js").CollectionPeriod[];
-            message: string;
-        };
-    }>;
+    handler(input: any): Promise<import("../shared/interactive-workflow.js").McpResponse>;
 } | {
     name: string;
     description: string;
@@ -412,9 +171,6 @@ export declare const cruxTools: ({
             };
         };
     };
-    handler(input: any): Promise<{
-        success: boolean;
-        data: any;
-    }>;
+    handler(input: any): Promise<import("../shared/interactive-workflow.js").McpResponse>;
 })[];
 //# sourceMappingURL=tools.d.ts.map

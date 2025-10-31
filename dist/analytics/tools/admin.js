@@ -6,6 +6,7 @@ import { getLogger } from '../../shared/logger.js';
 import { getApprovalEnforcer, DryRunResultBuilder } from '../../shared/approval-enforcer.js';
 import { detectAndEnforceVagueness } from '../../shared/vagueness-detector.js';
 import { extractOAuthToken, createGoogleAnalyticsAdminClient } from '../../shared/oauth-client-factory.js';
+import { formatDiscoveryResponse } from '../../shared/interactive-workflow.js';
 const logger = getLogger('analytics.tools.admin');
 /**
  * Create GA4 property
@@ -41,17 +42,11 @@ export const createPropertyTool = {
                 description: 'Confirmation token from dry-run preview (optional - if not provided, will show preview)',
             },
         },
-        required: ['accountId', 'displayName'],
+        required: [], // Make optional for discovery mode
     },
     async handler(input) {
         try {
             const { accountId, displayName, timeZone = 'America/Los_Angeles', currencyCode = 'USD', industryCategory, confirmationToken, } = input;
-            // Vagueness detection
-            detectAndEnforceVagueness({
-                operation: 'create_analytics_property',
-                inputText: `create property ${displayName}`,
-                inputParams: { accountId, displayName },
-            });
             // Extract OAuth token from request
             const oauthToken = await extractOAuthToken(input);
             if (!oauthToken) {
@@ -59,7 +54,35 @@ export const createPropertyTool = {
             }
             // Create Analytics Admin client using googleapis wrapper (avoids gRPC issues)
             const client = createGoogleAnalyticsAdminClient(oauthToken);
-            // Build dry-run preview
+            // ═══ STEP 1: ACCOUNT DISCOVERY ═══
+            if (!accountId) {
+                logger.info('Account discovery mode - listing accounts');
+                const accountsRes = await client.accounts.list({});
+                const accounts = (accountsRes.data.accounts || []).map((acc) => ({
+                    accountId: acc.name?.replace('accounts/', '') || '',
+                    displayName: acc.displayName,
+                }));
+                return formatDiscoveryResponse({
+                    step: '1/3',
+                    title: 'SELECT ANALYTICS ACCOUNT',
+                    items: accounts,
+                    itemFormatter: (a, i) => `${i + 1}. ${a.displayName || 'Untitled'}\n   Account ID: ${a.accountId}`,
+                    prompt: 'Which account should contain the new property?',
+                    nextParam: 'accountId',
+                    emoji: '🏢',
+                });
+            }
+            // ═══ STEP 2: CHECK DISPLAY NAME ═══
+            if (!displayName) {
+                throw new Error('displayName is required to create a property');
+            }
+            // Vagueness detection
+            detectAndEnforceVagueness({
+                operation: 'create_analytics_property',
+                inputText: `create property ${displayName}`,
+                inputParams: { accountId, displayName },
+            });
+            // ═══ STEP 3: DRY-RUN PREVIEW (if no confirmation token) ═══
             const approvalEnforcer = getApprovalEnforcer();
             const dryRunBuilder = new DryRunResultBuilder('create_analytics_property', 'Google Analytics', accountId);
             dryRunBuilder.addChange({
@@ -74,7 +97,6 @@ export const createPropertyTool = {
             dryRunBuilder.addRecommendation('Install GA4 tracking code on website');
             dryRunBuilder.addRecommendation('Configure conversion events and link to Google Ads');
             const dryRun = dryRunBuilder.build();
-            // If no confirmation token, return preview
             if (!confirmationToken) {
                 const { confirmationToken: token } = await approvalEnforcer.createDryRun('create_analytics_property', 'Google Analytics', accountId, { displayName });
                 const preview = approvalEnforcer.formatDryRunForDisplay(dryRun);
@@ -83,10 +105,10 @@ export const createPropertyTool = {
                     requiresApproval: true,
                     preview,
                     confirmationToken: token,
-                    message: 'Property creation requires approval. Review the preview and call again with confirmationToken.',
+                    message: 'Property creation requires approval. Review the preview and call again with confirmationToken (Step 3/3).',
                 };
             }
-            // Execute with confirmation
+            // ═══ STEP 4: EXECUTE WITH CONFIRMATION ═══
             logger.info('Creating GA4 property with confirmation', { accountId, displayName });
             const result = await approvalEnforcer.validateAndExecute(confirmationToken, dryRun, async () => {
                 const res = await client.properties.create({
@@ -151,11 +173,48 @@ export const createDataStreamTool = {
                 description: 'Confirmation token from dry-run preview (optional - if not provided, will show preview)',
             },
         },
-        required: ['propertyId', 'streamType', 'displayName'],
+        required: [], // Make optional for discovery mode
     },
     async handler(input) {
         try {
             const { propertyId, streamType, displayName, websiteUrl, confirmationToken } = input;
+            // Extract OAuth token from request
+            const oauthToken = await extractOAuthToken(input);
+            if (!oauthToken) {
+                throw new Error('OAuth token required for Google Analytics API access');
+            }
+            // Create Analytics Admin client using googleapis wrapper (avoids gRPC issues)
+            const client = createGoogleAnalyticsAdminClient(oauthToken);
+            // ═══ STEP 1: PROPERTY DISCOVERY ═══
+            if (!propertyId) {
+                logger.info('Property discovery mode - listing properties');
+                const accountsRes = await client.accounts.list({});
+                const accounts = accountsRes.data.accounts || [];
+                let propertyList = [];
+                for (const account of accounts) {
+                    const res = await client.properties.list({
+                        filter: `parent:${account.name}`,
+                    });
+                    propertyList.push(...(res.data.properties || []));
+                }
+                const properties = propertyList.map((prop) => ({
+                    propertyId: prop.name?.split('/')[1] || '',
+                    displayName: prop.displayName,
+                }));
+                return formatDiscoveryResponse({
+                    step: '1/4',
+                    title: 'SELECT PROPERTY FOR DATA STREAM',
+                    items: properties,
+                    itemFormatter: (p, i) => `${i + 1}. ${p.displayName || 'Untitled'}\n   Property ID: ${p.propertyId}`,
+                    prompt: 'Which property should contain the data stream?',
+                    nextParam: 'propertyId',
+                    emoji: '📊',
+                });
+            }
+            // ═══ STEP 2: CHECK REQUIRED PARAMS ═══
+            if (!streamType || !displayName) {
+                throw new Error('streamType and displayName are required');
+            }
             // Vagueness detection
             detectAndEnforceVagueness({
                 operation: 'create_data_stream',
@@ -166,14 +225,7 @@ export const createDataStreamTool = {
             if (streamType === 'WEB' && !websiteUrl) {
                 throw new Error('websiteUrl is required for WEB data streams');
             }
-            // Extract OAuth token from request
-            const oauthToken = await extractOAuthToken(input);
-            if (!oauthToken) {
-                throw new Error('OAuth token required for Google Analytics API access');
-            }
-            // Create Analytics Admin client using googleapis wrapper (avoids gRPC issues)
-            const client = createGoogleAnalyticsAdminClient(oauthToken);
-            // Build dry-run preview
+            // ═══ STEP 3: DRY-RUN PREVIEW (if no confirmation token) ═══
             const approvalEnforcer = getApprovalEnforcer();
             const dryRunBuilder = new DryRunResultBuilder('create_data_stream', 'Google Analytics', propertyId);
             dryRunBuilder.addChange({
@@ -187,7 +239,6 @@ export const createDataStreamTool = {
             dryRunBuilder.addRecommendation('Install tracking code with generated Measurement ID');
             dryRunBuilder.addRecommendation('Verify data collection in Real-Time reports');
             const dryRun = dryRunBuilder.build();
-            // If no confirmation token, return preview
             if (!confirmationToken) {
                 const { confirmationToken: token } = await approvalEnforcer.createDryRun('create_data_stream', 'Google Analytics', propertyId, { displayName, streamType });
                 const preview = approvalEnforcer.formatDryRunForDisplay(dryRun);
@@ -196,10 +247,10 @@ export const createDataStreamTool = {
                     requiresApproval: true,
                     preview,
                     confirmationToken: token,
-                    message: 'Data stream creation requires approval. Review the preview and call again with confirmationToken.',
+                    message: 'Data stream creation requires approval. Review the preview and call again with confirmationToken (Step 3/4).',
                 };
             }
-            // Execute with confirmation
+            // ═══ STEP 4: EXECUTE WITH CONFIRMATION ═══
             logger.info('Creating data stream with confirmation', { propertyId, displayName, streamType });
             const result = await approvalEnforcer.validateAndExecute(confirmationToken, dryRun, async () => {
                 const dataStream = {
@@ -273,17 +324,11 @@ export const createCustomDimensionTool = {
                 description: 'Confirmation token from dry-run preview (optional - if not provided, will show preview)',
             },
         },
-        required: ['propertyId', 'displayName', 'parameterName', 'scope'],
+        required: [], // Make optional for discovery mode
     },
     async handler(input) {
         try {
             const { propertyId, displayName, parameterName, scope, description, confirmationToken } = input;
-            // Vagueness detection
-            detectAndEnforceVagueness({
-                operation: 'create_custom_dimension',
-                inputText: `create custom dimension ${displayName}`,
-                inputParams: { propertyId, displayName, parameterName, scope },
-            });
             // Extract OAuth token from request
             const oauthToken = await extractOAuthToken(input);
             if (!oauthToken) {
@@ -291,7 +336,43 @@ export const createCustomDimensionTool = {
             }
             // Create Analytics Admin client using googleapis wrapper (avoids gRPC issues)
             const client = createGoogleAnalyticsAdminClient(oauthToken);
-            // Build dry-run preview
+            // ═══ STEP 1: PROPERTY DISCOVERY ═══
+            if (!propertyId) {
+                logger.info('Property discovery mode - listing properties');
+                const accountsRes = await client.accounts.list({});
+                const accounts = accountsRes.data.accounts || [];
+                let propertyList = [];
+                for (const account of accounts) {
+                    const res = await client.properties.list({
+                        filter: `parent:${account.name}`,
+                    });
+                    propertyList.push(...(res.data.properties || []));
+                }
+                const properties = propertyList.map((prop) => ({
+                    propertyId: prop.name?.split('/')[1] || '',
+                    displayName: prop.displayName,
+                }));
+                return formatDiscoveryResponse({
+                    step: '1/3',
+                    title: 'SELECT PROPERTY FOR CUSTOM DIMENSION',
+                    items: properties,
+                    itemFormatter: (p, i) => `${i + 1}. ${p.displayName || 'Untitled'}\n   Property ID: ${p.propertyId}`,
+                    prompt: 'Which property should contain the custom dimension?',
+                    nextParam: 'propertyId',
+                    emoji: '📊',
+                });
+            }
+            // ═══ STEP 2: CHECK REQUIRED PARAMS ═══
+            if (!displayName || !parameterName || !scope) {
+                throw new Error('displayName, parameterName, and scope are required');
+            }
+            // Vagueness detection
+            detectAndEnforceVagueness({
+                operation: 'create_custom_dimension',
+                inputText: `create custom dimension ${displayName}`,
+                inputParams: { propertyId, displayName, parameterName, scope },
+            });
+            // ═══ STEP 3: DRY-RUN PREVIEW (if no confirmation token) ═══
             const approvalEnforcer = getApprovalEnforcer();
             const dryRunBuilder = new DryRunResultBuilder('create_custom_dimension', 'Google Analytics', propertyId);
             dryRunBuilder.addChange({
@@ -305,7 +386,6 @@ export const createCustomDimensionTool = {
             dryRunBuilder.addRecommendation(`Ensure "${parameterName}" parameter is being sent in events`);
             dryRunBuilder.addRecommendation('Data will only populate for events sent AFTER dimension creation');
             const dryRun = dryRunBuilder.build();
-            // If no confirmation token, return preview
             if (!confirmationToken) {
                 const { confirmationToken: token } = await approvalEnforcer.createDryRun('create_custom_dimension', 'Google Analytics', propertyId, { displayName, parameterName });
                 const preview = approvalEnforcer.formatDryRunForDisplay(dryRun);
@@ -314,10 +394,10 @@ export const createCustomDimensionTool = {
                     requiresApproval: true,
                     preview,
                     confirmationToken: token,
-                    message: 'Custom dimension creation requires approval. Review and call again with confirmationToken.',
+                    message: 'Custom dimension creation requires approval. Review and call again with confirmationToken (Step 3/3).',
                 };
             }
-            // Execute with confirmation
+            // ═══ STEP 4: EXECUTE WITH CONFIRMATION ═══
             logger.info('Creating custom dimension with confirmation', { propertyId, displayName });
             const result = await approvalEnforcer.validateAndExecute(confirmationToken, dryRun, async () => {
                 const res = await client.properties.customDimensions.create({
@@ -386,16 +466,11 @@ export const createCustomMetricTool = {
                 description: 'Confirmation token (optional)',
             },
         },
-        required: ['propertyId', 'displayName', 'parameterName', 'measurementUnit'],
+        required: [], // Make optional for discovery mode
     },
     async handler(input) {
         try {
             const { propertyId, displayName, parameterName, measurementUnit, scope = 'EVENT', confirmationToken } = input;
-            detectAndEnforceVagueness({
-                operation: 'create_custom_metric',
-                inputText: `create custom metric ${displayName}`,
-                inputParams: { propertyId, displayName, parameterName },
-            });
             // Extract OAuth token from request
             const oauthToken = await extractOAuthToken(input);
             if (!oauthToken) {
@@ -403,6 +478,41 @@ export const createCustomMetricTool = {
             }
             // Create Analytics Admin client using googleapis wrapper (avoids gRPC issues)
             const client = createGoogleAnalyticsAdminClient(oauthToken);
+            // ═══ STEP 1: PROPERTY DISCOVERY ═══
+            if (!propertyId) {
+                logger.info('Property discovery mode - listing properties');
+                const accountsRes = await client.accounts.list({});
+                const accounts = accountsRes.data.accounts || [];
+                let propertyList = [];
+                for (const account of accounts) {
+                    const res = await client.properties.list({
+                        filter: `parent:${account.name}`,
+                    });
+                    propertyList.push(...(res.data.properties || []));
+                }
+                const properties = propertyList.map((prop) => ({
+                    propertyId: prop.name?.split('/')[1] || '',
+                    displayName: prop.displayName,
+                }));
+                return formatDiscoveryResponse({
+                    step: '1/3',
+                    title: 'SELECT PROPERTY FOR CUSTOM METRIC',
+                    items: properties,
+                    itemFormatter: (p, i) => `${i + 1}. ${p.displayName || 'Untitled'}\n   Property ID: ${p.propertyId}`,
+                    prompt: 'Which property should contain the custom metric?',
+                    nextParam: 'propertyId',
+                    emoji: '📊',
+                });
+            }
+            // ═══ STEP 2: CHECK REQUIRED PARAMS ═══
+            if (!displayName || !parameterName || !measurementUnit) {
+                throw new Error('displayName, parameterName, and measurementUnit are required');
+            }
+            detectAndEnforceVagueness({
+                operation: 'create_custom_metric',
+                inputText: `create custom metric ${displayName}`,
+                inputParams: { propertyId, displayName, parameterName },
+            });
             const approvalEnforcer = getApprovalEnforcer();
             const dryRunBuilder = new DryRunResultBuilder('create_custom_metric', 'Google Analytics', propertyId);
             dryRunBuilder.addChange({
@@ -417,8 +527,15 @@ export const createCustomMetricTool = {
             if (!confirmationToken) {
                 const { confirmationToken: token } = await approvalEnforcer.createDryRun('create_custom_metric', 'Google Analytics', propertyId, { displayName });
                 const preview = approvalEnforcer.formatDryRunForDisplay(dryRun);
-                return { success: true, requiresApproval: true, preview, confirmationToken: token };
+                return {
+                    success: true,
+                    requiresApproval: true,
+                    preview,
+                    confirmationToken: token,
+                    message: 'Custom metric creation requires approval. Review and call again with confirmationToken (Step 3/3).'
+                };
             }
+            // ═══ STEP 4: EXECUTE WITH CONFIRMATION ═══
             logger.info('Creating custom metric with confirmation', { propertyId, displayName });
             const result = await approvalEnforcer.validateAndExecute(confirmationToken, dryRun, async () => {
                 const res = await client.properties.customMetrics.create({
@@ -461,16 +578,11 @@ export const createConversionEventTool = {
             eventName: { type: 'string', description: 'Event name to mark as conversion' },
             confirmationToken: { type: 'string' },
         },
-        required: ['propertyId', 'eventName'],
+        required: [], // Make optional for discovery mode
     },
     async handler(input) {
         try {
             const { propertyId, eventName, confirmationToken } = input;
-            detectAndEnforceVagueness({
-                operation: 'create_conversion_event',
-                inputText: `mark ${eventName} as conversion`,
-                inputParams: { propertyId, eventName },
-            });
             // Extract OAuth token from request
             const oauthToken = await extractOAuthToken(input);
             if (!oauthToken) {
@@ -478,6 +590,41 @@ export const createConversionEventTool = {
             }
             // Create Analytics Admin client using googleapis wrapper (avoids gRPC issues)
             const client = createGoogleAnalyticsAdminClient(oauthToken);
+            // ═══ STEP 1: PROPERTY DISCOVERY ═══
+            if (!propertyId) {
+                logger.info('Property discovery mode - listing properties');
+                const accountsRes = await client.accounts.list({});
+                const accounts = accountsRes.data.accounts || [];
+                let propertyList = [];
+                for (const account of accounts) {
+                    const res = await client.properties.list({
+                        filter: `parent:${account.name}`,
+                    });
+                    propertyList.push(...(res.data.properties || []));
+                }
+                const properties = propertyList.map((prop) => ({
+                    propertyId: prop.name?.split('/')[1] || '',
+                    displayName: prop.displayName,
+                }));
+                return formatDiscoveryResponse({
+                    step: '1/3',
+                    title: 'SELECT PROPERTY FOR CONVERSION EVENT',
+                    items: properties,
+                    itemFormatter: (p, i) => `${i + 1}. ${p.displayName || 'Untitled'}\n   Property ID: ${p.propertyId}`,
+                    prompt: 'Which property contains the event to mark as conversion?',
+                    nextParam: 'propertyId',
+                    emoji: '🎯',
+                });
+            }
+            // ═══ STEP 2: CHECK REQUIRED PARAMS ═══
+            if (!eventName) {
+                throw new Error('eventName is required');
+            }
+            detectAndEnforceVagueness({
+                operation: 'create_conversion_event',
+                inputText: `mark ${eventName} as conversion`,
+                inputParams: { propertyId, eventName },
+            });
             const approvalEnforcer = getApprovalEnforcer();
             const dryRunBuilder = new DryRunResultBuilder('create_conversion_event', 'Google Analytics', propertyId);
             dryRunBuilder.addChange({
@@ -492,8 +639,15 @@ export const createConversionEventTool = {
             if (!confirmationToken) {
                 const { confirmationToken: token } = await approvalEnforcer.createDryRun('create_conversion_event', 'Google Analytics', propertyId, { eventName });
                 const preview = approvalEnforcer.formatDryRunForDisplay(dryRun);
-                return { success: true, requiresApproval: true, preview, confirmationToken: token };
+                return {
+                    success: true,
+                    requiresApproval: true,
+                    preview,
+                    confirmationToken: token,
+                    message: 'Conversion event creation requires approval. Review and call again with confirmationToken (Step 3/3).'
+                };
             }
+            // ═══ STEP 4: EXECUTE WITH CONFIRMATION ═══
             logger.info('Creating conversion event with confirmation', { propertyId, eventName });
             await approvalEnforcer.validateAndExecute(confirmationToken, dryRun, async () => {
                 const res = await client.properties.conversionEvents.create({
@@ -532,16 +686,11 @@ export const createGoogleAdsLinkTool = {
             googleAdsCustomerId: { type: 'string', description: 'Google Ads customer ID (10 digits)' },
             confirmationToken: { type: 'string' },
         },
-        required: ['propertyId', 'googleAdsCustomerId'],
+        required: [], // Make optional for discovery mode
     },
     async handler(input) {
         try {
             const { propertyId, googleAdsCustomerId, confirmationToken } = input;
-            detectAndEnforceVagueness({
-                operation: 'create_google_ads_link',
-                inputText: `link property ${propertyId} to ads account ${googleAdsCustomerId}`,
-                inputParams: { propertyId, googleAdsCustomerId },
-            });
             // Extract OAuth token from request
             const oauthToken = await extractOAuthToken(input);
             if (!oauthToken) {
@@ -549,6 +698,41 @@ export const createGoogleAdsLinkTool = {
             }
             // Create Analytics Admin client using googleapis wrapper (avoids gRPC issues)
             const client = createGoogleAnalyticsAdminClient(oauthToken);
+            // ═══ STEP 1: PROPERTY DISCOVERY ═══
+            if (!propertyId) {
+                logger.info('Property discovery mode - listing properties');
+                const accountsRes = await client.accounts.list({});
+                const accounts = accountsRes.data.accounts || [];
+                let propertyList = [];
+                for (const account of accounts) {
+                    const res = await client.properties.list({
+                        filter: `parent:${account.name}`,
+                    });
+                    propertyList.push(...(res.data.properties || []));
+                }
+                const properties = propertyList.map((prop) => ({
+                    propertyId: prop.name?.split('/')[1] || '',
+                    displayName: prop.displayName,
+                }));
+                return formatDiscoveryResponse({
+                    step: '1/3',
+                    title: 'SELECT PROPERTY FOR GOOGLE ADS LINK',
+                    items: properties,
+                    itemFormatter: (p, i) => `${i + 1}. ${p.displayName || 'Untitled'}\n   Property ID: ${p.propertyId}`,
+                    prompt: 'Which property should link to Google Ads?',
+                    nextParam: 'propertyId',
+                    emoji: '🔗',
+                });
+            }
+            // ═══ STEP 2: CHECK REQUIRED PARAMS ═══
+            if (!googleAdsCustomerId) {
+                throw new Error('googleAdsCustomerId is required (10-digit customer ID)');
+            }
+            detectAndEnforceVagueness({
+                operation: 'create_google_ads_link',
+                inputText: `link property ${propertyId} to ads account ${googleAdsCustomerId}`,
+                inputParams: { propertyId, googleAdsCustomerId },
+            });
             const approvalEnforcer = getApprovalEnforcer();
             const dryRunBuilder = new DryRunResultBuilder('create_google_ads_link', 'Google Analytics', propertyId);
             dryRunBuilder.addChange({
@@ -565,8 +749,15 @@ export const createGoogleAdsLinkTool = {
             if (!confirmationToken) {
                 const { confirmationToken: token } = await approvalEnforcer.createDryRun('create_google_ads_link', 'Google Analytics', propertyId, { googleAdsCustomerId });
                 const preview = approvalEnforcer.formatDryRunForDisplay(dryRun);
-                return { success: true, requiresApproval: true, preview, confirmationToken: token };
+                return {
+                    success: true,
+                    requiresApproval: true,
+                    preview,
+                    confirmationToken: token,
+                    message: 'Google Ads link creation requires approval. Review and call again with confirmationToken (Step 3/3).'
+                };
             }
+            // ═══ STEP 4: EXECUTE WITH CONFIRMATION ═══
             logger.info('Creating Google Ads link with confirmation', { propertyId, googleAdsCustomerId });
             const result = await approvalEnforcer.validateAndExecute(confirmationToken, dryRun, async () => {
                 const res = await client.properties.googleAdsLinks.create({

@@ -16,27 +16,9 @@ export declare const listConversionActionsTool: {
                 description: string;
             };
         };
-        required: string[];
+        required: never[];
     };
-    handler(input: any): Promise<{
-        success: boolean;
-        data: {
-            customerId: any;
-            conversionActions: {
-                id: string;
-                name: string;
-                category: string;
-                status: string;
-                type: string;
-                countingType: string;
-                attributionWindow: number;
-                defaultValue: number | undefined;
-                alwaysUseDefaultValue: boolean;
-            }[];
-            count: number;
-            message: string;
-        };
-    }>;
+    handler(input: any): Promise<import("../../shared/interactive-workflow.js").McpResponse>;
 };
 /**
  * Create conversion action
@@ -87,30 +69,14 @@ export declare const createConversionActionTool: {
                 description: string;
             };
         };
-        required: string[];
+        required: never[];
     };
-    handler(input: any): Promise<{
+    handler(input: any): Promise<import("../../shared/interactive-workflow.js").McpResponse | {
         success: boolean;
         requiresApproval: boolean;
         preview: string;
         confirmationToken: string;
         message: string;
-        data?: undefined;
-    } | {
-        success: boolean;
-        data: {
-            customerId: any;
-            conversionActionId: any;
-            name: any;
-            category: any;
-            countingType: any;
-            attributionWindowDays: any;
-            message: string;
-        };
-        requiresApproval?: undefined;
-        preview?: undefined;
-        confirmationToken?: undefined;
-        message?: undefined;
     }>;
 };
 /**
@@ -161,29 +127,14 @@ export declare const uploadClickConversionsTool: {
                 description: string;
             };
         };
-        required: string[];
+        required: never[];
     };
-    handler(input: any): Promise<{
+    handler(input: any): Promise<import("../../shared/interactive-workflow.js").McpResponse | {
         success: boolean;
         requiresApproval: boolean;
         preview: string;
         confirmationToken: string;
         message: string;
-        data?: undefined;
-    } | {
-        success: boolean;
-        data: {
-            customerId: any;
-            conversionActionId: any;
-            conversionsUploaded: any;
-            totalValue: string;
-            result: any;
-            message: string;
-        };
-        requiresApproval?: undefined;
-        preview?: undefined;
-        confirmationToken?: undefined;
-        message?: undefined;
     }>;
 };
 /**
@@ -239,31 +190,14 @@ export declare const uploadConversionAdjustmentsTool: {
                 description: string;
             };
         };
-        required: string[];
+        required: never[];
     };
-    handler(input: any): Promise<{
+    handler(input: any): Promise<import("../../shared/interactive-workflow.js").McpResponse | {
         success: boolean;
         requiresApproval: boolean;
         preview: string;
         confirmationToken: string;
         message: string;
-        data?: undefined;
-    } | {
-        success: boolean;
-        data: {
-            customerId: any;
-            conversionActionId: any;
-            adjustmentsUploaded: any;
-            retractions: any;
-            restatements: number;
-            totalValueChange: string;
-            result: any;
-            message: string;
-        };
-        requiresApproval?: undefined;
-        preview?: undefined;
-        confirmationToken?: undefined;
-        message?: undefined;
     }>;
 };
 /**
@@ -284,28 +218,9 @@ export declare const getConversionActionTool: {
                 description: string;
             };
         };
-        required: string[];
+        required: never[];
     };
-    handler(input: any): Promise<{
-        success: boolean;
-        data: {
-            customerId: any;
-            conversionAction: {
-                id: string;
-                name: string;
-                category: string;
-                status: string;
-                type: string;
-                countingType: string;
-                clickThroughWindow: number;
-                viewThroughWindow: number;
-                defaultValue: number | undefined;
-                alwaysUseDefaultValue: boolean;
-                tagSnippets: import("google-ads-node/build/protos/protos.js").google.ads.googleads.v21.common.ITagSnippet[];
-            };
-            message: string;
-        };
-    }>;
+    handler(input: any): Promise<import("../../shared/interactive-workflow.js").McpResponse>;
 };
 /**
  * Export conversion tools
@@ -321,27 +236,9 @@ export declare const conversionTools: ({
                 description: string;
             };
         };
-        required: string[];
+        required: never[];
     };
-    handler(input: any): Promise<{
-        success: boolean;
-        data: {
-            customerId: any;
-            conversionActions: {
-                id: string;
-                name: string;
-                category: string;
-                status: string;
-                type: string;
-                countingType: string;
-                attributionWindow: number;
-                defaultValue: number | undefined;
-                alwaysUseDefaultValue: boolean;
-            }[];
-            count: number;
-            message: string;
-        };
-    }>;
+    handler(input: any): Promise<import("../../shared/interactive-workflow.js").McpResponse>;
 } | {
     name: string;
     description: string;
@@ -388,30 +285,14 @@ export declare const conversionTools: ({
                 description: string;
             };
         };
-        required: string[];
+        required: never[];
     };
-    handler(input: any): Promise<{
+    handler(input: any): Promise<import("../../shared/interactive-workflow.js").McpResponse | {
         success: boolean;
         requiresApproval: boolean;
         preview: string;
         confirmationToken: string;
         message: string;
-        data?: undefined;
-    } | {
-        success: boolean;
-        data: {
-            customerId: any;
-            conversionActionId: any;
-            name: any;
-            category: any;
-            countingType: any;
-            attributionWindowDays: any;
-            message: string;
-        };
-        requiresApproval?: undefined;
-        preview?: undefined;
-        confirmationToken?: undefined;
-        message?: undefined;
     }>;
 } | {
     name: string;
@@ -458,29 +339,14 @@ export declare const conversionTools: ({
                 description: string;
             };
         };
-        required: string[];
+        required: never[];
     };
-    handler(input: any): Promise<{
+    handler(input: any): Promise<import("../../shared/interactive-workflow.js").McpResponse | {
         success: boolean;
         requiresApproval: boolean;
         preview: string;
         confirmationToken: string;
         message: string;
-        data?: undefined;
-    } | {
-        success: boolean;
-        data: {
-            customerId: any;
-            conversionActionId: any;
-            conversionsUploaded: any;
-            totalValue: string;
-            result: any;
-            message: string;
-        };
-        requiresApproval?: undefined;
-        preview?: undefined;
-        confirmationToken?: undefined;
-        message?: undefined;
     }>;
 } | {
     name: string;
@@ -532,68 +398,14 @@ export declare const conversionTools: ({
                 description: string;
             };
         };
-        required: string[];
+        required: never[];
     };
-    handler(input: any): Promise<{
+    handler(input: any): Promise<import("../../shared/interactive-workflow.js").McpResponse | {
         success: boolean;
         requiresApproval: boolean;
         preview: string;
         confirmationToken: string;
         message: string;
-        data?: undefined;
-    } | {
-        success: boolean;
-        data: {
-            customerId: any;
-            conversionActionId: any;
-            adjustmentsUploaded: any;
-            retractions: any;
-            restatements: number;
-            totalValueChange: string;
-            result: any;
-            message: string;
-        };
-        requiresApproval?: undefined;
-        preview?: undefined;
-        confirmationToken?: undefined;
-        message?: undefined;
-    }>;
-} | {
-    name: string;
-    description: string;
-    inputSchema: {
-        type: "object";
-        properties: {
-            customerId: {
-                type: string;
-                description: string;
-            };
-            conversionActionId: {
-                type: string;
-                description: string;
-            };
-        };
-        required: string[];
-    };
-    handler(input: any): Promise<{
-        success: boolean;
-        data: {
-            customerId: any;
-            conversionAction: {
-                id: string;
-                name: string;
-                category: string;
-                status: string;
-                type: string;
-                countingType: string;
-                clickThroughWindow: number;
-                viewThroughWindow: number;
-                defaultValue: number | undefined;
-                alwaysUseDefaultValue: boolean;
-                tagSnippets: import("google-ads-node/build/protos/protos.js").google.ads.googleads.v21.common.ITagSnippet[];
-            };
-            message: string;
-        };
     }>;
 })[];
 //# sourceMappingURL=conversions.d.ts.map

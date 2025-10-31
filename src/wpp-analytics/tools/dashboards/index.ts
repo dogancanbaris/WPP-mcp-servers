@@ -23,6 +23,7 @@ export { listDashboardsTool } from './list-dashboards.tool.js';
 export { updateDashboardLayoutTool } from './update-dashboard.tool.js';
 export { deleteDashboardTool } from './delete-dashboard.tool.js';
 export { listDatasetsTool } from './list-datasets.tool.js';
+export { listDashboardTemplatesTool } from './list-templates.tool.js';
 
 // Import tools for array export
 import { createDashboardTool } from './create-dashboard.tool.js';
@@ -31,10 +32,11 @@ import { listDashboardsTool } from './list-dashboards.tool.js';
 import { updateDashboardLayoutTool } from './update-dashboard.tool.js';
 import { deleteDashboardTool } from './delete-dashboard.tool.js';
 import { listDatasetsTool } from './list-datasets.tool.js';
+import { listDashboardTemplatesTool } from './list-templates.tool.js';
 
 /**
  * Array of all dashboard tools for MCP server registration
- * (Consolidated production tools - templates removed)
+ * (Consolidated production tools)
  */
 export const dashboardTools = [
   createDashboardTool,
@@ -43,4 +45,5 @@ export const dashboardTools = [
   updateDashboardLayoutTool,
   deleteDashboardTool,
   listDatasetsTool,
+  listDashboardTemplatesTool,
 ];

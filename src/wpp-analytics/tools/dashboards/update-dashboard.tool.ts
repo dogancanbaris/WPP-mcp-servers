@@ -11,255 +11,13 @@ import { getLogger } from '../../../shared/logger.js';
 import { UpdateDashboardLayoutSchema } from './schemas.js';
 import { initSupabase, initSupabaseFromEnv, generateId } from './helpers.js';
 import type { RowConfig, PageConfig } from './types.js';
+import { formatDiscoveryResponse, injectGuidance, formatSuccessSummary } from '../../../shared/interactive-workflow.js';
 
 const logger = getLogger('wpp-analytics.dashboards.update');
 
 export const updateDashboardLayoutTool = {
   name: 'update_dashboard_layout',
-  description: `Modify existing dashboard layout with multi-page architecture support.
-
-**Purpose:**
-Update dashboard structure without recreating from scratch. Supports both legacy
-(flat rows) and new multi-page dashboards. All operations work with pages structure.
-
-**IMPORTANT - Multi-Page Architecture:**
-- All dashboards use config.pages[] structure (not config.rows)
-- Each page has its own rows, filters, and styles
-- Operations require page_id to specify which page to modify
-- Legacy dashboards auto-migrate to pages structure on first update
-
-**Page Management Operations:**
-
-1. **add_page**: Create new page in dashboard
-   - data: { name: string, order?: number, filters?: [], rows?: [] }
-
-2. **remove_page**: Delete page by ID
-   - data: { page_id: string }
-
-3. **update_page**: Update page properties (name, filters, styles)
-   - data: { page_id: string, name?: string, filters?: [], pageStyles?: {} }
-
-4. **reorder_pages**: Change page order
-   - data: { page_order: ["page-id-1", "page-id-2", ...] }
-
-**Row Operations (within specific page):**
-
-5. **add_row_to_page**: Append row to specific page
-   - data: { page_id: string, columns: [...] }
-
-6. **remove_row_from_page**: Delete row from specific page
-   - data: { page_id: string, row_id: string }
-
-**Component Operations (within specific page):**
-
-7. **update_component_in_page**: Modify component in specific page
-   - data: { page_id: string, component_id: string, component: {...} }
-
-**Filter Operations:**
-
-8. **set_page_filters**: Set page-level filters
-   - data: { page_id: string, filters: [...] }
-
-9. **set_component_filters**: Set component-level filters
-   - data: { page_id: string, component_id: string, filters: [...] }
-
-**Parameters:**
-- dashboard_id: UUID of dashboard to modify (required)
-- workspaceId: UUID of workspace for access control (required)
-- operation: Type of modification (see operations above)
-- data: Operation-specific data (see examples below)
-- supabaseUrl: Supabase project URL (optional)
-- supabaseKey: Supabase API key (optional)
-
-**QUICK START (For Agents) - 3 STEPS:**
-
-**Step 1: Get Dashboard Structure**
-Use get_dashboard to see current layout and get IDs:
-\`\`\`json
-{
-  "dashboard_id": "550e8400-e29b-41d4-a716-446655440000"
-}
-\`\`\`
-Note the page_id, row_id, or component_id you want to modify, and the workspace_id.
-
-**Step 2: Choose Operation**
-- add_page: Add new page to dashboard
-- update_page: Change page name, filters, or styles
-- add_row_to_page: Add new row with components to specific page
-- update_component_in_page: Modify existing component in specific page
-- set_page_filters: Add filters affecting entire page
-
-**Step 3: Execute Update**
-\`\`\`json
-{
-  "dashboard_id": "550e8400-e29b-41d4-a716-446655440000",
-  "workspaceId": "945907d8-7e88-45c4-8fde-9db35d5f5ce2",
-  "operation": "add_row_to_page",
-  "data": {
-    "page_id": "page-abc123",
-    "columns": [...]
-  }
-}
-\`\`\`
-
-**MANDATORY FIELDS (Will Error Without These):**
-1. ✅ **dashboard_id**: Valid UUID (get from list_dashboards or get_dashboard)
-2. ✅ **workspaceId**: Valid UUID (required for access control)
-3. ✅ **operation**: One of the 9 supported operations
-4. ✅ **data**: Operation-specific data (varies by operation)
-
-**FLEXIBLE FIELDS (Your Choice):**
-- What operation to use (based on what you want to modify)
-- Data structure (depends on operation - see examples)
-- Styling and themes (in update_page operation)
-
-**TROUBLESHOOTING - Common Errors & Solutions:**
-
-**Error: "dashboard_id must be valid UUID"**
-→ Solution: Use list_dashboards to get valid UUID
-→ UUID format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-
-**Error: "workspaceId must be valid UUID and is required for access control"**
-→ Solution: Run list_workspaces to get valid workspace UUID
-→ Required to prevent unauthorized modifications
-→ Must match the dashboard's workspace
-
-**Error: "Workspace not found"**
-→ Solution: Verify workspace ID with list_workspaces tool
-→ Check you have access to this workspace
-
-**Error: "Dashboard not found in workspace"**
-→ Solution: Dashboard may be in different workspace
-→ Run get_dashboard(dashboard_id) to check which workspace it belongs to
-→ Verify you have access to that workspace
-
-**Error: "Page not found"**
-→ Solution: Run get_dashboard to see available page IDs
-→ Use exact page_id from the response.pages[] array
-→ Page IDs are UUIDs, not page names
-
-**Error: "Component not found"**
-→ Solution: Run get_dashboard to see available component IDs
-→ Navigate to pages[].rows[].columns[].component.id
-→ Component IDs are generated hashes, get from dashboard structure
-
-**Error: "Cannot remove the last page"**
-→ Solution: Dashboard must have at least one page
-→ Add a new page before removing the last one
-→ Use add_page operation first, then remove_page
-
-**Error: "Page name is required for add_page operation"**
-→ Solution: Include name in data: { name: "My Page", rows: [...] }
-→ Page names help organize multi-page dashboards
-
-**Example 1: Add Page**
-\`\`\`json
-{
-  "dashboard_id": "550e8400-e29b-41d4-a716-446655440000",
-  "operation": "add_page",
-  "data": {
-    "name": "Performance Metrics",
-    "order": 1,
-    "rows": [{
-      "columns": [{
-        "width": "1/1",
-        "component": {
-          "type": "scorecard",
-          "title": "Total Clicks",
-          "metrics": ["clicks"]
-        }
-      }]
-    }]
-  }
-}
-\`\`\`
-
-**Example 2: Add Row to Page**
-\`\`\`json
-{
-  "dashboard_id": "550e8400-e29b-41d4-a716-446655440000",
-  "operation": "add_row_to_page",
-  "data": {
-    "page_id": "page-abc123",
-    "columns": [
-      {
-        "width": "1/2",
-        "component": {
-          "type": "bar_chart",
-          "title": "Device Breakdown",
-          "dimension": "device",
-          "metrics": ["clicks"]
-        }
-      },
-      {
-        "width": "1/2",
-        "component": {
-          "type": "pie_chart",
-          "title": "Country Distribution",
-          "dimension": "country",
-          "metrics": ["impressions"]
-        }
-      }
-    ]
-  }
-}
-\`\`\`
-
-**Example 3: Update Component in Page**
-\`\`\`json
-{
-  "dashboard_id": "550e8400-e29b-41d4-a716-446655440000",
-  "operation": "update_component_in_page",
-  "data": {
-    "page_id": "page-abc123",
-    "component_id": "col-xyz789",
-    "component": {
-      "type": "scorecard",
-      "title": "Updated Clicks",
-      "metrics": ["clicks", "impressions"]
-    }
-  }
-}
-\`\`\`
-
-**Example 4: Set Page Filters**
-\`\`\`json
-{
-  "dashboard_id": "550e8400-e29b-41d4-a716-446655440000",
-  "operation": "set_page_filters",
-  "data": {
-    "page_id": "page-abc123",
-    "filters": [
-      {
-        "field": "country",
-        "operator": "in",
-        "values": ["US", "UK", "CA"]
-      }
-    ]
-  }
-}
-\`\`\`
-
-**Returns:**
-- success: Boolean indicating if operation succeeded
-- dashboard_id: ID of modified dashboard
-- operation: Operation that was performed
-- page_count: Number of pages in dashboard
-- updated_at: Timestamp of modification
-
-**Best Practices:**
-1. Load dashboard first to understand current structure
-2. Specify page_id for all row/component operations
-3. Use page filters for page-wide filtering
-4. Use component filters for component-specific overrides
-5. Test changes in development workspace first
-
-**Error Handling:**
-- Returns error if dashboard not found
-- Returns error if page_id not found
-- Validates operation-specific data
-- Auto-migrates legacy dashboards to pages structure
-- Ensures workspace access permissions`,
+  description: 'Modify existing dashboard layout with multi-page architecture support.',
 
   inputSchema: {
     type: 'object' as const,
@@ -300,11 +58,274 @@ Note the page_id, row_id, or component_id you want to modify, and the workspace_
         description: 'Supabase API key (optional - loads from ENV if not provided)',
       },
     },
-    required: ['dashboard_id', 'workspaceId', 'operation', 'data'],
+    required: [],
   },
 
   async handler(input: any) {
     try {
+      // Initialize Supabase (used for both discovery and execution)
+      const supabase = input.supabaseUrl && input.supabaseKey
+        ? initSupabase(input.supabaseUrl, input.supabaseKey)
+        : initSupabaseFromEnv();
+
+      // ═══ DISCOVERY MODE: Guide step-by-step if params missing ═══
+
+      // STEP 1: Workspace Discovery
+      if (!input.workspaceId) {
+        const { data: workspaces } = await supabase
+          .from('workspaces')
+          .select('id, name')
+          .limit(20);
+
+        return formatDiscoveryResponse({
+          step: '1/4',
+          title: 'SELECT WORKSPACE',
+          items: workspaces || [],
+          itemFormatter: (w, i) => `${i + 1}. ${w.name || 'Unnamed'} (ID: ${w.id})`,
+          prompt: 'Which workspace contains the dashboard?',
+          nextParam: 'workspaceId',
+        });
+      }
+
+      // STEP 2: Dashboard Discovery
+      if (!input.dashboard_id) {
+        const { data: dashboards } = await supabase
+          .from('dashboards')
+          .select('id, name, config')
+          .eq('workspace_id', input.workspaceId)
+          .order('updated_at', { ascending: false })
+          .limit(20);
+
+        if (!dashboards || dashboards.length === 0) {
+          return injectGuidance({}, `⚠️ NO DASHBOARDS FOUND (Step 2/4)
+
+Workspace: ${input.workspaceId}
+
+No dashboards exist in this workspace yet.
+
+💡 Create a dashboard first:
+- Use: create_dashboard or create_dashboard_from_table
+
+Then return to modify it.`);
+        }
+
+        return formatDiscoveryResponse({
+          step: '2/4',
+          title: 'SELECT DASHBOARD TO MODIFY',
+          items: dashboards,
+          itemFormatter: (d, i) => {
+            const pageCount = d.config?.pages?.length || 0;
+            return `${i + 1}. ${d.name}
+   ID: ${d.id}
+   Pages: ${pageCount}`;
+          },
+          prompt: 'Which dashboard do you want to modify?',
+          nextParam: 'dashboard_id',
+          context: { workspaceId: input.workspaceId }
+        });
+      }
+
+      // STEP 3: Operation Type Selection
+      if (!input.operation) {
+        // Load dashboard to show current structure
+        const { data: dashboard } = await supabase
+          .from('dashboards')
+          .select('*')
+          .eq('id', input.dashboard_id)
+          .eq('workspace_id', input.workspaceId)
+          .single();
+
+        if (!dashboard) {
+          throw new Error(`Dashboard ${input.dashboard_id} not found in workspace`);
+        }
+
+        const pageCount = dashboard.config?.pages?.length || 0;
+
+        return injectGuidance({}, `📐 DASHBOARD LAYOUT OPERATIONS (Step 3/4)
+
+**Dashboard:** ${dashboard.name}
+**Current Pages:** ${pageCount}
+
+**Available Operations:**
+
+**📄 Page Management:**
+1. **add_page** - Create new page
+2. **remove_page** - Delete existing page
+3. **update_page** - Modify page properties (name, filters, styles)
+4. **reorder_pages** - Change page order
+
+**📊 Row Operations:**
+5. **add_row_to_page** - Add chart row to specific page
+6. **remove_row_from_page** - Delete row from page
+
+**🎨 Component Operations:**
+7. **update_component_in_page** - Modify chart/component in page
+
+**🔍 Filter Operations:**
+8. **set_page_filters** - Set page-level filters
+9. **set_component_filters** - Set component-specific filters
+
+💡 Which operation do you want to perform?
+Provide: operation (e.g., "add_page", "update_component_in_page")`);
+      }
+
+      // STEP 4: Operation-Specific Data Guidance
+      if (!input.data) {
+        const operationGuidance: Record<string, string> = {
+          add_page: `📄 ADD PAGE (Step 4/4)
+
+Provide data object with:
+- **name**: Page name (e.g., "Performance Overview")
+- **order**: Page position (0, 1, 2...) - optional
+- **rows**: Array of row configurations - optional
+- **filters**: Page-level filters - optional
+
+Example:
+{
+  "name": "Device Analysis",
+  "order": 2,
+  "rows": []
+}
+
+What data should I use to create the page?`,
+
+          remove_page: `🗑️ REMOVE PAGE (Step 4/4)
+
+⚠️ WARNING: This will permanently delete the page and all its components.
+
+Provide data object with:
+- **page_id**: ID of page to delete
+
+To find page IDs, use get_dashboard first.
+
+What page_id should I delete?`,
+
+          update_page: `📝 UPDATE PAGE (Step 4/4)
+
+Provide data object with:
+- **page_id**: Page to update (required)
+- **name**: New page name - optional
+- **filters**: New page filters - optional
+- **pageStyles**: Style overrides - optional
+
+Example:
+{
+  "page_id": "page-abc-123",
+  "name": "Updated Page Name",
+  "filters": [{"field": "device", "operator": "equals", "values": ["MOBILE"]}]
+}
+
+What data should I use?`,
+
+          reorder_pages: `🔄 REORDER PAGES (Step 4/4)
+
+Provide data object with:
+- **page_order**: Array of page IDs in desired order
+
+Example:
+{
+  "page_order": ["page-3", "page-1", "page-2"]
+}
+
+Use get_dashboard to see current page IDs.
+
+What is the new page order?`,
+
+          add_row_to_page: `➕ ADD ROW TO PAGE (Step 4/4)
+
+Provide data object with:
+- **page_id**: Which page to add row to
+- **columns**: Array of column configurations
+
+Example:
+{
+  "page_id": "page-abc-123",
+  "columns": [
+    {
+      "width": "1/2",
+      "component": {"type": "line_chart", "title": "Trend", "dimension": "date", "metrics": ["clicks"]}
+    },
+    {
+      "width": "1/2",
+      "component": {"type": "bar_chart", "title": "Breakdown", "dimension": "device", "metrics": ["clicks"]}
+    }
+  ]
+}
+
+What row should I add?`,
+
+          remove_row_from_page: `🗑️ REMOVE ROW FROM PAGE (Step 4/4)
+
+Provide data object with:
+- **page_id**: Which page contains the row
+- **row_id**: ID of row to delete
+
+Use get_dashboard to see current row IDs.
+
+What row should I remove?`,
+
+          update_component_in_page: `🎨 UPDATE COMPONENT (Step 4/4)
+
+Provide data object with:
+- **page_id**: Which page contains the component
+- **component_id**: ID of component to update
+- **component**: New component configuration
+
+Example:
+{
+  "page_id": "page-abc-123",
+  "component_id": "comp-xyz-456",
+  "component": {
+    "type": "bar_chart",
+    "title": "Updated Chart",
+    "metrics": ["clicks", "ctr"]
+  }
+}
+
+What component should I update?`,
+
+          set_page_filters: `🔍 SET PAGE FILTERS (Step 4/4)
+
+Provide data object with:
+- **page_id**: Which page to filter
+- **filters**: Array of filter configurations
+
+Example:
+{
+  "page_id": "page-abc-123",
+  "filters": [
+    {"field": "device", "operator": "equals", "values": ["MOBILE"]},
+    {"field": "country", "operator": "in", "values": ["US", "UK"]}
+  ]
+}
+
+What filters should I apply?`,
+
+          set_component_filters: `🔍 SET COMPONENT FILTERS (Step 4/4)
+
+Provide data object with:
+- **page_id**: Which page contains the component
+- **component_id**: Which component to filter
+- **filters**: Array of filter configurations
+
+Example:
+{
+  "page_id": "page-abc-123",
+  "component_id": "comp-xyz-456",
+  "filters": [
+    {"field": "device", "operator": "equals", "values": ["DESKTOP"]}
+  ]
+}
+
+What filters should I apply?`,
+        };
+
+        const guidance = operationGuidance[input.operation] || 'Provide data object for operation';
+        return injectGuidance({}, guidance);
+      }
+
+      // ═══ EXECUTION MODE: All params provided ═══
+
       // Validate input
       const validated = UpdateDashboardLayoutSchema.parse(input);
 
@@ -314,10 +335,7 @@ Note the page_id, row_id, or component_id you want to modify, and the workspace_
         operation: validated.operation,
       });
 
-      // Initialize Supabase (from ENV or parameters)
-      const supabase = validated.supabaseUrl && validated.supabaseKey
-        ? initSupabase(validated.supabaseUrl, validated.supabaseKey)
-        : initSupabaseFromEnv();
+      // Supabase already initialized at top of handler
 
       // PRE-FLIGHT CHECK 1: Verify workspace exists
       const { data: workspace, error: workspaceError } = await supabase
@@ -718,14 +736,53 @@ Note the page_id, row_id, or component_id you want to modify, and the workspace_
         pageCount: pages.length,
       });
 
-      return {
-        success: true,
-        dashboard_id: validated.dashboard_id,
-        operation: validated.operation,
-        page_count: pages.length,
-        ...(affectedPageId && { page_id: affectedPageId }),
-        updated_at: new Date().toISOString(),
+      // Load dashboard name for success message
+      const { data: updatedDashboard } = await supabase
+        .from('dashboards')
+        .select('name')
+        .eq('id', validated.dashboard_id)
+        .single();
+
+      const operationNames: Record<string, string> = {
+        add_page: 'Page Added',
+        remove_page: 'Page Removed',
+        update_page: 'Page Updated',
+        reorder_pages: 'Pages Reordered',
+        add_row_to_page: 'Row Added',
+        remove_row_from_page: 'Row Removed',
+        update_component_in_page: 'Component Updated',
+        set_page_filters: 'Page Filters Set',
+        set_component_filters: 'Component Filters Set',
       };
+
+      const successText = formatSuccessSummary({
+        title: operationNames[validated.operation] || 'Dashboard Updated',
+        operation: validated.operation,
+        details: {
+          Dashboard: updatedDashboard?.name || validated.dashboard_id,
+          'Page Count': pages.length.toString(),
+          ...(affectedPageId && { 'Affected Page': affectedPageId }),
+          'Updated At': new Date().toISOString(),
+        },
+        nextSteps: [
+          'View changes: use get_dashboard',
+          'Add more components: use add_row_to_page',
+          'Test dashboard: Open in reporting platform',
+          'Share dashboard: use share_dashboard (if available)',
+        ],
+      });
+
+      return injectGuidance(
+        {
+          success: true,
+          dashboard_id: validated.dashboard_id,
+          operation: validated.operation,
+          page_count: pages.length,
+          ...(affectedPageId && { page_id: affectedPageId }),
+          updated_at: new Date().toISOString(),
+        },
+        successText
+      );
     } catch (error) {
       logger.error('update_dashboard_layout failed', { error });
 

@@ -8,6 +8,7 @@
 import { z } from 'zod';
 import { getLogger } from '../../../shared/logger.js';
 import { initSupabase, initSupabaseFromEnv } from './helpers.js';
+import { injectGuidance } from '../../../shared/interactive-workflow.js';
 
 const logger = getLogger('wpp-analytics.dashboards.list-datasets');
 
@@ -271,12 +272,46 @@ share the same underlying data source.
         by_platform: byPlatform,
       });
 
-      return {
-        success: true,
-        datasets: datasetsWithCounts,
-        total_count: datasetsWithCounts.length,
-        by_platform: byPlatform,
-      };
+      // Build rich guidance response
+      const platformSummary = Object.entries(byPlatform)
+        .map(([platform, count]) => `   • ${platform.toUpperCase()}: ${count} dataset${count !== 1 ? 's' : ''}`)
+        .join('\n');
+
+      const guidanceText = `📊 FOUND ${datasetsWithCounts.length} DATASET${datasetsWithCounts.length !== 1 ? 'S' : ''}
+
+${datasetsWithCounts.map((d, i) => `${i + 1}. **${d.name}**
+   • Platform: ${d.platform.toUpperCase()}
+   • BigQuery Table: ${d.bigquery_table}
+   • Property: ${d.property || 'N/A'}
+   • Used by ${d.dashboard_count} dashboard${d.dashboard_count !== 1 ? 's' : ''}
+   • Last Refreshed: ${d.last_refreshed ? new Date(d.last_refreshed).toLocaleDateString() : 'Never'}
+   • Estimated Rows: ${d.estimated_rows?.toLocaleString() || 'Unknown'}
+   • Data Freshness: ${d.data_freshness_days || 'Unknown'} days`).join('\n\n')}
+
+📈 **BY PLATFORM:**
+${platformSummary}
+
+💡 WHAT YOU CAN DO NEXT:
+   • Reuse dataset: use create_dashboard with dataset_id
+   • Check data freshness: Review last_refreshed timestamps
+   • Create new dataset: use push_platform_data_to_bigquery
+   • View dashboards using this data: use list_dashboards with workspace_id
+
+💰 **TABLE SHARING BENEFITS:**
+   • No duplicate BigQuery tables (cost savings)
+   • Faster dashboard creation (data already available)
+   • Consistent data across dashboards
+
+${validated.platform ? `🔍 **Filtered by platform:** ${validated.platform}` : ''}`;
+
+      return injectGuidance(
+        {
+          datasets: datasetsWithCounts,
+          total_count: datasetsWithCounts.length,
+          by_platform: byPlatform,
+        },
+        guidanceText
+      );
     } catch (error) {
       logger.error('list_datasets failed', { error });
 

@@ -35,19 +35,8 @@ export declare const getRealtimeUsersTool: {
                 description: string;
             };
         };
-        required: string[];
+        required: never[];
     };
-    handler(input: any): Promise<{
-        success: boolean;
-        data: {
-            propertyId: any;
-            timeframe: string;
-            dimensions: any[];
-            metrics: any[];
-            rows: import("@google-analytics/data/build/protos/protos.js").google.analytics.data.v1beta.IRow[];
-            rowCount: number;
-            message: string;
-        };
-    }>;
+    handler(input: any): Promise<import("../../../shared/interactive-workflow.js").McpResponse>;
 };
 //# sourceMappingURL=get-realtime-users.tool.d.ts.map

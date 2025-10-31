@@ -38,23 +38,9 @@ export declare const generateKeywordIdeasTool: {
                 description: string;
             };
         };
-        required: string[];
+        required: never[];
     };
-    handler(input: any): Promise<{
-        success: boolean;
-        data: {
-            customerId: any;
-            keywordIdeas: {
-                keyword: any;
-                avgMonthlySearches: number;
-                competition: any;
-                lowTopPageBid: number | undefined;
-                highTopPageBid: number | undefined;
-            }[];
-            count: number;
-            message: string;
-        };
-    }>;
+    handler(input: any): Promise<import("../../shared/interactive-workflow.js").McpResponse>;
 };
 /**
  * Export keyword planning tools
@@ -92,22 +78,8 @@ export declare const keywordPlanningTools: {
                 description: string;
             };
         };
-        required: string[];
+        required: never[];
     };
-    handler(input: any): Promise<{
-        success: boolean;
-        data: {
-            customerId: any;
-            keywordIdeas: {
-                keyword: any;
-                avgMonthlySearches: number;
-                competition: any;
-                lowTopPageBid: number | undefined;
-                highTopPageBid: number | undefined;
-            }[];
-            count: number;
-            message: string;
-        };
-    }>;
+    handler(input: any): Promise<import("../../shared/interactive-workflow.js").McpResponse>;
 }[];
 //# sourceMappingURL=keyword-planning.d.ts.map

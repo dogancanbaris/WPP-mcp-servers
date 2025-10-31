@@ -37,16 +37,9 @@ export declare const searchGoogleTool: {
                 description: string;
             };
         };
-        required: string[];
+        required: never[];
     };
-    handler(input: any): Promise<{
-        success: boolean;
-        data: {
-            query: any;
-            results: any;
-            message: string;
-        };
-    }>;
+    handler(input: any): Promise<import("../shared/interactive-workflow.js").McpResponse>;
 };
 /**
  * Export SERP tools
@@ -83,15 +76,8 @@ export declare const serpTools: {
                 description: string;
             };
         };
-        required: string[];
+        required: never[];
     };
-    handler(input: any): Promise<{
-        success: boolean;
-        data: {
-            query: any;
-            results: any;
-            message: string;
-        };
-    }>;
+    handler(input: any): Promise<import("../shared/interactive-workflow.js").McpResponse>;
 }[];
 //# sourceMappingURL=tools.d.ts.map

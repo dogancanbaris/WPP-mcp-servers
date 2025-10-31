@@ -6,6 +6,7 @@
 
 import { getLogger } from '../../../shared/logger.js';
 import { DASHBOARD_TEMPLATES } from './templates.js';
+import { injectGuidance } from '../../../shared/interactive-workflow.js';
 
 const logger = getLogger('wpp-analytics.dashboards.list-templates');
 
@@ -124,11 +125,57 @@ Array of template objects, each containing:
         count: templates.length,
       });
 
-      return {
-        success: true,
-        templates,
-        count: templates.length,
-      };
+      // Build rich guidance response
+      const guidanceText = `📋 ${templates.length} DASHBOARD TEMPLATES AVAILABLE
+
+${templates.map((t, i) => `${i + 1}. **${t.name}** (${t.component_count} components)
+   • ID: ${t.id}
+   • Description: ${t.description}
+   • Default Data Source: ${t.datasource}
+   • Components: ${t.component_count}`).join('\n\n')}
+
+💡 HOW TO USE TEMPLATES:
+
+**Step 1: Choose a Template**
+   • Review template descriptions above
+   • Consider your data source and reporting needs
+
+**Step 2: Customize (Optional)**
+   • Copy template's 'rows' array
+   • Adjust datasource to match your BigQuery table
+   • Modify metrics to match your data columns
+   • Change titles and layout as needed
+
+**Step 3: Create Dashboard**
+   • Use create_dashboard tool
+   • Provide template rows + your workspace_id + datasource
+   • Tool will create dashboard with template layout
+
+🎯 TEMPLATE RECOMMENDATIONS:
+
+   • **GSC/Organic Traffic:** Use "SEO Overview" template
+   • **Google Ads/Paid:** Use "Campaign Performance" template
+   • **GA4/Analytics:** Use "Analytics Overview" template
+   • **Custom Build:** Use "Blank Dashboard" template
+
+🚀 QUICK START EXAMPLE:
+
+\`\`\`json
+{
+  "title": "My GSC Dashboard",
+  "workspaceId": "your-workspace-uuid",
+  "datasource": "mcp-servers-475317.wpp_marketing.gsc_performance_shared",
+  "rows": [...] // Copy from template
+}
+\`\`\``;
+
+      return injectGuidance(
+        {
+          templates,
+          count: templates.length,
+        },
+        guidanceText
+      );
     } catch (error) {
       logger.error('list_dashboard_templates failed', { error });
 

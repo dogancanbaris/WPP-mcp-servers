@@ -6,6 +6,7 @@
 import { getLogger } from '../../shared/logger.js';
 import { extractRefreshToken } from '../../shared/oauth-client-factory.js';
 import { createGoogleAdsClientFromRefreshToken } from '../client.js';
+import { injectGuidance, formatDiscoveryResponse, formatNextSteps, formatNumber } from '../../shared/interactive-workflow.js';
 
 const logger = getLogger('ads.tools.keyword-planning');
 
@@ -14,34 +15,7 @@ const logger = getLogger('ads.tools.keyword-planning');
  */
 export const generateKeywordIdeasTool = {
   name: 'generate_keyword_ideas',
-  description: `Generate keyword ideas and search volume data for campaign planning.
-
-💡 AGENT GUIDANCE - KEYWORD RESEARCH:
-
-🎯 WHAT THIS DOES:
-- Discover new keyword opportunities
-- Get search volume and competition data
-- Find related keywords and phrases
-- Estimate traffic potential
-
-📊 DATA PROVIDED:
-- Keyword text
-- Average monthly searches
-- Competition level (LOW, MEDIUM, HIGH)
-- Suggested bid ranges
-- Search trends (rising/declining)
-
-💡 USE CASES:
-- "Find keyword ideas for 'digital marketing'"
-- "Get search volume for 100 keywords"
-- "Discover related keywords for campaign"
-- "Research keywords for new product launch"
-
-🎯 BEST PRACTICES:
-- Start with seed keywords (2-5 core terms)
-- Review competition level - LOW is easier to rank
-- Check search trends - rising keywords = opportunities
-- Use for both campaign planning and content strategy`,
+  description: 'Generate keyword ideas and search volume data for campaign planning.',
   inputSchema: {
     type: 'object' as const,
     properties: {
@@ -68,12 +42,10 @@ export const generateKeywordIdeasTool = {
         description: 'Geographic target IDs (e.g., ["2840"] for USA)',
       },
     },
-    required: ['customerId'],
+    required: [],
   },
   async handler(input: any) {
     try {
-      const { customerId, seedKeywords = [], pageUrl, languageCode = 'en', geoTargetIds = ['2840'] } = input;
-
       // Extract OAuth tokens from request
       const refreshToken = extractRefreshToken(input);
       if (!refreshToken) {
@@ -87,6 +59,25 @@ export const generateKeywordIdeasTool = {
 
       // Create Google Ads client with user's refresh token
       const client = createGoogleAdsClientFromRefreshToken(refreshToken, developerToken);
+
+      // Account discovery
+      if (!input.customerId) {
+        const resourceNames = await client.listAccessibleAccounts();
+        const accounts = resourceNames.map((rn: string) => ({
+          resourceName: rn,
+          customerId: rn.split('/')[1],
+        }));
+        return formatDiscoveryResponse({
+          step: '1/2',
+          title: 'SELECT GOOGLE ADS ACCOUNT',
+          items: accounts,
+          itemFormatter: (a, i) => `${i + 1}. Customer ID: ${a.customerId}`,
+          prompt: 'Which account would you like to research keywords for?',
+          nextParam: 'customerId',
+        });
+      }
+
+      const { customerId, seedKeywords = [], pageUrl, languageCode = 'en', geoTargetIds = ['2840'] } = input;
       const customer = client.getCustomer(customerId);
 
       logger.info('Generating keyword ideas', { customerId, seedKeywordCount: seedKeywords.length });
@@ -129,15 +120,61 @@ export const generateKeywordIdeasTool = {
         });
       }
 
-      return {
-        success: true,
-        data: {
+      // Calculate summary stats
+      const totalSearchVolume = keywordIdeas.reduce((sum, k) => sum + k.avgMonthlySearches, 0);
+      const lowCompKeywords = keywordIdeas.filter(k => k.competition === 'LOW').length;
+      const medCompKeywords = keywordIdeas.filter(k => k.competition === 'MEDIUM').length;
+      const highCompKeywords = keywordIdeas.filter(k => k.competition === 'HIGH').length;
+      const topKeywords = keywordIdeas.sort((a, b) => b.avgMonthlySearches - a.avgMonthlySearches).slice(0, 10);
+
+      // Inject rich guidance into response
+      const guidanceText = `🔍 KEYWORD IDEAS GENERATED
+
+**Account:** ${customerId}
+**Seed Keywords:** ${seedKeywords.length > 0 ? seedKeywords.join(', ') : pageUrl || 'None (broad search)'}
+**Geographic Target:** ${geoTargetIds.join(', ')} (USA: 2840)
+**Total Ideas:** ${formatNumber(keywordIdeas.length)}
+
+📊 SEARCH VOLUME & COMPETITION:
+• Total Monthly Searches: ${formatNumber(totalSearchVolume)}
+• Low Competition: ${lowCompKeywords} keywords
+• Medium Competition: ${medCompKeywords} keywords
+• High Competition: ${highCompKeywords} keywords
+
+🏆 TOP 10 KEYWORDS BY SEARCH VOLUME:
+${topKeywords.map((k, i) => `${i + 1}. "${k.keyword}" - ${formatNumber(k.avgMonthlySearches)} searches/month (${k.competition})`).join('\n')}
+
+💡 KEYWORD RESEARCH INSIGHTS:
+- Start with LOW competition keywords for easier rankings
+- HIGH competition = more expensive CPCs but potentially higher intent
+- Consider search volume vs. relevance tradeoff
+- Mix broad and specific keywords for complete coverage
+
+🎯 BEST PRACTICES:
+${lowCompKeywords > 0 ? `✅ ${lowCompKeywords} low-competition opportunities found - great for starting!` : '⚠️  No low-competition keywords - may need broader seed terms'}
+${medCompKeywords > 0 ? `✅ ${medCompKeywords} medium-competition keywords - balanced opportunity` : ''}
+${totalSearchVolume > 10000 ? `✅ Strong search volume potential (${formatNumber(totalSearchVolume)}/month)` : '⚠️  Lower search volume - consider expanding keyword list'}
+
+${formatNextSteps([
+  'Add high-potential keywords to campaign: use add_keywords',
+  'Create new campaign with these keywords: use create_campaign',
+  'Refine search with different seed keywords or URL',
+  'Check keyword performance after launch: use get_keyword_performance'
+])}`;
+
+      return injectGuidance(
+        {
           customerId,
           keywordIdeas,
           count: keywordIdeas.length,
-          message: `Generated ${keywordIdeas.length} keyword idea(s)`,
+          totalSearchVolume,
+          lowCompKeywords,
+          medCompKeywords,
+          highCompKeywords,
+          topKeywords: topKeywords.slice(0, 5),
         },
-      };
+        guidanceText
+      );
     } catch (error) {
       logger.error('Failed to generate keyword ideas', error as Error);
       throw error;

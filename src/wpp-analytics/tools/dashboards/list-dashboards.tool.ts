@@ -8,6 +8,7 @@ import { z } from 'zod';
 import { getLogger } from '../../../shared/logger.js';
 import { ListDashboardsSchema } from './schemas.js';
 import { initSupabase, initSupabaseFromEnv } from './helpers.js';
+import { injectGuidance } from '../../../shared/interactive-workflow.js';
 
 const logger = getLogger('wpp-analytics.dashboards.list');
 
@@ -208,16 +209,38 @@ Agent: Proceeds with updates using update_dashboard_layout
         total: count,
       });
 
-      return {
-        success: true,
-        dashboards: formatted,
-        count: formatted.length,
-        total: count || formatted.length,
-        filters: {
-          workspaceId: validated.workspaceId || 'all',
-          search: validated.search || 'none',
+      // Build rich guidance response
+      const guidanceText = `📊 FOUND ${formatted.length} DASHBOARD${formatted.length !== 1 ? 'S' : ''}
+
+${formatted.map((d, i) => `${i + 1}. **${d.name}**
+   • ID: ${d.id}
+   • URL: ${d.dashboard_url}
+   • Data Source: ${d.datasource}
+   • Last Updated: ${new Date(d.updated_at).toLocaleDateString()}
+   • Views: ${d.view_count}`).join('\n\n')}
+
+${formatted.length >= validated.limit ? `\n⚠️ **Limited to ${validated.limit} results.** Use 'limit' parameter for more.\n` : ''}
+
+💡 WHAT YOU CAN DO NEXT:
+   • View details: use get_dashboard with dashboard_id
+   • Create new: use create_dashboard
+   • View in browser: Open the dashboard_url
+   • Update existing: use update_dashboard_layout
+
+${validated.search ? `🔍 **Filtered by:** "${validated.search}"\n` : ''}${validated.workspaceId ? `🏢 **Workspace:** ${validated.workspaceId}` : ''}`;
+
+      return injectGuidance(
+        {
+          dashboards: formatted,
+          count: formatted.length,
+          total: count || formatted.length,
+          filters: {
+            workspaceId: validated.workspaceId || 'all',
+            search: validated.search || 'none',
+          },
         },
-      };
+        guidanceText
+      );
     } catch (error) {
       logger.error('list_dashboards failed', { error });
 

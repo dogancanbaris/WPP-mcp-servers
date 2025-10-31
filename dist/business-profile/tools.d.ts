@@ -16,25 +16,9 @@ export declare const listLocationsTool: {
                 description: string;
             };
         };
-        required: string[];
+        required: never[];
     };
-    handler(input: any): Promise<{
-        success: boolean;
-        data: {
-            accountId: any;
-            locations: {
-                name: any;
-                locationId: any;
-                title: any;
-                address: any;
-                websiteUri: any;
-                phoneNumbers: any;
-                categories: any;
-            }[];
-            count: number;
-            message: string;
-        };
-    }>;
+    handler(input: any): Promise<import("../shared/interactive-workflow.js").McpResponse>;
 };
 /**
  * Get location details
@@ -45,20 +29,18 @@ export declare const getLocationTool: {
     inputSchema: {
         type: "object";
         properties: {
-            locationName: {
+            accountId: {
+                type: string;
+                description: string;
+            };
+            locationId: {
                 type: string;
                 description: string;
             };
         };
-        required: string[];
+        required: never[];
     };
-    handler(input: any): Promise<{
-        success: boolean;
-        data: {
-            location: import("googleapis").mybusinessbusinessinformation_v1.Schema$Location;
-            message: string;
-        };
-    }>;
+    handler(input: any): Promise<import("../shared/interactive-workflow.js").McpResponse>;
 };
 /**
  * Update business location
@@ -69,7 +51,11 @@ export declare const updateLocationTool: {
     inputSchema: {
         type: "object";
         properties: {
-            locationName: {
+            accountId: {
+                type: string;
+                description: string;
+            };
+            locationId: {
                 type: string;
                 description: string;
             };
@@ -96,30 +82,14 @@ export declare const updateLocationTool: {
                 description: string;
             };
         };
-        required: string[];
+        required: never[];
     };
-    handler(input: any): Promise<{
-        success: boolean;
-        requiresApproval: boolean;
-        preview: string;
-        confirmationToken: string;
-        data?: undefined;
-    } | {
-        success: boolean;
-        data: {
-            locationName: any;
-            updatedFields: string[];
-            message: string;
-        };
-        requiresApproval?: undefined;
-        preview?: undefined;
-        confirmationToken?: undefined;
-    }>;
+    handler(input: any): Promise<import("../shared/interactive-workflow.js").McpResponse>;
 };
 /**
  * Export Business Profile tools
  */
-export declare const businessProfileTools: ({
+export declare const businessProfileTools: {
     name: string;
     description: string;
     inputSchema: {
@@ -130,96 +100,8 @@ export declare const businessProfileTools: ({
                 description: string;
             };
         };
-        required: string[];
+        required: never[];
     };
-    handler(input: any): Promise<{
-        success: boolean;
-        data: {
-            accountId: any;
-            locations: {
-                name: any;
-                locationId: any;
-                title: any;
-                address: any;
-                websiteUri: any;
-                phoneNumbers: any;
-                categories: any;
-            }[];
-            count: number;
-            message: string;
-        };
-    }>;
-} | {
-    name: string;
-    description: string;
-    inputSchema: {
-        type: "object";
-        properties: {
-            locationName: {
-                type: string;
-                description: string;
-            };
-        };
-        required: string[];
-    };
-    handler(input: any): Promise<{
-        success: boolean;
-        data: {
-            location: import("googleapis").mybusinessbusinessinformation_v1.Schema$Location;
-            message: string;
-        };
-    }>;
-} | {
-    name: string;
-    description: string;
-    inputSchema: {
-        type: "object";
-        properties: {
-            locationName: {
-                type: string;
-                description: string;
-            };
-            updates: {
-                type: string;
-                description: string;
-                properties: {
-                    title: {
-                        type: string;
-                    };
-                    websiteUri: {
-                        type: string;
-                    };
-                    phoneNumbers: {
-                        type: string;
-                    };
-                    regularHours: {
-                        type: string;
-                    };
-                };
-            };
-            confirmationToken: {
-                type: string;
-                description: string;
-            };
-        };
-        required: string[];
-    };
-    handler(input: any): Promise<{
-        success: boolean;
-        requiresApproval: boolean;
-        preview: string;
-        confirmationToken: string;
-        data?: undefined;
-    } | {
-        success: boolean;
-        data: {
-            locationName: any;
-            updatedFields: string[];
-            message: string;
-        };
-        requiresApproval?: undefined;
-        preview?: undefined;
-        confirmationToken?: undefined;
-    }>;
-})[];
+    handler(input: any): Promise<import("../shared/interactive-workflow.js").McpResponse>;
+}[];
 //# sourceMappingURL=tools.d.ts.map

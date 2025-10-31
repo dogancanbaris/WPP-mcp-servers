@@ -4,45 +4,18 @@
  * MCP tool for retrieving detailed keyword-level performance metrics.
  */
 import { GetKeywordPerformanceSchema } from '../../validation.js';
+import { extractCustomerId } from '../../validation.js';
 import { getLogger } from '../../../shared/logger.js';
 import { extractRefreshToken } from '../../../shared/oauth-client-factory.js';
 import { createGoogleAdsClientFromRefreshToken } from '../../client.js';
+import { injectGuidance, formatDiscoveryResponse, formatNextSteps, formatNumber } from '../../../shared/interactive-workflow.js';
 const logger = getLogger('ads.tools.reporting.get-keyword-performance');
 /**
  * Get keyword performance
  */
 export const getKeywordPerformanceTool = {
     name: 'get_keyword_performance',
-    description: `Get detailed keyword-level performance metrics including Quality Scores.
-
-💡 AGENT GUIDANCE - KEYWORD OPTIMIZATION:
-- Quality Score is critical - low scores (< 5) need attention
-- Higher Quality Scores = lower costs and better ad positions
-- Use this to identify underperforming keywords for optimization or removal
-
-📊 METRICS RETURNED:
-- Keyword text and match type
-- Quality Score (1-10 scale, 10 is best)
-- Quality Score components: Expected CTR, Ad Relevance, Landing Page Experience
-- Performance: Impressions, clicks, cost, conversions
-- Current CPC bid
-
-🎯 OPTIMIZATION OPPORTUNITIES:
-- Keywords with QS < 5 → Consider pausing or improving
-- High cost + low conversions → Reduce bids or pause
-- High impressions + low clicks → Improve ad copy relevance
-- High clicks + low conversions → Landing page issue
-
-⚠️ QUALITY SCORE INTERPRETATION:
-- 8-10: Excellent - maintain and expand
-- 6-7: Good - minor improvements possible
-- 4-5: Poor - needs attention or pause
-- 1-3: Very Poor - pause immediately or fix major issues
-
-💡 IMPROVEMENT ACTIONS:
-- Low Expected CTR → Improve ad copy relevance to keyword
-- Low Ad Relevance → Better match between keyword and ad
-- Low Landing Page Experience → Improve page content/speed/relevance`,
+    description: 'Get detailed keyword-level performance metrics including Quality Scores.',
     inputSchema: {
         type: 'object',
         properties: {
@@ -63,12 +36,10 @@ export const getKeywordPerformanceTool = {
                 description: 'End date in YYYY-MM-DD format (optional)',
             },
         },
-        required: ['customerId'],
+        required: [],
     },
     async handler(input) {
         try {
-            GetKeywordPerformanceSchema.parse(input);
-            const { customerId, campaignId, startDate, endDate } = input;
             // Extract OAuth tokens from request
             const refreshToken = extractRefreshToken(input);
             if (!refreshToken) {
@@ -80,20 +51,77 @@ export const getKeywordPerformanceTool = {
             }
             // Create Google Ads client with user's refresh token
             const client = createGoogleAdsClientFromRefreshToken(refreshToken, developerToken);
+            // Account discovery
+            if (!input.customerId) {
+                const resourceNames = await client.listAccessibleAccounts();
+                const accounts = resourceNames.map((rn) => ({
+                    resourceName: rn,
+                    customerId: extractCustomerId(rn),
+                }));
+                return formatDiscoveryResponse({
+                    step: '1/2',
+                    title: 'SELECT GOOGLE ADS ACCOUNT',
+                    items: accounts,
+                    itemFormatter: (a, i) => `${i + 1}. Customer ID: ${a.customerId}`,
+                    prompt: 'Which account would you like to analyze keyword performance for?',
+                    nextParam: 'customerId',
+                });
+            }
+            GetKeywordPerformanceSchema.parse(input);
+            const { customerId, campaignId, startDate, endDate } = input;
             logger.info('Getting keyword performance', { customerId, campaignId });
             const dateRange = startDate && endDate ? { startDate, endDate } : undefined;
             const keywords = await client.getKeywordPerformance(customerId, campaignId, dateRange);
-            return {
-                success: true,
-                data: {
-                    customerId,
-                    campaignId: campaignId || 'all',
-                    dateRange: dateRange || 'all time',
-                    keywords,
-                    count: keywords.length,
-                    message: `Retrieved performance data for ${keywords.length} keyword(s)`,
-                },
-            };
+            // Calculate summary stats
+            const avgQualityScore = keywords.length > 0
+                ? keywords.reduce((sum, k) => sum + (k.qualityScore || 0), 0) / keywords.length
+                : 0;
+            const lowQsKeywords = keywords.filter(k => k.qualityScore && k.qualityScore < 5).length;
+            const highCostKeywords = keywords.filter(k => k.cost > 100).length;
+            // Inject rich guidance into response
+            const guidanceText = `📊 KEYWORD PERFORMANCE ANALYSIS
+
+**Account:** ${customerId}
+**Campaign:** ${campaignId || 'All campaigns'}
+**Date Range:** ${dateRange ? `${startDate} to ${endDate}` : 'All time'}
+**Total Keywords:** ${formatNumber(keywords.length)}
+
+📈 KEY METRICS:
+• Average Quality Score: ${avgQualityScore.toFixed(1)}/10
+• Low Quality Score (< 5): ${lowQsKeywords} keyword(s)
+• High Cost Keywords (> $100): ${highCostKeywords} keyword(s)
+
+💡 QUALITY SCORE BREAKDOWN:
+- 8-10: Excellent - maintain and expand
+- 6-7: Good - minor improvements possible
+- 4-5: Poor - needs attention or pause
+- 1-3: Very Poor - pause immediately or fix major issues
+
+🎯 OPTIMIZATION OPPORTUNITIES:
+${lowQsKeywords > 0 ? `• ${lowQsKeywords} keywords with QS < 5 → Consider pausing or improving` : '✅ No critically low quality score keywords'}
+${highCostKeywords > 0 ? `• ${highCostKeywords} high-cost keywords → Review for efficiency` : '✅ Cost distribution looks healthy'}
+
+💡 IMPROVEMENT ACTIONS:
+- Low Expected CTR → Improve ad copy relevance to keyword
+- Low Ad Relevance → Better match between keyword and ad
+- Low Landing Page Experience → Improve page content/speed/relevance
+
+${formatNextSteps([
+                'Review low quality score keywords in detail',
+                'Pause underperforming keywords: identify keywords with high cost + low conversions',
+                'Get search terms report: use get_search_terms_report to find new keyword opportunities',
+                'Add negative keywords: use add_negative_keywords to exclude irrelevant searches'
+            ])}`;
+            return injectGuidance({
+                customerId,
+                campaignId: campaignId || 'all',
+                dateRange: dateRange || 'all time',
+                keywords,
+                count: keywords.length,
+                avgQualityScore: avgQualityScore.toFixed(1),
+                lowQsKeywords,
+                highCostKeywords,
+            }, guidanceText);
         }
         catch (error) {
             logger.error('Failed to get keyword performance', error);

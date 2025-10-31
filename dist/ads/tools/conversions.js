@@ -7,33 +7,15 @@ import { getApprovalEnforcer, DryRunResultBuilder } from '../../shared/approval-
 import { detectAndEnforceVagueness } from '../../shared/vagueness-detector.js';
 import { extractRefreshToken } from '../../shared/oauth-client-factory.js';
 import { createGoogleAdsClientFromRefreshToken } from '../client.js';
+import { formatDiscoveryResponse, injectGuidance, formatNextSteps, formatCurrency } from '../../shared/interactive-workflow.js';
+import { extractCustomerId } from '../validation.js';
 const logger = getLogger('ads.tools.conversions');
 /**
  * List conversion actions
  */
 export const listConversionActionsTool = {
     name: 'list_conversion_actions',
-    description: `List all conversion actions in a Google Ads account.
-
-💡 AGENT GUIDANCE - CONVERSION TRACKING:
-
-📊 WHAT ARE CONVERSION ACTIONS:
-- Conversion actions define what counts as a valuable action (purchase, signup, call, etc.)
-- Each action has tracking settings: category, counting method, attribution window
-- Required for measuring campaign ROI and optimizing for conversions
-
-🎯 USE CASES:
-- "What conversions are being tracked for this account?"
-- "Show me all conversion actions and their settings"
-- "Which conversions are imported from Google Analytics?"
-
-📋 WHAT YOU'LL GET:
-- Conversion action name and ID
-- Category (purchase, signup, lead, page_view, etc.)
-- Counting method (ONE or MANY per click/session)
-- Attribution window (days between click and conversion)
-- Value settings (fixed value or transaction-specific)
-- Status (enabled/removed)`,
+    description: 'List all conversion actions in a Google Ads account.',
     inputSchema: {
         type: 'object',
         properties: {
@@ -42,11 +24,10 @@ export const listConversionActionsTool = {
                 description: 'Customer ID (10 digits)',
             },
         },
-        required: ['customerId'],
+        required: [],
     },
     async handler(input) {
         try {
-            const { customerId } = input;
             // Extract OAuth tokens from request
             const refreshToken = extractRefreshToken(input);
             if (!refreshToken) {
@@ -58,6 +39,23 @@ export const listConversionActionsTool = {
             }
             // Create Google Ads client with user's refresh token
             const client = createGoogleAdsClientFromRefreshToken(refreshToken, developerToken);
+            // Account discovery
+            if (!input.customerId) {
+                const resourceNames = await client.listAccessibleAccounts();
+                const accounts = resourceNames.map((rn) => ({
+                    resourceName: rn,
+                    customerId: extractCustomerId(rn),
+                }));
+                return formatDiscoveryResponse({
+                    step: '1/2',
+                    title: 'SELECT GOOGLE ADS ACCOUNT',
+                    items: accounts,
+                    itemFormatter: (a, i) => `${i + 1}. Customer ID: ${a.customerId}`,
+                    prompt: 'Which account would you like to list conversion actions for?',
+                    nextParam: 'customerId',
+                });
+            }
+            const { customerId } = input;
             const customer = client.getCustomer(customerId);
             logger.info('Listing conversion actions', { customerId });
             // Query conversion actions
@@ -94,15 +92,72 @@ export const listConversionActionsTool = {
                     alwaysUseDefaultValue: action?.value_settings?.always_use_default_value || false,
                 });
             }
-            return {
-                success: true,
-                data: {
-                    customerId,
-                    conversionActions,
-                    count: conversionActions.length,
-                    message: `Found ${conversionActions.length} conversion action(s)`,
-                },
-            };
+            // Calculate summary stats
+            const byCategory = conversionActions.reduce((acc, a) => {
+                acc[a.category] = (acc[a.category] || 0) + 1;
+                return acc;
+            }, {});
+            const byCountingType = conversionActions.reduce((acc, a) => {
+                acc[a.countingType] = (acc[a.countingType] || 0) + 1;
+                return acc;
+            }, {});
+            const withFixedValue = conversionActions.filter(a => a.defaultValue && a.alwaysUseDefaultValue).length;
+            // Inject rich guidance into response
+            const guidanceText = `📊 CONVERSION ACTIONS
+
+**Account:** ${customerId}
+**Total Conversion Actions:** ${conversionActions.length}
+
+📋 BREAKDOWN BY CATEGORY:
+${Object.entries(byCategory).map(([cat, count]) => `• ${cat}: ${count} action(s)`).join('\n')}
+
+📋 COUNTING METHOD:
+${Object.entries(byCountingType).map(([type, count]) => `• ${type}: ${count} action(s)`).join('\n')}
+
+🎯 CONVERSION ACTIONS IN THIS ACCOUNT:
+${conversionActions.slice(0, 10).map((a, i) => `${i + 1}. ${a.name} (${a.category})
+   • ID: ${a.id}
+   • Type: ${a.type}
+   • Counting: ${a.countingType}
+   • Attribution Window: ${a.attributionWindow} days${a.defaultValue ? `\n   • Default Value: ${formatCurrency(a.defaultValue)}${a.alwaysUseDefaultValue ? ' (always use)' : ''}` : ''}`).join('\n\n')}${conversionActions.length > 10 ? `\n\n... and ${conversionActions.length - 10} more` : ''}
+
+💡 CONVERSION TRACKING EXPLAINED:
+
+**CATEGORIES:**
+- **PURCHASE:** E-commerce transactions (track revenue)
+- **LEAD:** Form submissions, signups
+- **SIGNUP:** Account creation
+- **PAGE_VIEW:** Specific page visits
+- **PHONE_CALL:** Call tracking
+
+**COUNTING METHODS:**
+- **ONE:** Count once per click (recommended for purchases)
+- **MANY:** Count every occurrence (recommended for page views)
+
+**ATTRIBUTION WINDOW:**
+- Default: 30 days (click to conversion)
+- Shorter = more conservative attribution
+- Longer = credits more conversions to ads
+
+🎯 CONVERSION TRACKING BEST PRACTICES:
+${conversionActions.length > 0 ? '✅ Conversion tracking is set up' : '⚠️  No conversion actions configured - set up tracking to measure ROI'}
+${withFixedValue > 0 ? `✅ ${withFixedValue} conversion(s) with fixed value` : 'ℹ️  Consider adding values to conversions for better optimization'}
+${byCountingType['ONE'] ? '✅ Using "ONE" counting for unique conversions' : ''}
+
+${formatNextSteps([
+                'Create new conversion action: use create_conversion_action',
+                'Upload offline conversions: use upload_click_conversions',
+                'Check conversion details: use get_conversion_action with conversionActionId',
+                'Set up conversion tracking tags on your website'
+            ])}`;
+            return injectGuidance({
+                customerId,
+                conversionActions,
+                count: conversionActions.length,
+                byCategory,
+                byCountingType,
+                withFixedValue,
+            }, guidanceText);
         }
         catch (error) {
             logger.error('Failed to list conversion actions', error);
@@ -198,7 +253,7 @@ export const createConversionActionTool = {
                 description: 'Confirmation token from dry-run preview (optional - if not provided, will show preview)',
             },
         },
-        required: ['customerId', 'name', 'category', 'countingType'],
+        required: [], // Make all optional for discovery
     },
     async handler(input) {
         try {
@@ -214,6 +269,112 @@ export const createConversionActionTool = {
             }
             // Create Google Ads client with user's refresh token
             const client = createGoogleAdsClientFromRefreshToken(refreshToken, developerToken);
+            // ═══ STEP 1: ACCOUNT DISCOVERY ═══
+            if (!customerId) {
+                logger.info('Account discovery mode - listing accessible accounts');
+                const resourceNames = await client.listAccessibleAccounts();
+                const accounts = resourceNames.map((rn) => ({
+                    resourceName: rn,
+                    customerId: extractCustomerId(rn),
+                }));
+                return formatDiscoveryResponse({
+                    step: '1/3',
+                    title: 'SELECT GOOGLE ADS ACCOUNT',
+                    items: accounts,
+                    itemFormatter: (a, i) => `${i + 1}. Customer ID: ${a.customerId}\n   Resource: ${a.resourceName}`,
+                    prompt: 'Which account should have this conversion action?',
+                    nextParam: 'customerId',
+                    emoji: '🏢',
+                });
+            }
+            // ═══ STEP 2: CONVERSION NAME INPUT ═══
+            if (!name) {
+                const guidanceText = `📝 CONVERSION ACTION NAME (Step 2/3)
+
+**Current Context:**
+- Account: ${customerId}
+
+**💡 NAME YOUR CONVERSION:**
+
+**Common Naming Patterns:**
+- "Purchase" - E-commerce transactions
+- "Lead - Contact Form" - Form submissions
+- "Sign Up - Free Trial" - Account creation
+- "Download - Whitepaper" - Content downloads
+- "Phone Call - Sales" - Call tracking
+- "Store Visit" - Physical visits
+
+**Best Practices:**
+- Be descriptive and specific
+- Include business value indicator
+- Match naming convention across account
+- Make it easy to identify in reports
+
+**Examples:**
+- ✅ "Purchase - High Value (>$100)"
+- ✅ "Lead - Demo Request"
+- ✅ "Sign Up - Premium Plan"
+- ❌ "Conversion1" (too vague)
+- ❌ "test" (not production-ready)
+
+**What parameter to provide next?**
+- name (string, descriptive name for this conversion)`;
+                return injectGuidance({ customerId }, guidanceText);
+            }
+            // ═══ STEP 3: CATEGORY SELECTION GUIDANCE ═══
+            if (!category) {
+                const categories = [
+                    { value: 'PURCHASE', desc: 'E-commerce transactions, orders' },
+                    { value: 'LEAD', desc: 'Form submissions, contact requests' },
+                    { value: 'SIGNUP', desc: 'Account creation, registrations' },
+                    { value: 'PAGE_VIEW', desc: 'Specific page visits, content views' },
+                    { value: 'PHONE_CALL', desc: 'Call tracking conversions' },
+                    { value: 'DOWNLOAD', desc: 'File/app downloads' },
+                    { value: 'STORE_VISIT', desc: 'Physical store visits' },
+                ];
+                return formatDiscoveryResponse({
+                    step: '3/3',
+                    title: 'SELECT CONVERSION CATEGORY',
+                    items: categories,
+                    itemFormatter: (cat, i) => `${i + 1}. ${cat.value}
+   ${cat.desc}`,
+                    prompt: 'Which category best describes this conversion?',
+                    nextParam: 'category',
+                    context: { customerId, name },
+                    emoji: '📊',
+                });
+            }
+            // If countingType not provided, guide user
+            if (!countingType) {
+                const guidanceText = `⚙️ COUNTING TYPE REQUIRED
+
+**Current Context:**
+- Account: ${customerId}
+- Name: ${name}
+- Category: ${category}
+
+**💡 SELECT COUNTING METHOD:**
+
+**ONE (Recommended for most)**
+- Count one conversion per click
+- Best for: Purchases, leads, signups
+- Example: User clicks ad → buys product → count 1 conversion
+- If they buy again from same click → still count 1
+
+**MANY (For engagement tracking)**
+- Count every conversion
+- Best for: Page views, video views, content downloads
+- Example: User clicks ad → views 5 pages → count 5 conversions
+
+**Decision Guide:**
+- Transactional (purchase, lead)? → Use ONE
+- Engagement (page views, clicks)? → Use MANY
+- Not sure? → Use ONE (safer, more conservative)
+
+**What parameter to provide next?**
+- countingType (either "ONE" or "MANY")`;
+                return injectGuidance({ customerId, name, category }, guidanceText);
+            }
             // Vagueness detection
             detectAndEnforceVagueness({
                 operation: 'create_conversion_action',
@@ -393,7 +554,7 @@ export const uploadClickConversionsTool = {
                 description: 'Confirmation token from dry-run preview (optional - if not provided, will show preview)',
             },
         },
-        required: ['customerId', 'conversionActionId', 'conversions'],
+        required: [], // Make all optional for discovery
     },
     async handler(input) {
         try {
@@ -409,7 +570,132 @@ export const uploadClickConversionsTool = {
             }
             // Create Google Ads client with user's refresh token
             const client = createGoogleAdsClientFromRefreshToken(refreshToken, developerToken);
+            // ═══ STEP 1: ACCOUNT DISCOVERY ═══
+            if (!customerId) {
+                logger.info('Account discovery mode - listing accessible accounts');
+                const resourceNames = await client.listAccessibleAccounts();
+                const accounts = resourceNames.map((rn) => ({
+                    resourceName: rn,
+                    customerId: extractCustomerId(rn),
+                }));
+                return formatDiscoveryResponse({
+                    step: '1/3',
+                    title: 'SELECT GOOGLE ADS ACCOUNT',
+                    items: accounts,
+                    itemFormatter: (a, i) => `${i + 1}. Customer ID: ${a.customerId}\n   Resource: ${a.resourceName}`,
+                    prompt: 'Which account contains the conversion action?',
+                    nextParam: 'customerId',
+                    emoji: '🏢',
+                });
+            }
             const customer = client.getCustomer(customerId);
+            // ═══ STEP 2: CONVERSION ACTION DISCOVERY ═══
+            if (!conversionActionId) {
+                logger.info('Conversion action discovery mode', { customerId });
+                // Query conversion actions
+                const query = `
+          SELECT
+            conversion_action.id,
+            conversion_action.name,
+            conversion_action.category,
+            conversion_action.status
+          FROM conversion_action
+          WHERE conversion_action.status != 'REMOVED'
+          ORDER BY conversion_action.name
+        `;
+                const results = await customer.query(query);
+                const conversionActions = [];
+                for (const row of results) {
+                    const action = row.conversion_action;
+                    conversionActions.push({
+                        id: String(action?.id || ''),
+                        name: String(action?.name || ''),
+                        category: String(action?.category || ''),
+                        status: String(action?.status || ''),
+                    });
+                }
+                if (conversionActions.length === 0) {
+                    const guidanceText = `⚠️ NO CONVERSION ACTIONS FOUND
+
+**Account:** ${customerId}
+
+No conversion actions found in this account. You must create a conversion action first before uploading conversions.
+
+**💡 NEXT STEPS:**
+1. Create conversion action: use create_conversion_action
+2. Then return here to upload offline conversions
+
+**What to do?**
+Create a conversion action first.`;
+                    return injectGuidance({ customerId }, guidanceText);
+                }
+                return formatDiscoveryResponse({
+                    step: '2/3',
+                    title: 'SELECT CONVERSION ACTION',
+                    items: conversionActions,
+                    itemFormatter: (action, i) => `${i + 1}. ${action.name}
+   ID: ${action.id}
+   Category: ${action.category}
+   Status: ${action.status}`,
+                    prompt: 'Which conversion action should receive these offline conversions?',
+                    nextParam: 'conversionActionId',
+                    context: { customerId },
+                    emoji: '📊',
+                });
+            }
+            // ═══ STEP 3: CONVERSION DATA INPUT GUIDANCE ═══
+            if (!conversions || conversions.length === 0) {
+                const guidanceText = `📝 PROVIDE CONVERSION DATA (Step 3/3)
+
+**Current Context:**
+- Account: ${customerId}
+- Conversion Action: ${conversionActionId}
+
+**💡 OFFLINE CONVERSION FORMAT:**
+
+**Required Fields:**
+- gclid: Google Click ID from the original ad click
+- conversionDateTime: When conversion happened (format: "YYYY-MM-DD HH:MM:SS timezone")
+
+**Optional Fields:**
+- conversionValue: Revenue in dollars
+- currencyCode: Currency (default: USD)
+
+**Example Format:**
+\`\`\`json
+{
+  "conversions": [
+    {
+      "gclid": "Cj0KCQiA...",
+      "conversionDateTime": "2025-10-30 14:30:00 America/New_York",
+      "conversionValue": 149.99,
+      "currencyCode": "USD"
+    },
+    {
+      "gclid": "Cj0KCQiB...",
+      "conversionDateTime": "2025-10-30 16:45:00 America/New_York",
+      "conversionValue": 299.99
+    }
+  ]
+}
+\`\`\`
+
+**⚠️ IMPORTANT:**
+- GCLID must be from actual ad click (starts with "Cj0...")
+- Conversion must be within attribution window (typically 30 days)
+- DateTime must include timezone
+- Max 2,000 conversions per upload
+
+**💡 WHERE TO GET GCLID:**
+- Enable auto-tagging in Google Ads
+- GCLID appears as URL parameter after ad click
+- Store GCLID in your CRM when lead/sale happens
+- Match GCLID to offline conversions
+
+**What parameter to provide next?**
+- conversions (array of conversion objects)`;
+                return injectGuidance({ customerId, conversionActionId }, guidanceText);
+            }
             // Vagueness detection
             detectAndEnforceVagueness({
                 operation: 'upload_click_conversions',
@@ -595,7 +881,7 @@ export const uploadConversionAdjustmentsTool = {
                 description: 'Confirmation token from dry-run preview (optional - if not provided, will show preview)',
             },
         },
-        required: ['customerId', 'conversionActionId', 'adjustments'],
+        required: [], // Make all optional for discovery
     },
     async handler(input) {
         try {
@@ -611,7 +897,127 @@ export const uploadConversionAdjustmentsTool = {
             }
             // Create Google Ads client with user's refresh token
             const client = createGoogleAdsClientFromRefreshToken(refreshToken, developerToken);
+            // ═══ STEP 1: ACCOUNT DISCOVERY ═══
+            if (!customerId) {
+                logger.info('Account discovery mode - listing accessible accounts');
+                const resourceNames = await client.listAccessibleAccounts();
+                const accounts = resourceNames.map((rn) => ({
+                    resourceName: rn,
+                    customerId: extractCustomerId(rn),
+                }));
+                return formatDiscoveryResponse({
+                    step: '1/3',
+                    title: 'SELECT GOOGLE ADS ACCOUNT',
+                    items: accounts,
+                    itemFormatter: (a, i) => `${i + 1}. Customer ID: ${a.customerId}\n   Resource: ${a.resourceName}`,
+                    prompt: 'Which account?',
+                    nextParam: 'customerId',
+                    emoji: '🏢',
+                });
+            }
             const customer = client.getCustomer(customerId);
+            // ═══ STEP 2: CONVERSION ACTION DISCOVERY ═══
+            if (!conversionActionId) {
+                logger.info('Conversion action discovery mode', { customerId });
+                const query = `
+          SELECT
+            conversion_action.id,
+            conversion_action.name,
+            conversion_action.category,
+            conversion_action.status
+          FROM conversion_action
+          WHERE conversion_action.status != 'REMOVED'
+          ORDER BY conversion_action.name
+        `;
+                const results = await customer.query(query);
+                const conversionActions = [];
+                for (const row of results) {
+                    const action = row.conversion_action;
+                    conversionActions.push({
+                        id: String(action?.id || ''),
+                        name: String(action?.name || ''),
+                        category: String(action?.category || ''),
+                        status: String(action?.status || ''),
+                    });
+                }
+                if (conversionActions.length === 0) {
+                    const guidanceText = `⚠️ NO CONVERSION ACTIONS FOUND
+
+**Account:** ${customerId}
+
+No conversion actions found. Create one first using create_conversion_action.`;
+                    return injectGuidance({ customerId }, guidanceText);
+                }
+                return formatDiscoveryResponse({
+                    step: '2/3',
+                    title: 'SELECT CONVERSION ACTION TO ADJUST',
+                    items: conversionActions,
+                    itemFormatter: (action, i) => `${i + 1}. ${action.name}
+   ID: ${action.id}
+   Category: ${action.category}`,
+                    prompt: 'Which conversion action needs adjustments?',
+                    nextParam: 'conversionActionId',
+                    context: { customerId },
+                    emoji: '📊',
+                });
+            }
+            // ═══ STEP 3: ADJUSTMENT TYPE GUIDANCE ═══
+            if (!adjustments || adjustments.length === 0) {
+                const guidanceText = `📝 PROVIDE ADJUSTMENT DATA (Step 3/3)
+
+**Current Context:**
+- Account: ${customerId}
+- Conversion Action: ${conversionActionId}
+
+**💡 CONVERSION ADJUSTMENT TYPES:**
+
+**RETRACTION** - Remove conversion
+- Use for: Refunds, cancellations, fraud
+- Effect: Removes conversion from reporting
+- Example: Customer refunded $100 purchase
+
+**RESTATEMENT** - Update conversion value
+- Use for: Upgraded/downgraded plans, corrected values
+- Effect: Updates conversion value
+- Example: Customer upgraded from $50 to $200 plan
+
+**Required Fields:**
+- gclid: Must match original conversion
+- conversionDateTime: Must match original conversion time
+- adjustmentType: "RETRACTION" or "RESTATEMENT"
+
+**Optional Fields (RESTATEMENT only):**
+- adjustedValue: New conversion value in dollars
+
+**Example Format:**
+\`\`\`json
+{
+  "adjustments": [
+    {
+      "gclid": "Cj0KCQiA...",
+      "conversionDateTime": "2025-10-20 14:30:00 America/New_York",
+      "adjustmentType": "RETRACTION"
+    },
+    {
+      "gclid": "Cj0KCQiB...",
+      "conversionDateTime": "2025-10-18 10:15:00 America/New_York",
+      "adjustmentType": "RESTATEMENT",
+      "adjustedValue": 299.99
+    }
+  ]
+}
+\`\`\`
+
+**⚠️ IMPORTANT:**
+- GCLID must exactly match original conversion
+- DateTime must exactly match original conversion
+- Adjustment must be within 55 days of conversion
+- Max 2,000 adjustments per upload
+
+**What parameter to provide next?**
+- adjustments (array of adjustment objects)`;
+                return injectGuidance({ customerId, conversionActionId }, guidanceText);
+            }
             // Vagueness detection
             detectAndEnforceVagueness({
                 operation: 'upload_conversion_adjustments',
@@ -727,21 +1133,7 @@ export const uploadConversionAdjustmentsTool = {
  */
 export const getConversionActionTool = {
     name: 'get_conversion_action',
-    description: `Get details of a specific conversion action.
-
-💡 AGENT GUIDANCE:
-
-📊 WHAT YOU'LL GET:
-- Conversion action settings and configuration
-- Tracking tag/snippet for implementation
-- Attribution window, counting method
-- Value settings
-- Recent conversion stats
-
-🎯 USE CASES:
-- "Get details for conversion action ID 12345"
-- "Check attribution window for Purchase conversion"
-- "See if conversion uses transaction-specific or fixed value"`,
+    description: 'Get details of a specific conversion action.',
     inputSchema: {
         type: 'object',
         properties: {
@@ -754,11 +1146,10 @@ export const getConversionActionTool = {
                 description: 'Conversion action ID',
             },
         },
-        required: ['customerId', 'conversionActionId'],
+        required: [],
     },
     async handler(input) {
         try {
-            const { customerId, conversionActionId } = input;
             // Extract OAuth tokens from request
             const refreshToken = extractRefreshToken(input);
             if (!refreshToken) {
@@ -770,6 +1161,56 @@ export const getConversionActionTool = {
             }
             // Create Google Ads client with user's refresh token
             const client = createGoogleAdsClientFromRefreshToken(refreshToken, developerToken);
+            // Account discovery
+            if (!input.customerId) {
+                const resourceNames = await client.listAccessibleAccounts();
+                const accounts = resourceNames.map((rn) => ({
+                    resourceName: rn,
+                    customerId: extractCustomerId(rn),
+                }));
+                return formatDiscoveryResponse({
+                    step: '1/3',
+                    title: 'SELECT GOOGLE ADS ACCOUNT',
+                    items: accounts,
+                    itemFormatter: (a, i) => `${i + 1}. Customer ID: ${a.customerId}`,
+                    prompt: 'Which account contains the conversion action?',
+                    nextParam: 'customerId',
+                });
+            }
+            // Conversion action discovery
+            if (!input.conversionActionId) {
+                const customer = client.getCustomer(input.customerId);
+                const query = `
+          SELECT
+            conversion_action.id,
+            conversion_action.name,
+            conversion_action.category,
+            conversion_action.status
+          FROM conversion_action
+          WHERE conversion_action.status != 'REMOVED'
+          ORDER BY conversion_action.name
+        `;
+                const results = await customer.query(query);
+                const actions = [];
+                for (const row of results) {
+                    const action = row.conversion_action;
+                    actions.push({
+                        id: String(action?.id || ''),
+                        name: String(action?.name || ''),
+                        category: String(action?.category || ''),
+                    });
+                }
+                return formatDiscoveryResponse({
+                    step: '2/3',
+                    title: 'SELECT CONVERSION ACTION',
+                    items: actions,
+                    itemFormatter: (a, i) => `${i + 1}. ${a.name} (${a.category}) - ID: ${a.id}`,
+                    prompt: 'Which conversion action would you like details for?',
+                    nextParam: 'conversionActionId',
+                    context: { customerId: input.customerId },
+                });
+            }
+            const { customerId, conversionActionId } = input;
             const customer = client.getCustomer(customerId);
             logger.info('Getting conversion action', { customerId, conversionActionId });
             const query = `
@@ -811,14 +1252,48 @@ export const getConversionActionTool = {
             if (!conversionAction) {
                 throw new Error(`Conversion action ${conversionActionId} not found`);
             }
-            return {
-                success: true,
-                data: {
-                    customerId,
-                    conversionAction,
-                    message: `Retrieved conversion action: ${conversionAction.name}`,
-                },
-            };
+            // Inject rich guidance into response
+            const guidanceText = `📊 CONVERSION ACTION DETAILS
+
+**Name:** ${conversionAction.name}
+**ID:** ${conversionAction.id}
+**Category:** ${conversionAction.category}
+**Status:** ${conversionAction.status}
+
+📋 CONFIGURATION:
+• **Type:** ${conversionAction.type}
+• **Counting Method:** ${conversionAction.countingType} ${conversionAction.countingType === 'ONE' ? '(once per click - recommended for purchases)' : '(every occurrence - recommended for page views)'}
+• **Click-Through Attribution Window:** ${conversionAction.clickThroughWindow} days
+• **View-Through Attribution Window:** ${conversionAction.viewThroughWindow} day(s)
+
+💰 VALUE SETTINGS:
+${conversionAction.defaultValue ? `• Fixed Value: ${formatCurrency(conversionAction.defaultValue)}${conversionAction.alwaysUseDefaultValue ? ' (always use this value)' : ' (use when no transaction value provided)'}` : '• No default value set (uses transaction-specific values)'}
+
+📝 TRACKING TAG:
+${conversionAction.tagSnippets.length > 0 ? '✅ Tracking tag available' : '⚠️  No tracking tag generated yet'}
+
+💡 WHAT THIS MEANS:
+
+**Category: ${conversionAction.category}**
+${conversionAction.category === 'PURCHASE' ? '- E-commerce transaction tracking\n- Use transaction-specific values for revenue\n- Count "ONE" prevents duplicate conversions' : ''}
+${conversionAction.category === 'LEAD' ? '- Form submission or signup tracking\n- Consider assigning fixed value based on lead quality\n- Use for ROI optimization' : ''}
+${conversionAction.category === 'PAGE_VIEW' ? '- Page visit tracking\n- Count "MANY" recommended\n- Useful for engagement measurement' : ''}
+
+**Attribution Window: ${conversionAction.clickThroughWindow} days**
+- Conversions within ${conversionAction.clickThroughWindow} days of click are attributed to ads
+- Shorter window = more conservative attribution
+- Longer window = credits more conversions (up to 90 days)
+
+${formatNextSteps([
+                'Modify settings: use update_conversion_action',
+                'Upload offline conversions: use upload_click_conversions',
+                'Create new conversion: use create_conversion_action',
+                'List all conversions: use list_conversion_actions'
+            ])}`;
+            return injectGuidance({
+                customerId,
+                conversionAction,
+            }, guidanceText);
         }
         catch (error) {
             logger.error('Failed to get conversion action', error);

@@ -1,154 +1,36 @@
 /**
  * Delete Dashboard Tool
  *
- * MCP tool to delete an existing dashboard from Supabase.
- * Performs a hard delete by dashboard ID with ownership verification.
+ * MCP tool to delete an existing dashboard from Supabase with interactive discovery and approval workflow.
  */
 
 import { z } from 'zod';
 import { getLogger } from '../../../shared/logger.js';
 import { initSupabase, initSupabaseFromEnv } from './helpers.js';
-import { DeleteDashboardSchema } from './schemas.js';
+// import { DeleteDashboardSchema } from './schemas.js'; // Currently unused
+import { getApprovalEnforcer, DryRunResultBuilder } from '../../../shared/approval-enforcer.js';
+import { formatDiscoveryResponse, injectGuidance } from '../../../shared/interactive-workflow.js';
 
 const logger = getLogger('wpp-analytics.dashboards.delete');
 
 export const deleteDashboardTool = {
   name: 'delete_dashboard',
-  description: `Delete a dashboard by ID with safety checks and confirmation.
-
-**Purpose:**
-Remove an existing dashboard from the WPP Analytics Platform. This performs a hard delete
-of the dashboard record. This operation is IRREVERSIBLE.
-
-**⚠️ SAFETY WARNINGS:**
-- Dashboard configuration permanently deleted
-- Operation cannot be undone
-- BigQuery data NOT affected (only dashboard metadata removed)
-- Requires explicit confirmation (confirm: true)
-- Requires workspace ownership verification
-
-**QUICK START (For Agents) - 3 STEPS TO DELETE SAFELY:**
-
-**Step 1: Verify Dashboard**
-Use get_dashboard to confirm this is the correct dashboard:
-\`\`\`json
-{
-  "dashboard_id": "550e8400-e29b-41d4-a716-446655440000"
-}
-\`\`\`
-Check the name, workspace_id, and contents before proceeding.
-
-**Step 2: Delete with Confirmation**
-\`\`\`json
-{
-  "dashboard_id": "550e8400-e29b-41d4-a716-446655440000",
-  "workspaceId": "945907d8-7e88-45c4-8fde-9db35d5f5ce2",
-  "confirm": true
-}
-\`\`\`
-
-**Step 3: Verify Deletion**
-- Response includes deleted: true
-- Dashboard no longer appears in list_dashboards
-- BigQuery data remains unchanged
-
-**MANDATORY FIELDS (Will Error Without These):**
-1. ✅ **dashboard_id**: Valid UUID (get from list_dashboards)
-2. ✅ **workspaceId**: Valid UUID (required for safety)
-3. ✅ **confirm**: Must be true (prevents accidental deletion)
-
-**WHAT GETS DELETED:**
-- ✅ Dashboard record in Supabase
-- ✅ Dashboard configuration (pages, components, filters)
-- ✅ Dashboard metadata (name, description, theme)
-- ❌ BigQuery data (NOT affected - data remains)
-- ❌ Dataset entries (NOT affected - shared by other dashboards)
-
-**TROUBLESHOOTING - Common Errors & Solutions:**
-
-**Error: "dashboard_id must be valid UUID"**
-→ Solution: Use list_dashboards to get valid dashboard UUID
-→ UUID format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-
-**Error: "workspaceId must be valid UUID and is required for safety"**
-→ Solution: Run list_workspaces to get your workspace UUID
-→ Safety: Required to prevent accidental cross-workspace deletion
-→ Get from your environment or list_workspaces tool
-
-**Error: "Workspace not found"**
-→ Solution: Verify workspace ID with list_workspaces tool
-→ Check you have access to this workspace
-
-**Error: "Dashboard not found"**
-→ Solution: Verify dashboard ID with list_dashboards
-→ Dashboard may have already been deleted
-→ Check workspace access permissions
-
-**Error: "Workspace mismatch: cannot delete dashboard in another workspace"**
-→ Solution: Dashboard belongs to different workspace
-→ Check ownership with get_dashboard(dashboard_id)
-→ You can only delete dashboards in your own workspace
-
-**Error: "Deletion requires explicit confirmation"**
-→ Solution: Add "confirm": true to your request
-→ This safety feature prevents accidental deletions
-→ Review dashboard with get_dashboard first, then confirm
-
-**Example 1: Basic Deletion (Safe Workflow)**
-\`\`\`json
-// Step 1: Verify first (optional but recommended)
-{
-  "tool": "get_dashboard",
-  "dashboard_id": "550e8400-e29b-41d4-a716-446655440000"
-}
-
-// Step 2: Delete with confirmation
-{
-  "tool": "delete_dashboard",
-  "dashboard_id": "550e8400-e29b-41d4-a716-446655440000",
-  "workspaceId": "945907d8-7e88-45c4-8fde-9db35d5f5ce2",
-  "confirm": true
-}
-\`\`\`
-
-**Example 2: Delete After Listing**
-\`\`\`json
-// Step 1: Find dashboard
-{
-  "tool": "list_dashboards",
-  "search": "Old Dashboard"
-}
-// Returns: dashboard_id and workspace_id
-
-// Step 2: Delete with info from listing
-{
-  "tool": "delete_dashboard",
-  "dashboard_id": "<id-from-listing>",
-  "workspaceId": "<workspace-id-from-listing>",
-  "confirm": true
-}
-\`\`\`
-
-**Returns:**
-- success: Boolean indicating if deletion succeeded
-- dashboard_id: ID of deleted dashboard
-- deleted: true
-- deleted_at: Timestamp of deletion`,
+  description: `Delete a dashboard by ID.`,
 
   inputSchema: {
     type: 'object' as const,
     properties: {
       dashboard_id: {
         type: 'string',
-        description: 'Dashboard UUID to delete (required)'
+        description: 'Dashboard UUID to delete (optional - will be discovered if not provided)'
       },
       workspaceId: {
         type: 'string',
-        description: 'Workspace UUID (REQUIRED for safety - prevents cross-workspace deletion)'
+        description: 'Workspace UUID (optional - will be discovered if not provided)'
       },
-      confirm: {
-        type: 'boolean',
-        description: 'Explicit confirmation required (must be true) - safety feature to prevent accidents'
+      confirmationToken: {
+        type: 'string',
+        description: 'Confirmation token from dry-run preview (required for execution)'
       },
       supabaseUrl: {
         type: 'string',
@@ -159,131 +41,363 @@ Check the name, workspace_id, and contents before proceeding.
         description: 'Supabase service key (optional - loads from ENV if not provided)'
       }
     },
-    required: ['dashboard_id', 'workspaceId', 'confirm']
+    required: []
   },
 
   async handler(input: any) {
     try {
-      // Validate input using imported schema
-      const validated = DeleteDashboardSchema.parse(input);
-
-      logger.info('delete_dashboard called', {
-        dashboardId: validated.dashboard_id,
-        workspaceId: validated.workspaceId,
-        confirm: validated.confirm,
-      });
-
-      // Initialize Supabase (from ENV or parameters)
-      const supabase = validated.supabaseUrl && validated.supabaseKey
-        ? initSupabase(validated.supabaseUrl, validated.supabaseKey)
+      // Initialize Supabase
+      const supabase = input.supabaseUrl && input.supabaseKey
+        ? initSupabase(input.supabaseUrl, input.supabaseKey)
         : initSupabaseFromEnv();
 
-      // PRE-FLIGHT CHECK 1: Verify workspace exists
-      const { data: workspace, error: workspaceError } = await supabase
+      // STEP 1: Workspace Discovery
+      if (!input.workspaceId) {
+        const { data: workspaces, error: workspaceError } = await supabase
+          .from('workspaces')
+          .select('id, name')
+          .order('name');
+
+        if (workspaceError || !workspaces || workspaces.length === 0) {
+          return injectGuidance(
+            { success: false },
+            `⚠️ NO WORKSPACES FOUND
+
+Unable to find any workspaces in the system.
+
+💡 TROUBLESHOOTING:
+• Check Supabase connection and credentials
+• Verify workspaces table exists
+• Ensure you have appropriate permissions
+
+Please contact system administrator if the issue persists.`
+          );
+        }
+
+        return formatDiscoveryResponse({
+          step: '1/3',
+          title: 'SELECT WORKSPACE',
+          items: workspaces,
+          itemFormatter: (ws, i) => `${i + 1}. ${ws.name || 'Unnamed'} (ID: ${ws.id})`,
+          prompt: 'Which workspace contains the dashboard to delete?',
+          nextParam: 'workspaceId',
+          emoji: '🗑️'
+        });
+      }
+
+      // STEP 2: Verify workspace exists
+      const { data: workspace, error: workspaceVerifyError } = await supabase
         .from('workspaces')
-        .select('id')
-        .eq('id', validated.workspaceId)
+        .select('id, name')
+        .eq('id', input.workspaceId)
         .single();
 
-      if (workspaceError || !workspace) {
-        throw new Error(
-          `Workspace not found: ${validated.workspaceId}\n` +
-          `Hint: Run list_workspaces to see available workspaces`
+      if (workspaceVerifyError || !workspace) {
+        return injectGuidance(
+          { success: false },
+          `❌ WORKSPACE NOT FOUND
+
+The workspace "${input.workspaceId}" does not exist.
+
+💡 SOLUTION:
+Call this tool without parameters to see available workspaces.`
         );
       }
 
-      logger.info('Workspace verified', { workspaceId: validated.workspaceId });
+      logger.info('Workspace verified', { workspaceId: input.workspaceId });
 
-      // PRE-FLIGHT CHECK 2: Load dashboard to verify existence and ownership
+      // STEP 3: Dashboard Discovery
+      if (!input.dashboard_id) {
+        const { data: dashboards, error: dashboardError } = await supabase
+          .from('dashboards')
+          .select('id, name, created_at, config')
+          .eq('workspace_id', input.workspaceId)
+          .order('created_at', { ascending: false });
+
+        if (dashboardError || !dashboards || dashboards.length === 0) {
+          return injectGuidance(
+            { success: false },
+            `📊 NO DASHBOARDS FOUND
+
+Workspace "${workspace.name}" has no dashboards yet.
+
+💡 WHAT YOU CAN DO:
+• Create a dashboard using create_dashboard tool
+• Check if you're looking in the correct workspace
+• Verify workspace permissions`
+          );
+        }
+
+        // Count components in each dashboard
+        const dashboardsWithCounts = dashboards.map((d) => {
+          const pages = d.config?.pages || [];
+          const componentCount = pages.reduce((total: number, page: any) => {
+            return total + (page.rows || []).reduce((rowTotal: number, row: any) => {
+              return rowTotal + (row.columns || []).filter((col: any) => col.component).length;
+            }, 0);
+          }, 0);
+
+          return {
+            ...d,
+            componentCount,
+            pageCount: pages.length
+          };
+        });
+
+        return formatDiscoveryResponse({
+          step: '2/3',
+          title: 'SELECT DASHBOARD TO DELETE',
+          items: dashboardsWithCounts,
+          itemFormatter: (d, i) =>
+            `${i + 1}. ${d.name}\n   ID: ${d.id}\n   Pages: ${d.pageCount}, Components: ${d.componentCount}\n   Created: ${new Date(d.created_at).toLocaleDateString()}`,
+          prompt: '⚠️ WARNING: Deletion is PERMANENT and cannot be undone.\n\nWhich dashboard do you want to delete?',
+          nextParam: 'dashboard_id',
+          context: { workspace: workspace.name },
+          emoji: '🗑️'
+        });
+      }
+
+      // STEP 4: Load dashboard and verify ownership
       const { data: dashboard, error: loadError } = await supabase
         .from('dashboards')
-        .select('id, workspace_id, name')
-        .eq('id', validated.dashboard_id)
+        .select('id, workspace_id, name, config, created_at')
+        .eq('id', input.dashboard_id)
         .single();
 
       if (loadError || !dashboard) {
-        throw new Error(
-          `Dashboard not found: ${validated.dashboard_id}\n` +
-          `Hint: Run list_dashboards to see available dashboards\n` +
-          `Check workspace access permissions`
+        return injectGuidance(
+          { success: false },
+          `❌ DASHBOARD NOT FOUND
+
+Dashboard "${input.dashboard_id}" does not exist.
+
+💡 SOLUTION:
+Call this tool with workspaceId to see available dashboards in that workspace.`
         );
       }
 
-      // PRE-FLIGHT CHECK 3: Verify ownership
-      if (dashboard.workspace_id !== validated.workspaceId) {
-        throw new Error(
-          `Workspace mismatch: Cannot delete dashboard in another workspace\n` +
-          `Dashboard "${dashboard.name}" is in workspace: ${dashboard.workspace_id}\n` +
-          `You provided workspace: ${validated.workspaceId}\n` +
-          `Hint: Check ownership with get_dashboard tool`
+      // Verify ownership
+      if (dashboard.workspace_id !== input.workspaceId) {
+        return injectGuidance(
+          { success: false },
+          `❌ WORKSPACE MISMATCH
+
+Dashboard "${dashboard.name}" belongs to a different workspace.
+
+**Dashboard workspace:** ${dashboard.workspace_id}
+**Provided workspace:** ${input.workspaceId}
+
+💡 SOLUTION:
+Use the correct workspace ID for this dashboard, or call without parameters to discover correct workspace.`
         );
       }
 
       logger.info('Dashboard ownership verified', {
-        dashboardId: validated.dashboard_id,
+        dashboardId: input.dashboard_id,
         dashboardName: dashboard.name,
         workspaceId: dashboard.workspace_id
       });
 
-      // Perform delete
-      const { error: deleteError } = await supabase
-        .from('dashboards')
-        .delete()
-        .eq('id', validated.dashboard_id);
+      // Calculate component count
+      const pages = dashboard.config?.pages || [];
+      const componentCount = pages.reduce((total: number, page: any) => {
+        return total + (page.rows || []).reduce((rowTotal: number, row: any) => {
+          return rowTotal + (row.columns || []).filter((col: any) => col.component).length;
+        }, 0);
+      }, 0);
 
-      if (deleteError) {
-        throw new Error(
-          `Failed to delete dashboard: ${deleteError.message}\n` +
-          `Dashboard ID: ${validated.dashboard_id}\n` +
-          `Hint: Check database connection and permissions`
+      // STEP 5: Dry-Run Preview (if no confirmation token)
+      if (!input.confirmationToken) {
+        const approvalEnforcer = getApprovalEnforcer();
+
+        const dryRunBuilder = new DryRunResultBuilder(
+          'delete_dashboard',
+          'WPP Analytics',
+          input.workspaceId
+        );
+
+        dryRunBuilder.addChange({
+          resource: 'Dashboard',
+          resourceId: dashboard.name,
+          field: 'status',
+          currentValue: 'exists',
+          newValue: 'PERMANENTLY DELETED',
+          changeType: 'delete'
+        });
+
+        dryRunBuilder.addRisk('⚠️ This operation is IRREVERSIBLE - dashboard cannot be recovered');
+        dryRunBuilder.addRisk('⚠️ All dashboard configuration will be permanently lost');
+        dryRunBuilder.addRisk(`⚠️ ${componentCount} components will be removed`);
+        dryRunBuilder.addRisk(`⚠️ ${pages.length} pages will be removed`);
+
+        dryRunBuilder.addRecommendation('✅ BigQuery data will NOT be affected');
+        dryRunBuilder.addRecommendation('✅ Dataset entries preserved for other dashboards');
+        dryRunBuilder.addRecommendation('💡 Consider exporting dashboard config before deletion');
+
+        const dryRun = dryRunBuilder.build();
+
+        const { confirmationToken } = await approvalEnforcer.createDryRun(
+          'delete_dashboard',
+          'WPP Analytics',
+          input.workspaceId,
+          { dashboard_id: input.dashboard_id }
+        );
+
+        const preview = approvalEnforcer.formatDryRunForDisplay(dryRun);
+
+        return injectGuidance(
+          {
+            success: true,
+            requiresApproval: true,
+            confirmationToken,
+            preview
+          },
+          `🗑️ CONFIRM DASHBOARD DELETION (Step 3/3)
+
+**Dashboard:** ${dashboard.name}
+**ID:** ${dashboard.id}
+**Workspace:** ${workspace.name}
+**Pages:** ${pages.length}
+**Components:** ${componentCount}
+**Created:** ${new Date(dashboard.created_at).toLocaleString()}
+
+🚨 THIS WILL PERMANENTLY:
+✗ Delete dashboard configuration
+✗ Remove all ${pages.length} pages and ${componentCount} components
+✗ Remove all filters and styling
+✗ Cannot be undone or recovered
+
+✅ WHAT WILL NOT BE AFFECTED:
+✓ BigQuery data (completely safe)
+✓ Dataset entries (preserved for other dashboards)
+✓ Other dashboards in workspace
+
+💡 RECOMMENDATION:
+Consider exporting the dashboard configuration before deletion if you might need it later.
+
+⚠️ Are you absolutely sure you want to delete "${dashboard.name}"?
+
+${preview}
+
+To proceed, call this tool again with confirmationToken: "${confirmationToken}"`
         );
       }
 
-      logger.info('Dashboard deleted successfully', {
-        dashboardId: validated.dashboard_id,
-        dashboardName: dashboard.name,
-        workspaceId: validated.workspaceId
+      // STEP 6: Execute Deletion (with confirmation)
+      const approvalEnforcer = getApprovalEnforcer();
+
+      const dryRunBuilder = new DryRunResultBuilder(
+        'delete_dashboard',
+        'WPP Analytics',
+        input.workspaceId
+      );
+
+      dryRunBuilder.addChange({
+        resource: 'Dashboard',
+        resourceId: dashboard.name,
+        field: 'status',
+        currentValue: 'exists',
+        newValue: 'PERMANENTLY DELETED',
+        changeType: 'delete'
       });
 
-      return {
-        success: true,
-        dashboard_id: validated.dashboard_id,
-        dashboard_name: dashboard.name,
-        deleted: true,
-        deleted_at: new Date().toISOString(),
-      };
+      const dryRun = dryRunBuilder.build();
+
+      await approvalEnforcer.validateAndExecute(
+        input.confirmationToken,
+        dryRun,
+        async () => {
+          const { error: deleteError } = await supabase
+            .from('dashboards')
+            .delete()
+            .eq('id', input.dashboard_id);
+
+          if (deleteError) {
+            throw new Error(`Failed to delete dashboard: ${deleteError.message}`);
+          }
+
+          return { dashboard_id: input.dashboard_id };
+        }
+      );
+
+      logger.info('Dashboard deleted successfully', {
+        dashboardId: input.dashboard_id,
+        dashboardName: dashboard.name,
+        workspaceId: input.workspaceId
+      });
+
+      return injectGuidance(
+        {
+          success: true,
+          dashboard_id: input.dashboard_id,
+          dashboard_name: dashboard.name,
+          deleted: true,
+          deleted_at: new Date().toISOString()
+        },
+        `✅ DASHBOARD DELETED SUCCESSFULLY
+
+**Dashboard:** ${dashboard.name}
+**ID:** ${input.dashboard_id}
+**Components removed:** ${componentCount}
+**Pages removed:** ${pages.length}
+**Deleted at:** ${new Date().toLocaleString()}
+
+✅ CONFIRMATION:
+• Dashboard configuration permanently removed
+• BigQuery data remains intact
+• Dataset entries preserved
+• Dashboard no longer appears in list_dashboards
+
+💡 NEXT STEPS:
+• Verify deletion with list_dashboards tool
+• Create new dashboard if needed with create_dashboard
+• Check other dashboards in this workspace`
+      );
+
     } catch (error) {
       logger.error('delete_dashboard failed', { error });
 
       if (error instanceof z.ZodError) {
-        // Enhanced Zod validation errors with hints
         const enhancedErrors = error.errors.map(e => {
           const field = e.path.join('.');
           let hint = '';
 
-          // Add context-specific hints
           if (field === 'dashboard_id') {
-            hint = '\nHint: Run list_dashboards to get valid dashboard UUID';
+            hint = '\n💡 Hint: Call without parameters to discover available dashboards';
           } else if (field === 'workspaceId') {
-            hint = '\nHint: Run list_workspaces to get your workspace UUID';
-          } else if (field === 'confirm') {
-            hint = '\nHint: Add "confirm": true to proceed with deletion';
+            hint = '\n💡 Hint: Call without parameters to discover available workspaces';
+          } else if (field === 'confirmationToken') {
+            hint = '\n💡 Hint: First call will show preview and provide confirmation token';
           }
 
           return `${field}: ${e.message}${hint}`;
         });
 
-        return {
-          success: false,
-          error: 'Validation error',
-          details: enhancedErrors,
-        };
+        return injectGuidance(
+          { success: false },
+          `❌ VALIDATION ERROR
+
+${enhancedErrors.join('\n')}
+
+💡 SOLUTION:
+Call this tool without any parameters to start the interactive workflow.`
+        );
       }
 
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
-      };
+      return injectGuidance(
+        { success: false },
+        `❌ ERROR IN DASHBOARD DELETION
+
+${error instanceof Error ? error.message : String(error)}
+
+💡 TROUBLESHOOTING:
+• Check database connection
+• Verify dashboard exists
+• Ensure you have appropriate permissions
+• Check Supabase credentials
+
+If the issue persists, contact system administrator.`
+      );
     }
   },
 };

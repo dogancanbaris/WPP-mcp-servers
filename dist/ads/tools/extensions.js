@@ -5,35 +5,14 @@
 import { getLogger } from '../../shared/logger.js';
 import { extractRefreshToken } from '../../shared/oauth-client-factory.js';
 import { createGoogleAdsClientFromRefreshToken } from '../client.js';
+import { injectGuidance, formatDiscoveryResponse, formatNextSteps } from '../../shared/interactive-workflow.js';
 const logger = getLogger('ads.tools.extensions');
 /**
  * List ad extensions (now called assets)
  */
 export const listAdExtensionsTool = {
     name: 'list_ad_extensions',
-    description: `List all ad extensions (sitelinks, calls, structured snippets, etc.) in account.
-
-💡 AGENT GUIDANCE - AD EXTENSIONS:
-
-📊 WHAT ARE EXTENSIONS:
-- Additional information shown with your ads
-- Increase ad size and visibility
-- Improve click-through rates
-- Previously called "extensions", now called "assets"
-
-🎯 EXTENSION TYPES:
-- SITELINK - Additional links below ad
-- CALL - Phone number
-- STRUCTURED_SNIPPET - Feature highlights
-- CALLOUT - Short text highlights
-- PROMOTION - Sales and discounts
-- PRICE - Pricing information
-- LOCATION - Business address
-
-💡 USE CASES:
-- "Show all sitelink extensions"
-- "List phone call extensions"
-- "Which extensions are performing best?"`,
+    description: 'List all ad extensions (sitelinks, calls, structured snippets, etc.) in account.',
     inputSchema: {
         type: 'object',
         properties: {
@@ -42,11 +21,10 @@ export const listAdExtensionsTool = {
                 description: 'Customer ID (10 digits)',
             },
         },
-        required: ['customerId'],
+        required: [],
     },
     async handler(input) {
         try {
-            const { customerId } = input;
             // Extract OAuth tokens from request
             const refreshToken = extractRefreshToken(input);
             if (!refreshToken) {
@@ -58,6 +36,23 @@ export const listAdExtensionsTool = {
             }
             // Create Google Ads client with user's refresh token
             const client = createGoogleAdsClientFromRefreshToken(refreshToken, developerToken);
+            // Account discovery
+            if (!input.customerId) {
+                const resourceNames = await client.listAccessibleAccounts();
+                const accounts = resourceNames.map((rn) => ({
+                    resourceName: rn,
+                    customerId: rn.split('/')[1],
+                }));
+                return formatDiscoveryResponse({
+                    step: '1/2',
+                    title: 'SELECT GOOGLE ADS ACCOUNT',
+                    items: accounts,
+                    itemFormatter: (a, i) => `${i + 1}. Customer ID: ${a.customerId}`,
+                    prompt: 'Which account would you like to list ad extensions for?',
+                    nextParam: 'customerId',
+                });
+            }
+            const { customerId } = input;
             const customer = client.getCustomer(customerId);
             logger.info('Listing ad extensions', { customerId });
             const query = `
@@ -87,15 +82,51 @@ export const listAdExtensionsTool = {
                     promotionTarget: asset?.promotion_asset?.promotion_target || undefined,
                 });
             }
-            return {
-                success: true,
-                data: {
-                    customerId,
-                    extensions,
-                    count: extensions.length,
-                    message: `Found ${extensions.length} extension(s)`,
-                },
-            };
+            // Calculate summary stats
+            const byType = extensions.reduce((acc, e) => {
+                acc[e.type] = (acc[e.type] || 0) + 1;
+                return acc;
+            }, {});
+            // Inject rich guidance into response
+            const guidanceText = `📊 AD EXTENSIONS (ASSETS)
+
+**Account:** ${customerId}
+**Total Extensions:** ${extensions.length}
+
+📋 EXTENSION BREAKDOWN:
+${Object.entries(byType).map(([type, count]) => `• ${type}: ${count} extension(s)`).join('\n')}
+
+🎯 EXTENSIONS IN THIS ACCOUNT:
+${extensions.slice(0, 10).map((e, i) => `${i + 1}. ${e.name} (${e.type})
+   • ID: ${e.id}${e.sitelinkText ? `\n   • Link Text: "${e.sitelinkText}"` : ''}${e.phoneNumber ? `\n   • Phone: ${e.phoneNumber}` : ''}${e.snippetHeader ? `\n   • Header: "${e.snippetHeader}"` : ''}`).join('\n\n')}${extensions.length > 10 ? `\n\n... and ${extensions.length - 10} more` : ''}
+
+💡 EXTENSION TYPES EXPLAINED:
+- **SITELINK:** Additional links below your ad (e.g., "Shop Now", "Contact Us")
+- **CALL:** Phone number users can click to call
+- **STRUCTURED_SNIPPET:** Feature highlights (e.g., "Brands: Nike, Adidas, Puma")
+- **CALLOUT:** Short text highlights (e.g., "Free Shipping", "24/7 Support")
+- **PROMOTION:** Sales and discounts (e.g., "20% Off Holiday Sale")
+- **PRICE:** Pricing information for services/products
+
+🎯 WHY USE EXTENSIONS:
+✅ Increase ad size and visibility (more screen real estate)
+✅ Improve click-through rates (10-25% CTR boost)
+✅ Provide more information without extra cost
+✅ Better mobile experience (easier to call or navigate)
+✅ No extra cost - only pay for clicks on main ad or extension
+
+${formatNextSteps([
+                'Create new sitelink: use create_sitelink_extension',
+                'Add phone extension: use create_call_extension',
+                'Check extension performance: use get_extension_performance',
+                'Associate extensions with campaigns: use link_extension_to_campaign'
+            ])}`;
+            return injectGuidance({
+                customerId,
+                extensions,
+                count: extensions.length,
+                byType,
+            }, guidanceText);
         }
         catch (error) {
             logger.error('Failed to list ad extensions', error);

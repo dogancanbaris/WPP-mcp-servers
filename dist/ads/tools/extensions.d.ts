@@ -16,25 +16,9 @@ export declare const listAdExtensionsTool: {
                 description: string;
             };
         };
-        required: string[];
+        required: never[];
     };
-    handler(input: any): Promise<{
-        success: boolean;
-        data: {
-            customerId: any;
-            extensions: {
-                id: string;
-                name: string;
-                type: string;
-                sitelinkText: string | undefined;
-                phoneNumber: string | undefined;
-                snippetHeader: string | undefined;
-                promotionTarget: string | undefined;
-            }[];
-            count: number;
-            message: string;
-        };
-    }>;
+    handler(input: any): Promise<import("../../shared/interactive-workflow.js").McpResponse>;
 };
 /**
  * Export extension tools
@@ -50,24 +34,8 @@ export declare const extensionTools: {
                 description: string;
             };
         };
-        required: string[];
+        required: never[];
     };
-    handler(input: any): Promise<{
-        success: boolean;
-        data: {
-            customerId: any;
-            extensions: {
-                id: string;
-                name: string;
-                type: string;
-                sitelinkText: string | undefined;
-                phoneNumber: string | undefined;
-                snippetHeader: string | undefined;
-                promotionTarget: string | undefined;
-            }[];
-            count: number;
-            message: string;
-        };
-    }>;
+    handler(input: any): Promise<import("../../shared/interactive-workflow.js").McpResponse>;
 }[];
 //# sourceMappingURL=extensions.d.ts.map

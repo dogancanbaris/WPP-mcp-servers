@@ -152,17 +152,73 @@ export const getSitemapTool = {
             await audit.logReadOperation('user', 'get_sitemap', property, {
                 sitemapUrl,
             });
-            return {
-                success: true,
-                data: {
-                    url: sitemap.path,
-                    lastSubmitted: sitemap.lastSubmitted,
-                    lastDownloaded: sitemap.lastDownloaded,
-                    errors: sitemap.errors || 0,
-                    warnings: sitemap.warnings || 0,
-                    contents: sitemap.contents || [],
-                },
+            const sitemapData = {
+                url: sitemap.path,
+                lastSubmitted: sitemap.lastSubmitted,
+                lastDownloaded: sitemap.lastDownloaded,
+                errors: sitemap.errors || 0,
+                warnings: sitemap.warnings || 0,
+                contents: sitemap.contents || [],
             };
+            // Generate insights
+            const insights = [];
+            const daysSinceSubmission = sitemap.lastSubmitted
+                ? Math.floor((Date.now() - new Date(sitemap.lastSubmitted).getTime()) / (1000 * 60 * 60 * 24))
+                : null;
+            if (sitemapData.errors === 0 && sitemapData.warnings === 0) {
+                insights.push('✅ No errors or warnings detected');
+            }
+            else {
+                if (Number(sitemapData.errors) > 0) {
+                    insights.push(`🔴 ${sitemapData.errors} error(s) found - requires immediate attention`);
+                }
+                if (Number(sitemapData.warnings) > 0) {
+                    insights.push(`⚠️ ${sitemapData.warnings} warning(s) - review recommended`);
+                }
+            }
+            if (daysSinceSubmission !== null) {
+                if (daysSinceSubmission === 0) {
+                    insights.push('✅ Submitted today');
+                }
+                else if (daysSinceSubmission < 7) {
+                    insights.push(`✅ Recently submitted (${daysSinceSubmission} days ago)`);
+                }
+                else if (daysSinceSubmission < 30) {
+                    insights.push(`⚠️ Submitted ${daysSinceSubmission} days ago - consider resubmitting`);
+                }
+                else {
+                    insights.push(`🔴 Last submitted ${daysSinceSubmission} days ago - resubmit recommended`);
+                }
+            }
+            const guidanceText = `🗺️ SITEMAP DETAILS
+
+**Property:** ${property}
+**Sitemap URL:** ${sitemapData.url}
+
+**STATUS:**
+- Last Submitted: ${sitemapData.lastSubmitted || 'Never'}
+- Last Downloaded: ${sitemapData.lastDownloaded || 'Never'}
+- Errors: ${sitemapData.errors}
+- Warnings: ${sitemapData.warnings}
+- Contents: ${sitemapData.contents.length} item(s)
+
+**CONTENTS BREAKDOWN:**
+${sitemapData.contents.length > 0
+                ? sitemapData.contents.map((c, i) => `${i + 1}. Type: ${c.type || 'Unknown'}
+   URLs: ${c.submitted || 0} submitted, ${c.indexed || 0} indexed`)
+                    .join('\n\n')
+                : '(No content data available)'}
+
+💡 KEY INSIGHTS:
+${insights.map(i => `   • ${i}`).join('\n')}
+
+${formatNextSteps([
+                'View all sitemaps: use list_sitemaps',
+                'Submit updated sitemap: use submit_sitemap',
+                'Inspect specific URLs: use inspect_url',
+                'Check indexing status: compare submitted vs indexed counts'
+            ])}`;
+            return injectGuidance(sitemapData, guidanceText);
         }
         catch (error) {
             logger.error('Failed to get sitemap', error);
@@ -193,7 +249,7 @@ export const submitSitemapTool = {
                 description: 'Confirmation token from dry-run preview (optional - if not provided, will show preview)',
             },
         },
-        required: ['property', 'sitemapUrl'],
+        required: [], // Make optional for discovery
     },
     async handler(input) {
         try {
@@ -205,6 +261,50 @@ export const submitSitemapTool = {
             }
             // Create GSC client with user's OAuth token
             const gscClient = createGSCClient(oauthToken);
+            // ═══ STEP 1: PROPERTY DISCOVERY ═══
+            if (!property) {
+                logger.info('Property discovery mode - listing properties');
+                const res = await gscClient.sites.list();
+                const sites = res.data.siteEntry || [];
+                const properties = sites.map((site) => ({
+                    url: site.siteUrl,
+                    permissionLevel: site.permissionLevel,
+                }));
+                return formatDiscoveryResponse({
+                    step: '1/3',
+                    title: 'SELECT PROPERTY',
+                    items: properties,
+                    itemFormatter: (p, i) => `${i + 1}. ${p.url}\n   Permission: ${p.permissionLevel}`,
+                    prompt: 'Which property do you want to submit a sitemap to?',
+                    nextParam: 'property',
+                    emoji: '🗺️',
+                });
+            }
+            // ═══ STEP 2: SITEMAP URL SPECIFICATION ═══
+            if (!sitemapUrl) {
+                const guidanceText = `📋 SPECIFY SITEMAP URL (Step 2/3)
+
+**Property:** ${property}
+
+Please provide the full URL of the sitemap you want to submit:
+
+**Examples:**
+- https://example.com/sitemap.xml
+- https://example.com/sitemap_index.xml
+- https://example.com/sitemaps/posts.xml
+
+💡 REQUIREMENTS:
+- Must be accessible via HTTPS or HTTP
+- Must be in valid XML sitemap format
+- Should be within your domain
+- Can be sitemap index or regular sitemap
+
+⚠️ NOTE: Submission doesn't guarantee immediate indexing. Google will process the sitemap at its own pace.
+
+What sitemap URL would you like to submit?`;
+                return injectGuidance({ property }, guidanceText);
+            }
+            // ═══ STEP 3: DRY-RUN PREVIEW (existing logic) ═══
             // Validate input
             validateGSCProperty(property);
             // Vagueness detection
@@ -292,7 +392,7 @@ export const deleteSitemapTool = {
                 description: 'Confirmation token from dry-run preview (optional - if not provided, will show preview)',
             },
         },
-        required: ['property', 'sitemapUrl'],
+        required: [], // Make optional for discovery
     },
     async handler(input) {
         try {
@@ -304,6 +404,57 @@ export const deleteSitemapTool = {
             }
             // Create GSC client with user's OAuth token
             const gscClient = createGSCClient(oauthToken);
+            // ═══ STEP 1: PROPERTY DISCOVERY ═══
+            if (!property) {
+                logger.info('Property discovery mode - listing properties');
+                const res = await gscClient.sites.list();
+                const sites = res.data.siteEntry || [];
+                const properties = sites.map((site) => ({
+                    url: site.siteUrl,
+                    permissionLevel: site.permissionLevel,
+                }));
+                return formatDiscoveryResponse({
+                    step: '1/3',
+                    title: 'SELECT PROPERTY',
+                    items: properties,
+                    itemFormatter: (p, i) => `${i + 1}. ${p.url}\n   Permission: ${p.permissionLevel}`,
+                    prompt: '🚨 DESTRUCTIVE: Which property contains the sitemap you want to delete?',
+                    nextParam: 'property',
+                    emoji: '⚠️',
+                });
+            }
+            // ═══ STEP 2: SITEMAP DISCOVERY ═══
+            if (!sitemapUrl) {
+                const res = await gscClient.sitemaps.list({ siteUrl: property });
+                const sitemaps = res.data.sitemap || [];
+                if (sitemaps.length === 0) {
+                    return injectGuidance({ property, sitemaps: [] }, `⚠️ NO SITEMAPS FOUND
+
+**Property:** ${property}
+
+No sitemaps are currently submitted to this property.
+
+${formatNextSteps([
+                        'Submit a sitemap: use submit_sitemap',
+                        'Check another property: call list_properties'
+                    ])}`);
+                }
+                return formatDiscoveryResponse({
+                    step: '2/3',
+                    title: 'SELECT SITEMAP TO DELETE',
+                    items: sitemaps,
+                    itemFormatter: (s, i) => {
+                        const sitemap = s;
+                        return `${i + 1}. ${sitemap.path}
+   Last Submitted: ${sitemap.lastSubmitted || 'Never'}
+   Errors: ${sitemap.errors || 0} | Warnings: ${sitemap.warnings || 0}`;
+                    },
+                    prompt: '🚨 Which sitemap do you want to DELETE? (This action is permanent)',
+                    nextParam: 'sitemapUrl',
+                    context: { property },
+                });
+            }
+            // ═══ STEP 3: DRY-RUN PREVIEW (existing logic) ═══
             // Validate input
             validateGSCProperty(property);
             // Vagueness detection

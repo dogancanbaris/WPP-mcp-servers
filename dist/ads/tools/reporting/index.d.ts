@@ -11,7 +11,7 @@ export { getKeywordPerformanceTool } from './get-keyword-performance.tool.js';
 /**
  * Array of all reporting tools for MCP server registration
  */
-export declare const reportingTools: ({
+export declare const reportingTools: {
     name: string;
     description: string;
     inputSchema: {
@@ -25,44 +25,5 @@ export declare const reportingTools: ({
         required: never[];
     };
     handler(input: any): Promise<import("../../../shared/interactive-workflow.js").McpResponse>;
-} | {
-    name: string;
-    description: string;
-    inputSchema: {
-        type: "object";
-        properties: {
-            customerId: {
-                type: string;
-                description: string;
-            };
-            campaignId: {
-                type: string;
-                description: string;
-            };
-            startDate: {
-                type: string;
-                description: string;
-            };
-            endDate: {
-                type: string;
-                description: string;
-            };
-        };
-        required: string[];
-    };
-    handler(input: any): Promise<{
-        success: boolean;
-        data: {
-            customerId: any;
-            campaignId: any;
-            dateRange: string | {
-                startDate: any;
-                endDate: any;
-            };
-            keywords: any[];
-            count: number;
-            message: string;
-        };
-    }>;
-})[];
+}[];
 //# sourceMappingURL=index.d.ts.map

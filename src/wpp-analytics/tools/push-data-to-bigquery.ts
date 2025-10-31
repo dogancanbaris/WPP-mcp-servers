@@ -8,6 +8,7 @@
 import { google } from 'googleapis';
 import { getLogger } from '../../shared/logger.js';
 import { extractOAuthToken } from '../../shared/oauth-client-factory.js';
+import { formatDiscoveryResponse, injectGuidance, formatSuccessSummary } from '../../shared/interactive-workflow.js';
 
 const logger = getLogger('wpp-analytics.push-data');
 
@@ -17,64 +18,7 @@ const logger = getLogger('wpp-analytics.push-data');
 
 export const pushPlatformDataToBigQueryTool = {
   name: 'push_platform_data_to_bigquery',
-  description: `Pull data from marketing platform and insert to BigQuery table.
-
-**Purpose:**
-First step in dashboard creation - gets platform data into BigQuery for analysis.
-
-**IMPORTANT:** By default, uses SHARED TABLE architecture for multi-dashboard support.
-This enables multiple dashboards to use the same data source, reducing storage costs.
-
-**What it does:**
-1. Pulls data from platform (GSC, Google Ads, or GA4) using OAuth
-2. Transforms to BigQuery schema with NULL dimension logic
-3. Inserts to SHARED TABLE (default) or creates per-dashboard table
-4. Inserts all rows with workspace_id for data isolation
-5. Returns table reference for dashboard creation
-
-**Parameters:**
-- platform: Platform to pull from ("gsc", "google_ads", "analytics") [REQUIRED]
-- property: Property ID (GSC domain, Ads customer ID, or GA4 property) [REQUIRED]
-- dateRange: [startDate, endDate] in YYYY-MM-DD format [REQUIRED]
-- dimensions: Array of dimensions to pull (e.g., ["date", "query", "page", "device", "country"]) [REQUIRED]
-- workspaceId: Workspace UUID for data isolation [REQUIRED]
-- useSharedTable: Use shared table architecture (default: TRUE)
-- tableName: (Optional) BigQuery table name (auto-generated if not provided, ignored if useSharedTable=true)
-
-**Example Usage:**
-\`\`\`json
-{
-  "platform": "gsc",
-  "property": "sc-domain:themindfulsteward.com",
-  "dateRange": ["2024-06-25", "2025-10-29"],
-  "dimensions": ["date", "query", "page", "device", "country"],
-  "workspaceId": "945907d8-7e88-45c4-8fde-9db35d5f5ce2",
-  "useSharedTable": true
-}
-\`\`\`
-
-**Returns:**
-\`\`\`json
-{
-  "success": true,
-  "table": "mcp-servers-475317.wpp_marketing.gsc_performance_shared",
-  "tableName": "gsc_performance_shared",
-  "rows_inserted": 58349,
-  "dimensions_pulled": 5,
-  "platform": "gsc",
-  "property": "sc-domain:themindfulsteward.com",
-  "dateRange": ["2024-06-25", "2025-10-29"]
-}
-\`\`\`
-
-**Workflow:**
-After calling this tool, use the returned table name to create a dashboard with \`create_dashboard\` tool.
-
-**Shared Table Architecture:**
-- Shared tables enable multiple dashboards to use the same data source
-- Data is isolated by workspace_id column
-- Reduces BigQuery storage costs significantly
-- Default behavior (useSharedTable: true)`,
+  description: 'Pull data from marketing platform and insert to BigQuery table.',
 
   inputSchema: {
     type: 'object' as const,
@@ -118,26 +62,183 @@ After calling this tool, use the returned table name to create a dashboard with 
         description: 'OAuth token (auto-loaded if not provided)'
       }
     },
-    required: ['platform', 'property', 'dateRange', 'dimensions', 'workspaceId']
+    required: []
   },
 
   async handler(input: any) {
     try {
-      logger.info('[push_platform_data_to_bigquery] Starting...', {
+      // ═══ DISCOVERY MODE: Guide step-by-step if params missing ═══
+
+      // STEP 1: Platform Selection
+      if (!input.platform) {
+        return injectGuidance({}, `📊 SELECT PLATFORM (Step 1/6)
+
+Which marketing platform do you want to pull data from?
+
+**Available Platforms:**
+
+1. **gsc** - Google Search Console
+   - Metrics: clicks, impressions, CTR, position
+   - Dimensions: date, query, page, device, country
+   - Use for: Organic search performance
+
+2. **google_ads** - Google Ads (Coming Soon)
+   - Metrics: clicks, cost, conversions, ROAS
+   - Dimensions: campaign, ad_group, keyword, device
+   - Use for: Paid advertising performance
+
+3. **analytics** - Google Analytics 4 (Coming Soon)
+   - Metrics: users, sessions, conversions, revenue
+   - Dimensions: source, medium, campaign, page
+   - Use for: Website analytics
+
+💡 Currently, only **gsc** is fully implemented.
+
+Provide: platform (e.g., "gsc")`);
+      }
+
+      // Get OAuth token early for property discovery
+      const oauthToken = await extractOAuthToken(input);
+      if (!oauthToken) {
+        return injectGuidance({}, `🔐 OAUTH TOKEN REQUIRED (Step 2/6)
+
+To pull data from ${input.platform.toUpperCase()}, I need your OAuth access token.
+
+💡 This tool should be called by an agent that has access to your OAuth credentials.
+
+If you're calling this directly, provide:
+- __oauthToken: Your Google OAuth access token
+
+Or ensure OAuth tokens are available in the MCP context.`);
+      }
+
+      // STEP 2: Property Discovery (platform-specific)
+      if (!input.property) {
+        if (input.platform === 'gsc') {
+          const oauth2Client = new google.auth.OAuth2();
+          oauth2Client.setCredentials({ access_token: oauthToken });
+          const gscClient = google.searchconsole({ version: 'v1', auth: oauth2Client });
+
+          const res = await gscClient.sites.list();
+          const sites = res.data.siteEntry || [];
+
+          return formatDiscoveryResponse({
+            step: '2/6',
+            title: 'SELECT GSC PROPERTY',
+            items: sites,
+            itemFormatter: (s, i) => `${i + 1}. ${s.siteUrl}
+   Permission: ${s.permissionLevel}`,
+            prompt: 'Which property do you want to pull data from?',
+            nextParam: 'property',
+            context: { platform: input.platform }
+          });
+        }
+
+        return injectGuidance({}, `📊 PROPERTY ID NEEDED (Step 2/6)
+
+Platform: ${input.platform.toUpperCase()}
+
+Provide the property identifier:
+- **GSC:** Domain (e.g., "sc-domain:example.com")
+- **Google Ads:** Customer ID (e.g., "1234567890")
+- **Analytics:** Property ID (e.g., "123456789")
+
+What property should I pull data from?`);
+      }
+
+      // STEP 3: Date Range Guidance
+      if (!input.dateRange || !Array.isArray(input.dateRange) || input.dateRange.length !== 2) {
+        const today = new Date();
+        const last7 = new Date(today);
+        last7.setDate(today.getDate() - 7);
+        const last30 = new Date(today);
+        last30.setDate(today.getDate() - 30);
+        const last90 = new Date(today);
+        last90.setDate(today.getDate() - 90);
+
+        const formatDate = (d: Date) => d.toISOString().split('T')[0];
+
+        return injectGuidance({}, `📅 DATE RANGE (Step 3/6)
+
+Property: ${input.property}
+
+What date range should I pull?
+
+**Quick Options:**
+- Last 7 days: ["${formatDate(last7)}", "${formatDate(today)}"]
+- Last 30 days: ["${formatDate(last30)}", "${formatDate(today)}"]
+- Last 90 days: ["${formatDate(last90)}", "${formatDate(today)}"]
+
+**Custom Range:**
+Format: ["YYYY-MM-DD", "YYYY-MM-DD"]
+
+**Recommended:**
+- For first pull: Last 90 days (good data sample)
+- For daily refresh: Yesterday only (incremental)
+
+💡 Larger date ranges take longer but provide more historical data.
+
+Provide: dateRange (e.g., ["${formatDate(last30)}", "${formatDate(today)}"])`);
+      }
+
+      // STEP 4: Dimensions Selection
+      if (!input.dimensions || !Array.isArray(input.dimensions) || input.dimensions.length === 0) {
+        const dimensionOptions: Record<string, string[]> = {
+          gsc: ['date', 'query', 'page', 'device', 'country'],
+          google_ads: ['date', 'campaign_name', 'ad_group_name', 'keyword', 'device'],
+          analytics: ['date', 'source', 'medium', 'campaign', 'page_path', 'device_category']
+        };
+
+        const platformDimensions = dimensionOptions[input.platform as keyof typeof dimensionOptions] || [];
+
+        return injectGuidance({}, `📏 SELECT DIMENSIONS (Step 4/6)
+
+Platform: ${input.platform.toUpperCase()}
+Property: ${input.property}
+
+Which dimensions do you want to pull?
+
+**Available for ${input.platform.toUpperCase()}:**
+${platformDimensions.map((d, i) => `${i + 1}. ${d}`).join('\n')}
+
+**Recommendations:**
+- **For ALL analysis:** Include ALL dimensions ${JSON.stringify(platformDimensions)}
+- **For quick test:** Just ["date"] (minimal data)
+- **For time series:** ["date"] + one dimension (e.g., ["date", "device"])
+
+💡 More dimensions = richer analysis, but longer pull time.
+
+**Cost:** Negligible (GSC stores ALL dimensions by default)
+
+Provide: dimensions (e.g., ${JSON.stringify(platformDimensions)})`);
+      }
+
+      // STEP 5: Workspace ID
+      if (!input.workspaceId) {
+        return injectGuidance({}, `🏢 WORKSPACE ID (Step 5/6)
+
+Platform: ${input.platform.toUpperCase()}
+Property: ${input.property}
+Date Range: ${input.dateRange[0]} to ${input.dateRange[1]}
+Dimensions: ${input.dimensions.join(', ')}
+
+Provide workspace ID for data isolation.
+
+**Format:** UUID (e.g., "945907d8-7e88-45c4-8fde-9db35d5f5ce2")
+
+💡 Data will be tagged with this workspace_id for multi-tenant isolation.
+
+What workspace_id should I use?`);
+      }
+
+      // ═══ EXECUTION MODE: All params provided ═══
+
+      logger.info('[push_platform_data_to_bigquery] Starting data pull...', {
         platform: input.platform,
         property: input.property,
         dateRange: input.dateRange,
         dimensions: input.dimensions
       });
-
-      // Get OAuth token
-      const oauthToken = await extractOAuthToken(input);
-      if (!oauthToken) {
-        return {
-          success: false,
-          error: 'OAuth token required. Cannot access platform data without authentication.'
-        };
-      }
 
       // STEP 1: Pull data from platform
       let platformData: any[];
@@ -215,16 +316,40 @@ After calling this tool, use the returned table name to create a dashboard with 
         rows: platformData.length
       });
 
-      return {
-        success: true,
-        table: fullTableRef,
-        tableName: tableName,
-        rows_inserted: platformData.length,
-        dimensions_pulled: input.dimensions.length,
-        platform: input.platform,
-        property: input.property,
-        dateRange: input.dateRange
-      };
+      const successText = formatSuccessSummary({
+        title: 'Data Successfully Pushed to BigQuery',
+        operation: 'push_platform_data_to_bigquery',
+        details: {
+          'Platform': input.platform.toUpperCase(),
+          'Property': input.property,
+          'BigQuery Table': fullTableRef,
+          'Rows Inserted': platformData.length.toLocaleString(),
+          'Dimensions': `${input.dimensions.length} (${input.dimensions.join(', ')})`,
+          'Date Range': `${input.dateRange[0]} to ${input.dateRange[1]}`,
+          'Table Type': useSharedTable ? 'Shared (multi-dashboard)' : 'Dedicated',
+          'Workspace ID': input.workspaceId,
+        },
+        nextSteps: [
+          'Create dashboard: use create_dashboard_from_table',
+          'Analyze insights: use analyze_gsc_data_for_insights',
+          'Query data: use run_bigquery_query',
+          'View in BigQuery Console: Check mcp-servers-475317.wpp_marketing',
+        ],
+      });
+
+      return injectGuidance(
+        {
+          success: true,
+          table: fullTableRef,
+          tableName: tableName,
+          rows_inserted: platformData.length,
+          dimensions_pulled: input.dimensions.length,
+          platform: input.platform,
+          property: input.property,
+          dateRange: input.dateRange
+        },
+        successText
+      );
 
     } catch (error) {
       logger.error('[push_platform_data_to_bigquery] Error:', error);

@@ -7,6 +7,7 @@ import { extractOAuthToken, createBusinessProfileClient } from '../shared/oauth-
 import { getLogger } from '../shared/logger.js';
 import { getApprovalEnforcer, DryRunResultBuilder } from '../shared/approval-enforcer.js';
 import { detectAndEnforceVagueness } from '../shared/vagueness-detector.js';
+import { formatDiscoveryResponse, injectGuidance, formatNextSteps } from '../shared/interactive-workflow.js';
 
 const logger = getLogger('business-profile.tools');
 
@@ -15,22 +16,7 @@ const logger = getLogger('business-profile.tools');
  */
 export const listLocationsTool = {
   name: 'list_business_locations',
-  description: `List all Google Business Profile locations for an account.
-
-💡 AGENT GUIDANCE - BUSINESS LOCATIONS:
-
-📊 WHAT YOU'LL GET:
-- Location name and ID
-- Business address
-- Phone numbers
-- Website URL
-- Categories
-- Verification status
-
-🎯 USE CASES:
-- "Show all business locations"
-- "Get locations for multi-location client"
-- "Check which locations are verified"`,
+  description: 'List all Google Business Profile locations for an account',
   inputSchema: {
     type: 'object' as const,
     properties: {
@@ -39,7 +25,7 @@ export const listLocationsTool = {
         description: 'Business Profile account ID',
       },
     },
-    required: ['accountId'],
+    required: [], // Make optional for discovery
   },
   async handler(input: any) {
     try {
@@ -54,6 +40,49 @@ export const listLocationsTool = {
       // Create Business Profile client with user's OAuth token
       const client = createBusinessProfileClient(oauthToken);
 
+      // ═══ STEP 1: ACCOUNT DISCOVERY ═══
+      if (!accountId) {
+        logger.info('Account discovery mode - listing accounts');
+        const accountsResponse = await (client as any).accounts.list();
+        const accounts = accountsResponse.data.accounts || [];
+
+        if (accounts.length === 0) {
+          return injectGuidance(
+            { accounts: [] },
+            `⚠️ NO BUSINESS PROFILE ACCOUNTS FOUND
+
+You don't have access to any Google Business Profile accounts yet.
+
+💡 TO GET STARTED:
+1. Visit https://business.google.com
+2. Create or claim your business
+3. Verify ownership
+4. Return here to manage your locations
+
+${formatNextSteps([
+  'Visit Google Business Profile: https://business.google.com',
+  'Learn about verification: https://support.google.com/business/answer/7107242'
+])}`
+          );
+        }
+
+        return formatDiscoveryResponse({
+          step: '1/1',
+          title: 'SELECT BUSINESS PROFILE ACCOUNT',
+          items: accounts,
+          itemFormatter: (a, i) => {
+            const account = a as any;
+            return `${i + 1}. ${account.accountName || account.name}
+   Account ID: ${account.name?.split('/')[1] || 'Unknown'}
+   Type: ${account.type || 'Standard'}`;
+          },
+          prompt: 'Which account\'s locations do you want to list?',
+          nextParam: 'accountId',
+          emoji: '🏢',
+        });
+      }
+
+      // ═══ STEP 2: EXECUTE WITH ANALYSIS ═══
       logger.info('Listing business locations', { accountId });
 
       const response = await client.businessinformation.accounts.locations.list({
@@ -73,15 +102,62 @@ export const listLocationsTool = {
         categories: loc.categories,
       }));
 
-      return {
-        success: true,
-        data: {
+      // Generate insights
+      const insights: string[] = [];
+      if (formatted.length === 0) {
+        insights.push('⚠️ No locations found - consider adding your first business location');
+      } else if (formatted.length === 1) {
+        insights.push('✅ Single location business');
+      } else {
+        insights.push(`✅ Multi-location business with ${formatted.length} locations`);
+      }
+
+      const locationsWithWebsite = formatted.filter(l => l.websiteUri).length;
+      const locationsWithPhone = formatted.filter(l => l.phoneNumbers?.length > 0).length;
+
+      if (locationsWithWebsite < formatted.length) {
+        insights.push(`⚠️ ${formatted.length - locationsWithWebsite} location(s) missing website`);
+      }
+      if (locationsWithPhone < formatted.length) {
+        insights.push(`⚠️ ${formatted.length - locationsWithPhone} location(s) missing phone number`);
+      }
+
+      const guidanceText = `🏢 BUSINESS PROFILE LOCATIONS
+
+**Account ID:** ${accountId}
+**Total Locations:** ${formatted.length}
+
+**LOCATIONS:**
+${formatted.length > 0
+  ? formatted.map((loc, i) => `${i + 1}. ${loc.title || 'Unnamed Location'}
+   Location ID: ${loc.locationId}
+   Address: ${loc.address?.addressLines?.join(', ') || 'No address'}
+   Phone: ${loc.phoneNumbers?.[0]?.primaryPhone || 'None'}
+   Website: ${loc.websiteUri || 'None'}
+   Categories: ${loc.categories?.map((c: any) => c.displayName).join(', ') || 'None'}`)
+    .join('\n\n')
+  : '(No locations found)'}
+
+💡 KEY INSIGHTS:
+${insights.map(i => `   • ${i}`).join('\n')}
+
+${formatNextSteps([
+  'Get details: use get_business_location with location ID',
+  'Update location: use update_business_location',
+  'Add missing info: Ensure all locations have complete data',
+  'Verify locations: Check verification status in Business Profile'
+])}
+
+Full location data available in structured output.`;
+
+      return injectGuidance(
+        {
           accountId,
           locations: formatted,
           count: formatted.length,
-          message: `Found ${formatted.length} location(s)`,
         },
-      };
+        guidanceText
+      );
     } catch (error) {
       logger.error('Failed to list locations', error as Error);
       throw error;
@@ -94,35 +170,24 @@ export const listLocationsTool = {
  */
 export const getLocationTool = {
   name: 'get_business_location',
-  description: `Get detailed information for a specific business location.
-
-💡 AGENT GUIDANCE:
-
-📊 WHAT YOU'LL GET:
-- Complete location details
-- Business hours
-- Categories
-- Phone numbers
-- Reviews summary
-- Verification status
-
-🎯 USE CASES:
-- "Get full details for location ID xyz"
-- "Check business hours for a location"
-- "See verification status"`,
+  description: 'Get detailed information for a specific business location',
   inputSchema: {
     type: 'object' as const,
     properties: {
-      locationName: {
+      accountId: {
         type: 'string',
-        description: 'Location resource name (accounts/{accountId}/locations/{locationId})',
+        description: 'Business Profile account ID',
+      },
+      locationId: {
+        type: 'string',
+        description: 'Location ID',
       },
     },
-    required: ['locationName'],
+    required: [], // Make optional for discovery
   },
   async handler(input: any) {
     try {
-      const { locationName } = input;
+      const { accountId, locationId } = input;
 
       // Extract OAuth token from request
       const oauthToken = await extractOAuthToken(input);
@@ -133,6 +198,69 @@ export const getLocationTool = {
       // Create Business Profile client with user's OAuth token
       const client = createBusinessProfileClient(oauthToken);
 
+      // ═══ STEP 1: ACCOUNT DISCOVERY ═══
+      if (!accountId) {
+        logger.info('Account discovery mode - listing accounts');
+        const accountsResponse = await (client as any).accounts.list();
+        const accounts = accountsResponse.data.accounts || [];
+
+        return formatDiscoveryResponse({
+          step: '1/2',
+          title: 'SELECT BUSINESS PROFILE ACCOUNT',
+          items: accounts,
+          itemFormatter: (a, i) => {
+            const account = a as any;
+            return `${i + 1}. ${account.accountName || account.name}
+   Account ID: ${account.name?.split('/')[1] || 'Unknown'}`;
+          },
+          prompt: 'Which account contains the location?',
+          nextParam: 'accountId',
+          emoji: '🏢',
+        });
+      }
+
+      // ═══ STEP 2: LOCATION DISCOVERY ═══
+      if (!locationId) {
+        const response = await client.businessinformation.accounts.locations.list({
+          parent: `accounts/${accountId}`,
+          readMask: 'name,title,storefrontAddress',
+        });
+        const locations = response.data.locations || [];
+
+        if (locations.length === 0) {
+          return injectGuidance(
+            { accountId, locations: [] },
+            `⚠️ NO LOCATIONS FOUND
+
+**Account ID:** ${accountId}
+
+No locations found in this account.
+
+${formatNextSteps([
+  'List all accounts: use list_business_locations without parameters',
+  'Add a location: Visit https://business.google.com'
+])}`
+          );
+        }
+
+        return formatDiscoveryResponse({
+          step: '2/2',
+          title: 'SELECT LOCATION',
+          items: locations,
+          itemFormatter: (l, i) => {
+            const location = l as any;
+            return `${i + 1}. ${location.title || 'Unnamed Location'}
+   Location ID: ${location.name?.split('/')[3] || 'Unknown'}
+   Address: ${location.storefrontAddress?.addressLines?.join(', ') || 'No address'}`;
+          },
+          prompt: 'Which location do you want details for?',
+          nextParam: 'locationId',
+          context: { accountId },
+        });
+      }
+
+      // ═══ STEP 3: EXECUTE WITH ANALYSIS ═══
+      const locationName = `accounts/${accountId}/locations/${locationId}`;
       logger.info('Getting location details', { locationName });
 
       const response = await client.businessinformation.locations.get({
@@ -142,13 +270,65 @@ export const getLocationTool = {
 
       const location = response.data;
 
-      return {
-        success: true,
-        data: {
-          location,
-          message: `Retrieved location: ${location.title}`,
-        },
-      };
+      // Generate insights
+      const insights: string[] = [];
+
+      if (!location.websiteUri) {
+        insights.push('⚠️ No website URL - consider adding one to increase visibility');
+      }
+      if (!location.phoneNumbers || (Array.isArray(location.phoneNumbers) && location.phoneNumbers.length === 0)) {
+        insights.push('⚠️ No phone numbers - customers need a way to contact you');
+      }
+      if (!location.regularHours) {
+        insights.push('⚠️ No business hours set - helps customers know when you\'re open');
+      }
+      if (!location.categories || (Array.isArray(location.categories) && location.categories.length === 0)) {
+        insights.push('⚠️ No categories - helps customers find you in search');
+      }
+
+      if (insights.length === 0) {
+        insights.push('✅ Location profile is complete');
+      }
+
+      const guidanceText = `🏢 BUSINESS LOCATION DETAILS
+
+**Location:** ${location.title || 'Unnamed Location'}
+**Location ID:** ${locationId}
+
+**ADDRESS:**
+${location.storefrontAddress?.addressLines?.join('\n') || 'No address'}
+${location.storefrontAddress?.locality || ''}, ${location.storefrontAddress?.administrativeArea || ''} ${location.storefrontAddress?.postalCode || ''}
+${location.storefrontAddress?.regionCode || ''}
+
+**CONTACT:**
+- Phone: ${(Array.isArray(location.phoneNumbers) ? location.phoneNumbers[0]?.primaryPhone : null) || 'None'}
+- Website: ${location.websiteUri || 'None'}
+
+**CATEGORIES:**
+${(Array.isArray(location.categories) ? location.categories : []).map((c: any) => `- ${c.displayName}`).join('\n') || 'None'}
+
+**BUSINESS HOURS:**
+${(location.regularHours?.periods?.length ?? 0) > 0
+  ? location.regularHours?.periods?.map((p: any) =>
+    `${p.openDay}: ${p.openTime?.hours || '00'}:${p.openTime?.minutes || '00'} - ${p.closeTime?.hours || '00'}:${p.closeTime?.minutes || '00'}`)
+    .join('\n')
+  : 'Not set'}
+
+**PROFILE:**
+- Description: ${location.profile?.description || 'None'}
+
+💡 KEY INSIGHTS:
+${insights.map(i => `   • ${i}`).join('\n')}
+
+${formatNextSteps([
+  'Update location: use update_business_location',
+  'List all locations: use list_business_locations',
+  'View in Business Profile: https://business.google.com'
+])}
+
+Full location data available in structured output.`;
+
+      return injectGuidance(location, guidanceText);
     } catch (error) {
       logger.error('Failed to get location', error as Error);
       throw error;
@@ -161,38 +341,17 @@ export const getLocationTool = {
  */
 export const updateLocationTool = {
   name: 'update_business_location',
-  description: `Update business location information (hours, description, phone, etc.).
-
-💡 AGENT GUIDANCE - UPDATE LOCATIONS:
-
-🎯 WHAT THIS DOES:
-- Update location details
-- Change business hours
-- Update phone numbers, website
-- Modify categories
-
-⚠️ UPDATEABLE FIELDS:
-- title (business name)
-- phoneNumbers
-- websiteUri
-- regularHours
-- categories
-- profile (description)
-
-💡 COMMON USE CASES:
-- "Update business hours for holiday schedule"
-- "Change phone number for all locations"
-- "Update website URL after rebrand"
-
-⚠️ BULK OPERATIONS:
-- Use vagueness check for bulk updates
-- Show all locations being updated before confirming`,
+  description: 'Update business location information (hours, phone, website, etc.).',
   inputSchema: {
     type: 'object' as const,
     properties: {
-      locationName: {
+      accountId: {
         type: 'string',
-        description: 'Location resource name',
+        description: 'Business Profile account ID',
+      },
+      locationId: {
+        type: 'string',
+        description: 'Location ID',
       },
       updates: {
         type: 'object',
@@ -209,11 +368,11 @@ export const updateLocationTool = {
         description: 'Confirmation token (optional)',
       },
     },
-    required: ['locationName', 'updates'],
+    required: [],
   },
   async handler(input: any) {
     try {
-      const { locationName, updates, confirmationToken } = input;
+      const { accountId, locationId, updates, confirmationToken } = input;
 
       // Extract OAuth token from request
       const oauthToken = await extractOAuthToken(input);
@@ -221,14 +380,115 @@ export const updateLocationTool = {
         throw new Error('OAuth token required for Business Profile API access');
       }
 
+      // Create Business Profile client with user's OAuth token
+      const client = createBusinessProfileClient(oauthToken);
+
+      // ═══ STEP 1: ACCOUNT DISCOVERY ═══
+      if (!accountId) {
+        logger.info('Account discovery mode');
+        const accountsResponse = await (client as any).accounts.list();
+        const accounts = accountsResponse.data.accounts || [];
+
+        return formatDiscoveryResponse({
+          step: '1/4',
+          title: 'SELECT BUSINESS ACCOUNT',
+          items: accounts,
+          itemFormatter: (a, i) => {
+            const account = a as any;
+            return `${i + 1}. ${account.accountName || account.name}
+   Account ID: ${account.name?.split('/')[1] || 'Unknown'}`;
+          },
+          prompt: 'Which account contains the location to update?',
+          nextParam: 'accountId',
+          emoji: '🏢',
+        });
+      }
+
+      // ═══ STEP 2: LOCATION DISCOVERY ═══
+      if (!locationId) {
+        const locationsResponse = await client.businessinformation.accounts.locations.list({
+          parent: `accounts/${accountId}`,
+          readMask: 'name,title,storefrontAddress,websiteUri,phoneNumbers',
+        });
+        const locations = locationsResponse.data.locations || [];
+
+        if (locations.length === 0) {
+          throw new Error(`No locations found for account ${accountId}`);
+        }
+
+        return formatDiscoveryResponse({
+          step: '2/4',
+          title: 'SELECT LOCATION',
+          items: locations,
+          itemFormatter: (l, i) => {
+            const loc = l as any;
+            return `${i + 1}. ${loc.title}
+   Location ID: ${loc.name?.split('/')[3] || 'Unknown'}
+   Address: ${loc.storefrontAddress?.addressLines?.[0] || 'N/A'}
+   Phone: ${loc.phoneNumbers?.[0]?.primaryPhone || 'None'}`;
+          },
+          prompt: 'Which location to update?',
+          nextParam: 'locationId',
+          context: { accountId },
+        });
+      }
+
+      // ═══ STEP 3: SHOW CURRENT VALUES ═══
+      const locationName = `accounts/${accountId}/locations/${locationId}`;
+
+      if (!updates || Object.keys(updates).length === 0) {
+        const currentLocation = await client.businessinformation.locations.get({
+          name: locationName,
+          readMask: 'name,title,storefrontAddress,websiteUri,phoneNumbers,regularHours',
+        });
+
+        const loc = currentLocation.data;
+
+        const guidanceText = `📝 CURRENT LOCATION DETAILS (Step 3/4)
+
+**Location:** ${loc.title}
+**Location ID:** ${locationId}
+
+**Current Values:**
+- **Title:** ${loc.title || 'N/A'}
+- **Website:** ${loc.websiteUri || 'N/A'}
+- **Phone:** ${(Array.isArray(loc.phoneNumbers) ? loc.phoneNumbers[0]?.primaryPhone : null) || 'N/A'}
+- **Address:** ${loc.storefrontAddress?.addressLines?.join(', ') || 'N/A'}
+
+**Business Hours:**
+${loc.regularHours?.periods?.map((p: any) =>
+  `   • ${p.openDay}: ${p.openTime?.hours || '00'}:${p.openTime?.minutes || '00'} - ${p.closeTime?.hours || '00'}:${p.closeTime?.minutes || '00'}`
+).join('\n') || '   Not set'}
+
+**Updateable Fields:**
+- title: Business name
+- websiteUri: Website URL
+- phoneNumbers: Array of phone objects
+- regularHours: Business hours object
+
+💡 **What would you like to update?**
+Provide: updates parameter as JSON object
+
+**Example:**
+\`\`\`json
+{
+  "websiteUri": "https://newwebsite.com",
+  "phoneNumbers": [{ "primaryPhone": "+1-555-0123" }]
+}
+\`\`\``;
+
+        return injectGuidance(
+          { currentLocation: loc, nextParam: 'updates' },
+          guidanceText
+        );
+      }
+
+      // ═══ STEP 4: DRY-RUN PREVIEW ═══
       detectAndEnforceVagueness({
         operation: 'update_business_location',
         inputText: `update location ${locationName}`,
         inputParams: { locationName, updates },
       });
-
-      // Create Business Profile client with user's OAuth token
-      const client = createBusinessProfileClient(oauthToken);
 
       const approvalEnforcer = getApprovalEnforcer();
       const dryRunBuilder = new DryRunResultBuilder(
@@ -237,18 +497,27 @@ export const updateLocationTool = {
         locationName
       );
 
+      // Fetch current values for comparison
+      const currentLocation = await client.businessinformation.locations.get({
+        name: locationName,
+        readMask: 'name,title,websiteUri,phoneNumbers,regularHours',
+      });
+
+      const current = currentLocation.data;
+
       Object.keys(updates).forEach((field) => {
         dryRunBuilder.addChange({
           resource: 'Business Location',
           resourceId: locationName,
           field,
-          currentValue: 'Current value',
+          currentValue: JSON.stringify(current[field as keyof typeof current] || 'N/A'),
           newValue: JSON.stringify(updates[field]),
           changeType: 'update',
         });
       });
 
-      dryRunBuilder.addRecommendation('Changes may take 24-48 hours to appear on Google');
+      dryRunBuilder.addRecommendation('Changes may take 24-48 hours to appear on Google Search and Maps');
+      dryRunBuilder.addRecommendation('Verify changes in Google Business Profile dashboard after update');
 
       const dryRun = dryRunBuilder.build();
 
@@ -264,6 +533,7 @@ export const updateLocationTool = {
         return { success: true, requiresApproval: true, preview, confirmationToken: token };
       }
 
+      // ═══ STEP 5: EXECUTE WITH CONFIRMATION ═══
       logger.info('Updating location with confirmation', { locationName });
 
       await approvalEnforcer.validateAndExecute(
@@ -280,14 +550,36 @@ export const updateLocationTool = {
         }
       );
 
-      return {
-        success: true,
-        data: {
+      const guidanceText = `✅ BUSINESS LOCATION UPDATED
+
+**Location:** ${locationName}
+**Fields Updated:** ${Object.keys(updates).join(', ')}
+
+**Changes:**
+${Object.entries(updates).map(([field, value]) =>
+  `   • ${field}: ${JSON.stringify(value)}`
+).join('\n')}
+
+⏱️ **Timeline:**
+- Changes propagate to Google within 24-48 hours
+- Verify in Google Business Profile dashboard
+- Check Google Search and Maps for public visibility
+
+${formatNextSteps([
+  'Verify changes: use get_business_location',
+  'Update other locations: use update_business_location again',
+  'Check all locations: use list_business_locations',
+  'Monitor reviews: Check Business Profile dashboard'
+])}`;
+
+      return injectGuidance(
+        {
           locationName,
           updatedFields: Object.keys(updates),
-          message: `✅ Location updated successfully`,
+          updates,
         },
-      };
+        guidanceText
+      );
     } catch (error) {
       logger.error('Failed to update location', error as Error);
       throw error;

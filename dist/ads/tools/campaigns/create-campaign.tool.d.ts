@@ -35,9 +35,9 @@ export declare const createCampaignTool: {
                 description: string;
             };
         };
-        required: string[];
+        required: never[];
     };
-    handler(input: any): Promise<{
+    handler(input: any): Promise<import("../../../shared/interactive-workflow.js").McpResponse | {
         success: boolean;
         data: {
             customerId: any;

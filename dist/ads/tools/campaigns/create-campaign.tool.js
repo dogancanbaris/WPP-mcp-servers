@@ -7,6 +7,8 @@ import { getLogger } from '../../../shared/logger.js';
 import { extractRefreshToken } from '../../../shared/oauth-client-factory.js';
 import { createGoogleAdsClientFromRefreshToken } from '../../client.js';
 import { getAuditLogger } from '../../../gsc/audit.js';
+import { formatDiscoveryResponse, injectGuidance } from '../../../shared/interactive-workflow.js';
+import { extractCustomerId, microsToAmount } from '../../validation.js';
 const logger = getLogger('ads.tools.campaigns.create');
 const audit = getAuditLogger();
 /**
@@ -85,7 +87,7 @@ export const createCampaignTool = {
                 description: 'Initial status (default: PAUSED - recommended)',
             },
         },
-        required: ['customerId', 'name', 'budgetId', 'campaignType'],
+        required: [], // Make optional for discovery
     },
     async handler(input) {
         try {
@@ -101,6 +103,120 @@ export const createCampaignTool = {
             }
             // Create Google Ads client with user's refresh token
             const client = createGoogleAdsClientFromRefreshToken(refreshToken, developerToken);
+            // ═══ STEP 1: ACCOUNT DISCOVERY ═══
+            if (!customerId) {
+                const resourceNames = await client.listAccessibleAccounts();
+                const accounts = resourceNames.map((rn) => ({
+                    resourceName: rn,
+                    customerId: extractCustomerId(rn),
+                }));
+                return formatDiscoveryResponse({
+                    step: '1/5',
+                    title: 'SELECT GOOGLE ADS ACCOUNT',
+                    items: accounts,
+                    itemFormatter: (a, i) => `${i + 1}. Customer ID: ${a.customerId}`,
+                    prompt: 'Which account do you want to create a campaign in?',
+                    nextParam: 'customerId',
+                    emoji: '🎯',
+                });
+            }
+            // ═══ STEP 2: BUDGET DISCOVERY ═══
+            if (!budgetId) {
+                const budgets = await client.listBudgets(customerId);
+                if (budgets.length === 0) {
+                    const guidanceText = `⚠️ NO BUDGETS FOUND (Step 2/5)
+
+This account has no budgets. You must create a budget before creating a campaign.
+
+**Next Steps:**
+1. Use create_budget tool to create a budget
+2. Then return here to create the campaign
+
+**Example:**
+\`\`\`
+create_budget(
+  customerId: "${customerId}",
+  name: "Q1 2025 Budget",
+  dailyAmountDollars: 50
+)
+\`\`\``;
+                    return injectGuidance({ customerId }, guidanceText);
+                }
+                return formatDiscoveryResponse({
+                    step: '2/5',
+                    title: 'SELECT BUDGET',
+                    items: budgets,
+                    itemFormatter: (b, i) => {
+                        const budget = b.campaign_budget;
+                        const dailyAmount = microsToAmount(budget?.amount_micros || 0);
+                        return `${i + 1}. ${budget?.name || 'Unnamed Budget'}
+   ID: ${budget?.id}
+   Daily Budget: ${dailyAmount}/day`;
+                    },
+                    prompt: 'Which budget should this campaign use?',
+                    nextParam: 'budgetId',
+                    context: { customerId },
+                });
+            }
+            // ═══ STEP 3: CAMPAIGN TYPE GUIDANCE ═══
+            if (!campaignType) {
+                const guidanceText = `🎯 SELECT CAMPAIGN TYPE (Step 3/5)
+
+Choose the campaign type:
+
+**Available Types:**
+
+1. **SEARCH** - Text ads on Google Search
+   • Best for: Intent-based searches, high-converting keywords
+   • Example: User searches "buy running shoes" → sees your text ad
+
+2. **DISPLAY** - Banner/image ads on Display Network
+   • Best for: Brand awareness, remarketing, visual products
+   • Example: Image ads on news sites, YouTube, Gmail
+
+3. **PERFORMANCE_MAX** - Automated cross-channel campaigns
+   • Best for: Maximizing conversions across all Google properties
+   • Google automatically optimizes placements and creatives
+
+4. **SHOPPING** - Product listing ads (requires Merchant Center)
+   • Best for: E-commerce, product catalogs
+   • Shows product image, price, store name
+
+5. **VIDEO** - YouTube ads
+   • Best for: Video content, brand storytelling
+   • In-stream, discovery, bumper ads
+
+6. **DEMAND_GEN** - Demand generation campaigns
+   • Best for: Building demand on YouTube, Gmail, Discover
+   • Visually rich, storytelling formats
+
+**Provide:** campaignType (one of: SEARCH, DISPLAY, PERFORMANCE_MAX, SHOPPING, VIDEO, DEMAND_GEN)
+
+Which campaign type do you want?`;
+                return injectGuidance({ customerId, budgetId }, guidanceText);
+            }
+            // ═══ STEP 4: CAMPAIGN NAME GUIDANCE ═══
+            if (!name) {
+                const guidanceText = `📝 CAMPAIGN NAME (Step 4/5)
+
+Enter a descriptive campaign name:
+
+**Naming Best Practices:**
+- Format: "[Client/Brand] - [Type] - [Purpose] - [Date]"
+- Examples:
+  • "ACME Inc - Search - Brand Terms - 2025 Q1"
+  • "Product Launch - PMax - November 2025"
+  • "Holiday Sale - Display - Remarketing"
+
+**Keep it:**
+- Descriptive (know what it is at a glance)
+- Consistent (same format across campaigns)
+- Searchable (easy to find in reports)
+
+What should the campaign be named?`;
+                return injectGuidance({ customerId, budgetId, campaignType }, guidanceText);
+            }
+            // ═══ STEP 5: EXECUTE CAMPAIGN CREATION ═══
             logger.info('Creating campaign', { customerId, name, campaignType });
             const result = await client.createCampaign(customerId, name, budgetId, campaignType, status || 'PAUSED');
             // AUDIT: Log successful campaign creation
