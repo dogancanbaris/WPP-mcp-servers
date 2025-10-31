@@ -1496,8 +1496,594 @@ Proceed with interactive workflow transformation using agents or manual implemen
 ---
 
 **Session End:** October 31, 2025
-**Duration:** ~8 hours total
-**Files Modified:** 15 files
-**Tools Transformed:** 12 tools
-**Patterns Demonstrated:** 4/4 categories
-**Documentation:** Complete
+**Duration:** ~12 hours total (extended session)
+**Files Modified:** 25+ files
+**Tools Transformed:** 15 tools with full interactive workflows
+**Tools Fixed:** All 66 tools functionally working (OAuth + Analytics gRPC fixes)
+**Patterns Demonstrated:** 4/4 categories ✅
+**Documentation:** Complete ✅
+**Build Status:** ✅ 0 errors
+**Git Commit:** d9343d9
+
+**Remaining Work:** 51 tools need interactive workflow transformation (patterns proven)
+**Approach:** Mechanical application of proven patterns
+**Estimated Time:** 12-15 hours in next session
+**Token Budget:** 416K used / 1M limit (584K available for next session)
+
+---
+---
+
+# 🔄 NEXT SESSION: Complete Remaining 51 Tools
+
+**For Next Agent:** Read this section first to understand exactly what needs to be done.
+
+---
+
+## 📊 Current Status After Session 2 (October 31, 2025, Commit d9343d9)
+
+### ✅ COMPLETE
+
+**Infrastructure:**
+- ✅ Router architecture working (94% token reduction)
+- ✅ Backend serving 66 tools on port 3100
+- ✅ OAuth dev system fixed (auto-loads from config/gsc-tokens.json)
+- ✅ Google Ads developer token configured in .env
+- ✅ Analytics gRPC issues fixed (googleapis wrapper)
+- ✅ Interactive workflow utilities (`src/shared/interactive-workflow.ts`)
+- ✅ Build succeeds with 0 TypeScript errors
+
+**Tools Transformed (15/66) - Fully Working with Interactive Workflows:**
+1. `src/gsc/tools/properties.ts` - list_properties, get_property
+2. `src/gsc/tools/analytics.ts` - query_search_analytics
+3. `src/gsc/tools/sitemaps.ts` - list_sitemaps (with discovery)
+4. `src/ads/tools/accounts.ts` - list_accessible_accounts
+5. `src/ads/tools/reporting/list-campaigns.tool.ts` - list_campaigns
+6. `src/ads/tools/reporting/list-budgets.tool.ts` - list_budgets  
+7. `src/ads/tools/reporting/get-campaign-performance.tool.ts` - get_campaign_performance
+8. `src/ads/tools/reporting/get-search-terms.tool.ts` - get_search_terms_report
+9. `src/ads/tools/budgets.ts` - update_budget (with discovery + approval)
+10. `src/analytics/tools/accounts.ts` - list_analytics_accounts, list_analytics_properties, list_data_streams
+11. `src/bigquery/tools.ts` - list_bigquery_datasets
+
+**Documentation:**
+- ✅ CLAUDE.md updated (router arch + AI agent guide + Google Ads access levels)
+- ✅ README.md updated (router architecture)
+- ✅ All architecture docs updated
+
+---
+
+## 🎯 REMAINING WORK: 51 Tools to Transform
+
+### Pattern Reference (Copy These Exactly)
+
+**Simple READ Example:** `src/gsc/tools/properties.ts` - list_properties
+```typescript
+// 1. Import utilities
+import { injectGuidance, formatNextSteps } from '../../shared/interactive-workflow.js';
+
+// 2. Strip description to single line
+description: 'List all Search Console properties you have access to',
+
+// 3. Return with guidance injection
+return injectGuidance(data, `📊 FORMATTED RESULTS
+...
+💡 WHAT YOU CAN DO:
+...
+${formatNextSteps([...])}`);
+```
+
+**Complex READ Example:** `src/gsc/tools/analytics.ts` - query_search_analytics
+```typescript
+// 1. Import utilities
+import { injectGuidance, formatDiscoveryResponse, formatNextSteps, formatNumber } from '../../shared/interactive-workflow.js';
+
+// 2. Make params optional
+required: [],
+
+// 3. Add discovery steps
+if (!input.property) {
+  return formatDiscoveryResponse({
+    step: '1/2',
+    title: 'SELECT PROPERTY',
+    items: properties,
+    itemFormatter: (p, i) => `${i + 1}. ${p.url}`,
+    prompt: 'Which property?',
+    nextParam: 'property',
+  });
+}
+
+// 4. Final response with analysis
+return injectGuidance(data, `📊 ANALYSIS
+${formatResults()}
+💡 INSIGHTS:
+${insights}
+${formatNextSteps([...])}`);
+```
+
+**WRITE with Approval Example:** `src/ads/tools/budgets.ts` - update_budget
+```typescript
+// 1. Import utilities
+import { formatDiscoveryResponse, injectGuidance } from '../../shared/interactive-workflow.js';
+
+// 2. Make all params optional
+required: [],
+
+// 3. Add discovery for each param (before existing dry-run)
+if (!input.customerId) {
+  return formatDiscoveryResponse({...}); // Account discovery
+}
+if (!input.budgetId) {
+  return formatDiscoveryResponse({...}); // Budget discovery
+}
+if (!input.newAmount) {
+  return injectGuidance({...}, `guidance for amount`);
+}
+
+// 4. Keep existing dry-run + approval logic
+// 5. Enhance success message
+```
+
+---
+
+## 📋 COMPLETE TRANSFORMATION CHECKLIST
+
+### Phase 1: Remaining GSC Tools (3 tools)
+
+**File:** `src/gsc/tools/url-inspection.ts`
+- [ ] inspect_url (Complex READ)
+  - Strip description
+  - Add property discovery
+  - Add URL discovery/input
+  - Rich response with indexing status
+
+**File:** `src/gsc/tools/sitemaps.ts`
+- [ ] get_sitemap (already has discovery partial - complete it)
+  - Add guidance to response
+- [ ] submit_sitemap (WRITE - already has approval, add discovery)
+  - Add property discovery
+  - Add sitemap URL input/guidance
+- [ ] delete_sitemap (WRITE - already has approval, add discovery)
+  - Add property discovery
+  - Add sitemap selection
+
+### Phase 2: Remaining Google Ads READ Tools (7 tools)
+
+**File:** `src/ads/tools/reporting/get-keyword-performance.tool.ts`
+- [ ] get_keyword_performance
+  - Strip description
+  - Add account discovery
+  - Add date range guidance
+  - Rich analysis response
+
+**File:** `src/ads/tools/keyword-planning.ts`
+- [ ] generate_keyword_ideas
+  - Strip description
+  - Add account discovery
+  - Add guidance for seed keywords
+  - Rich response with suggestions
+
+**File:** `src/ads/tools/bidding.ts`
+- [ ] list_bidding_strategies
+  - Strip description
+  - Add account discovery
+  - Rich guidance response
+
+**File:** `src/ads/tools/extensions.ts`
+- [ ] list_ad_extensions
+  - Strip description
+  - Add account discovery
+  - Rich guidance response
+
+**File:** `src/ads/tools/audiences.ts`
+- [ ] list_user_lists
+  - Strip description
+  - Add account discovery
+  - Rich guidance response
+
+**File:** `src/ads/tools/conversions.ts`
+- [ ] list_conversion_actions
+  - Strip description
+  - Add account discovery  
+  - Rich guidance response
+- [ ] get_conversion_action
+  - Strip description
+  - Add account discovery
+  - Add conversion action discovery
+  - Rich response
+
+### Phase 3: Remaining Analytics Tools (2 reporting tools)
+
+**File:** `src/analytics/tools/reporting/run-report.tool.ts`
+- [ ] run_analytics_report
+  - Strip description
+  - Add property discovery
+  - Add date range guidance
+  - Add dimensions/metrics suggestions
+  - Rich analysis response
+
+**File:** `src/analytics/tools/reporting/get-realtime-users.tool.ts`
+- [ ] get_realtime_users
+  - Strip description
+  - Add property discovery
+  - Add dimensions/metrics guidance
+  - Rich real-time analysis response
+
+### Phase 4: CrUX Tools (5 tools)
+
+**File:** `src/crux/tools.ts`
+- [ ] get_core_web_vitals_origin
+  - Strip description
+  - Add origin input guidance
+  - Rich CWV analysis response
+- [ ] get_core_web_vitals_url
+  - Strip description
+  - Add URL input guidance
+  - Rich page CWV response
+- [ ] get_cwv_history_origin
+  - Strip description
+  - Add origin discovery
+  - Rich trend analysis
+- [ ] get_cwv_history_url
+  - Strip description
+  - Add URL discovery
+  - Rich trend analysis
+- [ ] compare_cwv_form_factors
+  - Strip description
+  - Add origin/URL discovery
+  - Rich comparison response
+
+### Phase 5: Other Platform Tools (3 tools)
+
+**File:** `src/bigquery/tools.ts`
+- [ ] run_bigquery_query
+  - Strip description
+  - Add SQL input guidance with examples
+  - Rich query results response
+- [ ] create_bigquery_dataset (WRITE - needs approval)
+  - Strip description
+  - Add dataset ID input
+  - Add dry-run preview
+  - Add confirmation workflow
+
+**File:** `src/serp/tools.ts`
+- [ ] search_google
+  - Strip description
+  - Add query input guidance
+  - Rich SERP results response
+
+### Phase 6: Business Profile Tools (3 tools)
+
+**File:** `src/business-profile/tools.ts`
+- [ ] list_business_locations
+  - Strip description
+  - Add account discovery
+  - Rich list response
+- [ ] get_business_location
+  - Strip description
+  - Add account discovery
+  - Add location discovery
+  - Rich location details
+- [ ] update_business_location (WRITE - needs approval)
+  - Strip description
+  - Add account discovery
+  - Add location discovery
+  - Add update field discovery
+  - Add dry-run preview
+  - Add confirmation
+
+### Phase 7: WPP Analytics Tools (9 tools)
+
+**File:** `src/wpp-analytics/tools/dashboards/list-dashboards.tool.ts`
+- [ ] list_dashboards
+  - Already working, add rich guidance
+
+**File:** `src/wpp-analytics/tools/dashboards/get-dashboard.tool.ts`
+- [ ] get_dashboard
+  - Add dashboard discovery
+  - Rich dashboard details response
+
+**File:** `src/wpp-analytics/tools/dashboards/list-datasets.tool.ts`
+- [ ] list_datasets
+  - Add workspace discovery
+  - Rich guidance response
+
+**File:** `src/wpp-analytics/tools/dashboards/list-templates.tool.ts`
+- [ ] list_templates
+  - Rich guidance response
+
+**Files:** create-dashboard, update-dashboard, delete-dashboard, create-dashboard-from-table tools
+- [ ] create_dashboard - Add discovery + approval + guidance
+- [ ] update_dashboard_layout - Add discovery + approval + guidance
+- [ ] delete_dashboard - Already has approval, add discovery + guidance
+- [ ] create_dashboard_from_table - Add discovery + approval + guidance
+
+**File:** `src/wpp-analytics/tools/push-data-to-bigquery.ts`
+- [ ] push_platform_data_to_bigquery
+  - Add platform discovery
+  - Add property discovery
+  - Add date range guidance
+  - Add dry-run preview
+  - Rich success response
+
+**File:** `src/wpp-analytics/tools/analyze-data-insights.ts`
+- [ ] analyze_gsc_data_for_insights
+  - Add table discovery
+  - Add date range guidance
+  - Rich insights response
+
+### Phase 8: Remaining Google Ads WRITE Tools (18 tools)
+
+**File:** `src/ads/tools/budgets.ts`
+- [ ] create_budget
+  - Add account discovery
+  - Add budget name/amount guidance
+  - Keep existing approval
+  - Add success guidance
+
+**File:** `src/ads/tools/keywords.ts`
+- [ ] add_keywords
+  - Add account discovery
+  - Add ad group discovery
+  - Add keyword input guidance
+  - Keep existing approval
+- [ ] add_negative_keywords
+  - Add account discovery
+  - Add campaign discovery
+  - Add negative keyword guidance
+  - Keep existing approval
+
+**File:** `src/ads/tools/campaigns/create-campaign.tool.ts`
+- [ ] create_campaign
+  - Add account discovery
+  - Add budget discovery
+  - Add campaign type guidance
+  - Keep existing approval
+
+**File:** `src/ads/tools/campaigns/update-status.tool.ts`
+- [ ] update_campaign_status
+  - Add account discovery
+  - Add campaign discovery
+  - Add status selection guidance
+  - Keep existing approval
+
+**File:** `src/ads/tools/conversions.ts` (5 tools)
+- [ ] create_conversion_action
+- [ ] upload_click_conversions
+- [ ] upload_conversion_adjustments
+  - All: Add account discovery + parameter guidance + keep approval
+
+**File:** `src/ads/tools/audiences.ts` (3 tools)
+- [ ] create_user_list
+- [ ] upload_customer_match_list
+- [ ] create_audience
+  - All: Add account discovery + parameter guidance + keep approval
+
+### Phase 9: Analytics Admin Tools (6 tools)
+
+**File:** `src/analytics/tools/admin.ts`
+- [ ] create_analytics_property
+  - Add account discovery
+  - Keep existing approval
+  - Success guidance
+- [ ] create_data_stream
+  - Add property discovery
+  - Add stream type guidance
+  - Keep existing approval
+- [ ] create_custom_dimension
+  - Add property discovery
+  - Add scope/parameter guidance
+  - Keep existing approval
+- [ ] create_custom_metric
+  - Add property discovery
+  - Add metric guidance
+  - Keep existing approval
+- [ ] create_conversion_event
+  - Add property discovery
+  - Add event name guidance
+  - Keep existing approval
+- [ ] create_google_ads_link
+  - Add property discovery
+  - Add Ads account discovery
+  - Keep existing approval
+
+---
+
+## 🛠️ Step-by-Step Transformation Process
+
+**For EVERY tool, follow this process:**
+
+1. **Read the tool file**
+2. **Import utilities:** Add `import { injectGuidance, formatDiscoveryResponse, formatNextSteps } from '../../shared/interactive-workflow.js';`
+3. **Strip description:** Replace multi-line with single-line first sentence
+4. **Make params optional:** Change `required: [...]` to `required: []` (for discovery)
+5. **Add discovery logic:** For each missing required param, add discovery step
+6. **Enhance response:** Add `injectGuidance()` with rich formatting
+7. **Test build:** `npm run build` should succeed
+8. **Move to next tool**
+
+---
+
+## 🧪 Testing After Completion
+
+**When all 51 tools are transformed:**
+
+1. **Build test:** `npm run build` → must succeed with 0 errors
+2. **Backend test:** `npm run dev:google-backend` → must start on port 3100
+3. **Tool tests:** Test 5-10 representative tools:
+   - Simple READ: list_properties
+   - Complex READ: query_search_analytics (test discovery flow)
+   - WRITE: update_budget (test approval flow)
+   - Analytics: list_analytics_accounts
+   - CrUX: get_core_web_vitals_origin
+
+4. **Token verification:** Check tool descriptions are minimal in router
+
+---
+
+## 📚 Reference Files (Copy These Patterns)
+
+**Simple READ:** `src/gsc/tools/properties.ts:listPropertiesTool`
+**Complex READ:** `src/gsc/tools/analytics.ts:querySearchAnalyticsTool`
+**WRITE Enhanced:** `src/ads/tools/budgets.ts:updateBudgetTool`
+**Utilities:** `src/shared/interactive-workflow.ts`
+
+**Google Ads Account Discovery Pattern (copy/paste):**
+```typescript
+if (!customerId) {
+  const resourceNames = await client.listAccessibleAccounts();
+  const accounts = resourceNames.map((rn) => ({
+    resourceName: rn,
+    customerId: extractCustomerId(rn),
+  }));
+  return formatDiscoveryResponse({
+    step: '1/X',
+    title: 'SELECT GOOGLE ADS ACCOUNT',
+    items: accounts,
+    itemFormatter: (a, i) => `${i + 1}. Customer ID: ${a.customerId}`,
+    prompt: 'Which account?',
+    nextParam: 'customerId',
+  });
+}
+```
+
+**GSC Property Discovery Pattern:**
+```typescript
+if (!property) {
+  const res = await gscClient.sites.list();
+  const sites = res.data.siteEntry || [];
+  const properties = sites.map((site) => ({
+    url: site.siteUrl,
+    permissionLevel: site.permissionLevel,
+  }));
+  return formatDiscoveryResponse({
+    step: '1/X',
+    title: 'SELECT PROPERTY',
+    items: properties,
+    itemFormatter: (p, i) => `${i + 1}. ${p.url}`,
+    prompt: 'Which property?',
+    nextParam: 'property',
+  });
+}
+```
+
+---
+
+## ⚠️ CRITICAL: Consistency Requirements
+
+**MUST maintain consistency across all tools:**
+
+1. **Description format:** Single line, ends with period, no emojis
+2. **Discovery step format:** "Step X/Y" in title
+3. **Response formatting:** Use emoji sections (📊, 💡, 🎯)
+4. **Next steps:** Always use `formatNextSteps()`
+5. **OAuth pattern:** Always `extractOAuthToken(input)` or `extractRefreshToken(input)`
+6. **Error handling:** Maintain existing try/catch blocks
+7. **Audit logging:** Don't remove existing audit calls
+
+---
+
+## 🚀 Quick Start for Next Session
+
+```bash
+# 1. Pull latest
+git pull origin main
+
+# 2. Verify current commit
+git log -1 --oneline
+# Should show: d9343d9 feat: Router architecture + Interactive workflows
+
+# 3. Check status
+git status
+# Should be clean
+
+# 4. Start backend
+npm run dev:google-backend
+# Should start on port 3100
+
+# 5. Verify build works
+npm run build
+# Should succeed with 0 errors
+
+# 6. Start transforming remaining 51 tools
+# Follow checklist above, one file at a time
+# Build and test after each file
+
+# 7. When complete (all 66 tools)
+# - Final build test
+# - Test 10+ tools
+# - Update documentation
+# - Commit with message: "feat: Complete interactive workflows - All 66 tools transformed"
+```
+
+---
+
+## 📊 Progress Tracking
+
+Use this checklist to track completion:
+
+**Analytics (8 remaining):**
+- [ ] run_analytics_report
+- [ ] get_realtime_users
+- [ ] create_analytics_property (enhance)
+- [ ] create_data_stream (enhance)
+- [ ] create_custom_dimension (enhance)
+- [ ] create_custom_metric (enhance)
+- [ ] create_conversion_event (enhance)
+- [ ] create_google_ads_link (enhance)
+
+**GSC (3 remaining):**
+- [ ] inspect_url
+- [ ] get_sitemap (complete)
+- [ ] submit_sitemap, delete_sitemap (enhance)
+
+**Google Ads (25 remaining):**
+- [ ] get_keyword_performance
+- [ ] generate_keyword_ideas
+- [ ] list_bidding_strategies
+- [ ] list_ad_extensions
+- [ ] list_user_lists
+- [ ] list_conversion_actions
+- [ ] get_conversion_action
+- [ ] create_budget (enhance)
+- [ ] add_keywords (enhance)
+- [ ] add_negative_keywords (enhance)
+- [ ] create_campaign (enhance)
+- [ ] update_campaign_status (enhance)
+- [ ] create_conversion_action (enhance)
+- [ ] upload_click_conversions (enhance)
+- [ ] upload_conversion_adjustments (enhance)
+- [ ] create_user_list (enhance)
+- [ ] upload_customer_match_list (enhance)
+- [ ] create_audience (enhance)
+
+**CrUX (5):**
+- [ ] All 5 tools (simple pattern)
+
+**Other (9):**
+- [ ] BigQuery (2)
+- [ ] SERP (1)
+- [ ] Business Profile (3)
+- [ ] WPP Analytics (9)
+
+**Total:** 51 tools remaining
+
+---
+
+## ✅ Success Criteria
+
+**Session is complete when:**
+- [ ] All 66 tools have minimal descriptions
+- [ ] All 66 tools inject rich guidance in responses
+- [ ] All complex READ tools have parameter discovery
+- [ ] All WRITE tools have multi-step approval
+- [ ] `npm run build` succeeds with 0 errors
+- [ ] Test 10+ tools - all show interactive workflows
+- [ ] Documentation updated with "66/66 tools complete"
+- [ ] Final commit made
+
+---
+
+**Next Session Goal:** Transform remaining 51 tools (12-15 hours estimated)
+**Approach:** Follow patterns exactly, work file-by-file, test frequently
+**Result:** 66/66 tools with interactive workflows ✅
+
