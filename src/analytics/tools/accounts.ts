@@ -106,35 +106,7 @@ Which account would you like to explore?`;
  */
 export const listAnalyticsPropertiesTool = {
   name: 'list_analytics_properties',
-  description: `List all GA4 properties (websites/apps being tracked).
-
-💡 AGENT GUIDANCE - PROPERTY DISCOVERY:
-
-📊 WHAT THIS RETURNS:
-- All GA4 properties you can access
-- Property IDs (required for ALL reporting tools)
-- Property names, time zones, currency codes
-- Industry categories
-
-🎯 PROPERTY ID IS CRITICAL:
-- Every Analytics report requires a property ID
-- Format: "123456789" or "properties/123456789"
-- Each property = one website or app being tracked
-- Get this before running any reports
-
-💡 FILTER BY ACCOUNT (OPTIONAL):
-- Provide accountId to see properties for specific account only
-- Omit accountId to see all properties across all accounts
-
-🔍 WHAT TO LOOK FOR:
-- Property display name → Identify which site/app
-- Time zone → Important for date-based reports
-- Currency code → For revenue reports
-
-📋 NEXT STEPS:
-1. Identify the property you want to report on
-2. Copy the property ID
-3. Use in reporting tools (run_analytics_report, get_realtime_users, etc.)`,
+  description: 'List all GA4 properties (websites/apps being tracked).',
   inputSchema: {
     type: 'object' as const,
     properties: {
@@ -188,17 +160,59 @@ export const listAnalyticsPropertiesTool = {
         displayName: prop.displayName,
         timeZone: prop.timeZone,
         currencyCode: prop.currencyCode,
+        propertyId: prop.name?.split('/')[1] || '',
       }));
 
-      return {
-        success: true,
-        data: {
+      // Inject rich guidance
+      const guidanceText = `📊 DISCOVERED ${properties.length} GA4 PROPERT${properties.length === 1 ? 'Y' : 'IES'}
+
+${accountId ? `**Account:** ${accountId}\n` : '**Showing:** All properties across all accounts\n'}
+${properties.map((p, i) =>
+  `${i + 1}. ${p.displayName || p.name}
+   Property ID: ${p.propertyId}
+   Timezone: ${p.timeZone || 'N/A'} | Currency: ${p.currencyCode || 'N/A'}`
+).join('\n\n')}
+
+💡 PROPERTY ID IS CRITICAL:
+
+**Every Analytics report requires a property ID**
+- Format: "${properties[0]?.propertyId || '123456789'}" (just the numeric part)
+- Each property = one website or app being tracked
+- Get this before running any reports
+
+📊 WHAT YOU CAN DO WITH THESE PROPERTIES:
+
+**Data Exploration:**
+- View data streams: use list_data_streams with propertyId
+- Check tracking setup: verify Measurement IDs
+
+**Reporting:**
+- Run custom reports: use run_analytics_report with propertyId
+- Get real-time users: use get_realtime_users with propertyId
+- Analyze traffic patterns: specify metrics and dimensions
+
+**Management:**
+- Create data streams: use create_data_stream
+- Configure custom dimensions: use create_custom_dimension
+- Set up conversions: use create_conversion_event
+- Link to Google Ads: use create_google_ads_link
+
+${formatNextSteps([
+  'Check data streams: call list_data_streams with a propertyId',
+  'Run report: call run_analytics_report with propertyId and date range',
+  'Monitor live traffic: call get_realtime_users with propertyId'
+])}
+
+Which property would you like to analyze?`;
+
+      return injectGuidance(
+        {
           accountId: accountId || 'all',
           properties,
           count: properties.length,
-          message: `Found ${properties.length} GA4 propert${properties.length === 1 ? 'y' : 'ies'}`,
         },
-      };
+        guidanceText
+      );
     } catch (error) {
       logger.error('Failed to list Analytics properties', error as Error);
       throw error;
@@ -211,27 +225,7 @@ export const listAnalyticsPropertiesTool = {
  */
 export const listDataStreamsTool = {
   name: 'list_data_streams',
-  description: `List data streams (web/app tracking configurations) for a GA4 property.
-
-💡 AGENT GUIDANCE - UNDERSTANDING DATA STREAMS:
-
-📊 WHAT ARE DATA STREAMS:
-- Web data stream = Website tracking
-- iOS/Android app streams = Mobile app tracking
-- Each stream has a Measurement ID (G-XXXXXXXXXX)
-- One property can have multiple streams
-
-🔍 WHAT YOU'LL GET:
-- Stream IDs and types
-- Measurement IDs (for tracking code)
-- Stream names
-- Website URLs (for web streams)
-
-🎯 USE CASES:
-- Verify which sites/apps are being tracked
-- Get Measurement IDs for implementation
-- Check stream configuration
-- Multi-site property management`,
+  description: 'List data streams (web/app tracking configurations) for a GA4 property.',
   inputSchema: {
     type: 'object' as const,
     properties: {
@@ -268,17 +262,55 @@ export const listDataStreamsTool = {
         type: stream.type,
         displayName: stream.displayName,
         webStreamData: stream.webStreamData,
+        measurementId: stream.webStreamData?.measurementId || 'N/A',
+        streamId: stream.name?.split('/')[3] || '',
       }));
 
-      return {
-        success: true,
-        data: {
+      // Inject rich guidance
+      const guidanceText = `📊 DISCOVERED ${streams.length} DATA STREAM(S)
+
+**Property:** ${propertyId}
+
+${streams.map((s, i) =>
+  `${i + 1}. ${s.displayName || s.type}
+   Type: ${s.type}
+   Stream ID: ${s.streamId}
+   Measurement ID: ${s.measurementId}${s.webStreamData?.defaultUri ? `\n   Website: ${s.webStreamData.defaultUri}` : ''}`
+).join('\n\n')}
+
+💡 WHAT ARE DATA STREAMS:
+
+**Data streams connect your website/app to GA4**
+- Web data stream = Website tracking
+- iOS/Android app streams = Mobile app tracking
+- Each stream has Measurement ID (G-XXXXXXXXXX)
+- Use Measurement ID in your tracking code
+
+📊 WHAT YOU CAN DO:
+
+**Implementation:**
+- Install gtag.js with Measurement ID: ${streams[0]?.measurementId || 'G-XXXXXXXXXX'}
+- Verify tracking: Check real-time reports after installation
+
+**Reporting:**
+- Run reports: use run_analytics_report with propertyId
+- Check live users: use get_realtime_users with propertyId
+- Analyze traffic: specify metrics and dimensions
+
+${formatNextSteps([
+  'Run report: call run_analytics_report with this propertyId',
+  'Check live traffic: call get_realtime_users',
+  'Create additional stream: use create_data_stream if needed'
+])}`;
+
+      return injectGuidance(
+        {
           propertyId,
           streams,
           count: streams.length,
-          message: `Found ${streams.length} data stream(s) for property ${propertyId}`,
         },
-      };
+        guidanceText
+      );
     } catch (error) {
       logger.error('Failed to list data streams', error as Error);
       throw error;
