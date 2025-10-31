@@ -110,6 +110,14 @@ interface DashboardStore {
   pasteStyle: (componentId: string) => void;
   toggleLock: (componentId: string) => void;
 
+  // Canvas mode actions (NEW)
+  canvasWidth: number;
+  setCanvasWidth: (width: number) => void;
+  moveComponentAbsolute: (canvasId: string, x: number, y: number) => void;
+  resizeComponent: (canvasId: string, width: number, height: number, x: number, y: number) => void;
+  convertToCanvas: () => void;
+  convertToRowColumn: () => void;
+
   // Actions - History
   undo: () => void;
   redo: () => void;
@@ -254,6 +262,8 @@ export const useDashboardStore = create<DashboardStore>()(
       sidebarActiveTab: 'setup',
       pauseUpdates: false,
       styleClipboard: null,
+      // Canvas mode state
+      canvasWidth: 1200,
 
       // Dashboard Actions
       loadDashboard: async (id: string) => {
@@ -1446,6 +1456,160 @@ export const useDashboardStore = create<DashboardStore>()(
             }
           });
         }
+      },
+
+      // Canvas Mode Actions
+      setCanvasWidth: (width: number) => {
+        set({ canvasWidth: width });
+
+        // Also update current page's canvasWidth
+        const state = get();
+        const currentPageId = state.currentPageId;
+
+        if (state.config.pages && currentPageId) {
+          set({
+            config: {
+              ...state.config,
+              pages: state.config.pages.map(page =>
+                page.id === currentPageId
+                  ? { ...page, canvasWidth: width }
+                  : page
+              )
+            }
+          });
+        }
+
+        get().autoSave();
+      },
+
+      moveComponentAbsolute: (canvasId: string, x: number, y: number) => {
+        const state = get();
+        const currentPageId = state.currentPageId;
+
+        if (!state.config.pages || !currentPageId) return;
+
+        get().addToHistory();
+
+        set({
+          config: {
+            ...state.config,
+            pages: state.config.pages.map(page => {
+              if (page.id === currentPageId && page.components) {
+                return {
+                  ...page,
+                  components: page.components.map(comp =>
+                    comp.id === canvasId
+                      ? { ...comp, x, y }
+                      : comp
+                  )
+                };
+              }
+              return page;
+            })
+          }
+        });
+
+        get().autoSave();
+      },
+
+      resizeComponent: (canvasId: string, width: number, height: number, x: number, y: number) => {
+        const state = get();
+        const currentPageId = state.currentPageId;
+
+        if (!state.config.pages || !currentPageId) return;
+
+        get().addToHistory();
+
+        set({
+          config: {
+            ...state.config,
+            pages: state.config.pages.map(page => {
+              if (page.id === currentPageId && page.components) {
+                return {
+                  ...page,
+                  components: page.components.map(comp =>
+                    comp.id === canvasId
+                      ? { ...comp, x, y, width, height }
+                      : comp
+                  )
+                };
+              }
+              return page;
+            })
+          }
+        });
+
+        get().autoSave();
+      },
+
+      convertToCanvas: () => {
+        const state = get();
+        const currentPageId = state.currentPageId;
+
+        if (!state.config.pages || !currentPageId) return;
+
+        const currentPage = state.config.pages.find(p => p.id === currentPageId);
+        if (!currentPage || !currentPage.rows || currentPage.rows.length === 0) return;
+
+        // Import converter
+        const { rowColumnToAbsolute } = require('@/lib/utils/layout-converter');
+
+        const canvasComponents = rowColumnToAbsolute(
+          currentPage.rows,
+          currentPage.canvasWidth || state.canvasWidth
+        );
+
+        get().addToHistory();
+
+        set({
+          config: {
+            ...state.config,
+            pages: state.config.pages.map(page =>
+              page.id === currentPageId
+                ? {
+                    ...page,
+                    components: canvasComponents,
+                    canvasWidth: page.canvasWidth || state.canvasWidth
+                  }
+                : page
+            )
+          }
+        });
+
+        get().autoSave();
+      },
+
+      convertToRowColumn: () => {
+        const state = get();
+        const currentPageId = state.currentPageId;
+
+        if (!state.config.pages || !currentPageId) return;
+
+        const currentPage = state.config.pages.find(p => p.id === currentPageId);
+        if (!currentPage || !currentPage.components || currentPage.components.length === 0) return;
+
+        // Import converter
+        const { absoluteToRowColumn } = require('@/lib/utils/layout-converter');
+
+        const rows = absoluteToRowColumn(
+          currentPage.components,
+          currentPage.canvasWidth || state.canvasWidth
+        );
+
+        get().addToHistory();
+
+        set({
+          config: {
+            ...state.config,
+            pages: state.config.pages.map(page =>
+              page.id === currentPageId
+                ? { ...page, rows }
+                : page
+            )
+          }
+        });
+
+        get().autoSave();
       },
 
       // Reset
