@@ -3,6 +3,20 @@ import { PageConfig } from './page-config';
 // Column width options for responsive grid
 export type ColumnWidth = '1/1' | '1/2' | '1/3' | '2/3' | '1/4' | '3/4';
 
+// Absolute positioning for canvas mode
+export interface AbsolutePosition {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+// Canvas component with absolute positioning
+export interface CanvasComponent extends AbsolutePosition {
+  id: string;
+  component: ComponentConfig;
+}
+
 // Component types available in the dashboard
 export type ComponentType =
   // Basic charts

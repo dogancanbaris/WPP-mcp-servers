@@ -7,7 +7,7 @@
  * - 2-level style cascade: Page Styles → Component Styles
  */
 
-import { RowConfig, FilterConfig, DateRangeConfig } from './dashboard-builder';
+import { RowConfig, FilterConfig, DateRangeConfig, CanvasComponent } from './dashboard-builder';
 
 /**
  * Page-level style overrides
@@ -54,8 +54,26 @@ export interface PageConfig {
   /**
    * Layout for this specific page
    * Standard row-based layout (rows → columns → components)
+   *
+   * @deprecated For new dashboards, use `components` array with canvas mode
    */
   rows: RowConfig[];
+
+  /**
+   * Canvas-based layout (NEW)
+   * Components with absolute positioning for free-form canvas
+   *
+   * If both `rows` and `components` exist:
+   * - Canvas mode uses `components` array
+   * - Agent mode can convert between formats
+   */
+  components?: CanvasComponent[];
+
+  /**
+   * Canvas width in pixels (default: 1200)
+   * Used for proportional scaling when canvas resizes
+   */
+  canvasWidth?: number;
 
   /** Timestamp when page was created */
   createdAt?: string;
