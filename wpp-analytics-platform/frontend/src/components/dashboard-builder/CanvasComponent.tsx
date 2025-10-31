@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useCallback } from 'react';
 import { Rnd } from 'react-rnd';
 import { cn } from '@/lib/utils';
 import { ChartWrapper } from './ChartWrapper';
@@ -46,7 +46,38 @@ interface CanvasComponentProps {
  * - Bounds checking
  * - Edit mode controls
  */
-export const CanvasComponent: React.FC<CanvasComponentProps> = ({
+/**
+ * Get component-type specific minimum sizes
+ * Smaller components like scorecards can be tiny, larger ones like tables need more space
+ */
+function getMinSize(componentType: string): { minWidth: number; minHeight: number } {
+  switch (componentType) {
+    case 'scorecard':
+      return { minWidth: 80, minHeight: 60 };
+    case 'title':
+    case 'text':
+      return { minWidth: 100, minHeight: 40 };
+    case 'line':
+      return { minWidth: 60, minHeight: 20 };
+    case 'circle':
+    case 'rectangle':
+      return { minWidth: 40, minHeight: 40 };
+    case 'pie_chart':
+    case 'donut_chart':
+      return { minWidth: 120, minHeight: 120 };
+    case 'table':
+      return { minWidth: 300, minHeight: 200 };
+    case 'time_series':
+    case 'bar_chart':
+    case 'line_chart':
+    case 'area_chart':
+      return { minWidth: 200, minHeight: 150 };
+    default:
+      return { minWidth: 150, minHeight: 120 };
+  }
+}
+
+const CanvasComponentInner: React.FC<CanvasComponentProps> = ({
   id,
   position,
   component,
@@ -64,6 +95,9 @@ export const CanvasComponent: React.FC<CanvasComponentProps> = ({
   const enableDrag = isEditing && !isLocked;
   const enableResize = isEditing && !isLocked;
 
+  // Get component-type specific minimum sizes
+  const { minWidth, minHeight } = getMinSize(component.type);
+
   const rndStyle = useMemo(
     () => ({
       display: 'flex',
@@ -71,22 +105,25 @@ export const CanvasComponent: React.FC<CanvasComponentProps> = ({
       justifyContent: 'center',
       border: isSelected
         ? '2px solid hsl(var(--primary))'
-        : '1px solid hsl(var(--border))',
-      borderRadius: '8px',
-      backgroundColor: 'hsl(var(--card))',
+        : isEditing
+        ? '1px dashed rgba(200, 200, 200, 0.3)' // Subtle dashed border in edit mode
+        : 'none', // No border in view mode
+      borderRadius: '4px',
+      backgroundColor: 'transparent', // Transparent - canvas background shows through
       boxShadow: isSelected
         ? '0 4px 12px rgba(0, 0, 0, 0.15)'
-        : '0 1px 3px rgba(0, 0, 0, 0.1)',
+        : 'none', // No shadow unless selected
       transition: 'border-color 200ms, box-shadow 200ms',
     }),
-    [isSelected]
+    [isSelected, isEditing]
   );
 
-  const handleDragStop = (_e: any, d: { x: number; y: number }) => {
+  const handleDragStop = useCallback((_e: any, d: { x: number; y: number }) => {
     onPositionChange(id, d.x, d.y);
-  };
+  }, [id, onPositionChange]);
 
-  const handleResizeStop = (
+  // Live resize preview - updates during resize for immediate feedback
+  const handleResize = useCallback((
     _e: any,
     _direction: any,
     ref: HTMLElement,
@@ -100,18 +137,35 @@ export const CanvasComponent: React.FC<CanvasComponentProps> = ({
       position.x,
       position.y
     );
-  };
+  }, [id, onSizeChange]);
+
+  const handleResizeStop = useCallback((
+    _e: any,
+    _direction: any,
+    ref: HTMLElement,
+    _delta: any,
+    position: { x: number; y: number }
+  ) => {
+    onSizeChange(
+      id,
+      ref.offsetWidth,
+      ref.offsetHeight,
+      position.x,
+      position.y
+    );
+  }, [id, onSizeChange]);
 
   return (
     <Rnd
       size={{ width: position.width, height: position.height }}
       position={{ x: position.x, y: position.y }}
       onDragStop={handleDragStop}
+      onResize={handleResize} // Live resize preview
       onResizeStop={handleResizeStop}
       bounds="parent"
       grid={[20, 20]} // 20px grid snapping
-      minWidth={200}
-      minHeight={150}
+      minWidth={minWidth}
+      minHeight={minHeight}
       disableDragging={!enableDrag}
       enableResizing={
         enableResize
@@ -159,6 +213,7 @@ export const CanvasComponent: React.FC<CanvasComponentProps> = ({
           config={component}
           onClick={() => onSelect(id)}
           isSelected={isSelected}
+          containerSize={{ width: position.width, height: position.height }}
         />
       </div>
 
@@ -260,3 +315,18 @@ export const CanvasComponent: React.FC<CanvasComponentProps> = ({
     </Rnd>
   );
 };
+
+// Memoize component to prevent unnecessary re-renders
+// Only re-render if id, position, component, isEditing, or isSelected changes
+export const CanvasComponent = React.memo(CanvasComponentInner, (prevProps, nextProps) => {
+  return (
+    prevProps.id === nextProps.id &&
+    prevProps.position.x === nextProps.position.x &&
+    prevProps.position.y === nextProps.position.y &&
+    prevProps.position.width === nextProps.position.width &&
+    prevProps.position.height === nextProps.position.height &&
+    prevProps.component === nextProps.component &&
+    prevProps.isEditing === nextProps.isEditing &&
+    prevProps.isSelected === nextProps.isSelected
+  );
+});

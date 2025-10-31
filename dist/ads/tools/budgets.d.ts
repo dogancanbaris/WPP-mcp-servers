@@ -78,32 +78,14 @@ export declare const updateBudgetTool: {
                 description: string;
             };
         };
-        required: string[];
+        required: never[];
     };
-    handler(input: any): Promise<{
+    handler(input: any): Promise<import("../../shared/interactive-workflow.js").McpResponse | {
         success: boolean;
         requiresApproval: boolean;
         preview: string;
         confirmationToken: string;
         message: string;
-        data?: undefined;
-    } | {
-        success: boolean;
-        data: {
-            customerId: any;
-            budgetId: any;
-            previousAmount: string;
-            newAmount: string;
-            dailyDifference: string;
-            monthlyImpact: string;
-            percentageChange: string;
-            result: any;
-            message: string;
-        };
-        requiresApproval?: undefined;
-        preview?: undefined;
-        confirmationToken?: undefined;
-        message?: undefined;
     }>;
 };
 //# sourceMappingURL=budgets.d.ts.map

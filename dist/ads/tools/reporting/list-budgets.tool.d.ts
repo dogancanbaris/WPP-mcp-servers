@@ -17,16 +17,8 @@ export declare const listBudgetsTool: {
                 description: string;
             };
         };
-        required: string[];
+        required: never[];
     };
-    handler(input: any): Promise<{
-        success: boolean;
-        data: {
-            customerId: any;
-            budgets: any[];
-            count: number;
-            message: string;
-        };
-    }>;
+    handler(input: any): Promise<import("../../../shared/interactive-workflow.js").McpResponse>;
 };
 //# sourceMappingURL=list-budgets.tool.d.ts.map

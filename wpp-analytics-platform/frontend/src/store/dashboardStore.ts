@@ -1413,9 +1413,38 @@ export const useDashboardStore = create<DashboardStore>()(
       toggleLock: (componentId: string) => {
         const state = get();
         const currentPageId = state.currentPageId;
-        const rows = (state.config.pages && currentPageId)
-          ? state.config.pages.find(p => p.id === currentPageId)?.rows || []
-          : state.config.rows;
+        const currentPage = (state.config.pages && currentPageId)
+          ? state.config.pages.find(p => p.id === currentPageId)
+          : null;
+
+        get().addToHistory();
+
+        // CANVAS MODE: Update components array
+        if (currentPage?.components) {
+          const canvasComp = currentPage.components.find(c => c.component.id === componentId);
+          if (!canvasComp) return;
+
+          const currentLocked = !!canvasComp.component.locked;
+
+          set({
+            config: {
+              ...state.config,
+              pages: state.config.pages!.map(page => page.id === currentPageId ? {
+                ...page,
+                components: page.components!.map(comp => comp.component.id === componentId ? {
+                  ...comp,
+                  component: { ...comp.component, locked: !currentLocked }
+                } : comp)
+              } : page)
+            }
+          });
+
+          get().autoSave();
+          return;
+        }
+
+        // ROW/COLUMN MODE (legacy): Update rows array
+        const rows = currentPage?.rows || state.config.rows;
 
         // Find current lock state
         let locked = false;
@@ -1424,8 +1453,6 @@ export const useDashboardStore = create<DashboardStore>()(
         }));
 
         // Update only the locked flag (bypass lock check by calling set directly)
-        get().addToHistory();
-
         if (state.config.pages && currentPageId) {
           set({
             config: {
@@ -1456,6 +1483,8 @@ export const useDashboardStore = create<DashboardStore>()(
             }
           });
         }
+
+        get().autoSave();
       },
 
       // Canvas Mode Actions

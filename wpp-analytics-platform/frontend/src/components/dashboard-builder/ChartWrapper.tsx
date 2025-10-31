@@ -55,6 +55,7 @@ interface ChartWrapperProps {
   config: ComponentConfig;
   onClick?: () => void;
   isSelected?: boolean;
+  containerSize?: { width: number; height: number };
 }
 
 /**
@@ -85,7 +86,8 @@ interface ChartWrapperProps {
 export const ChartWrapper: React.FC<ChartWrapperProps> = ({
   config,
   onClick,
-  isSelected = false
+  isSelected = false,
+  containerSize
 }) => {
   console.log('[ChartWrapper] Rendering component:', {
     type: config.type,
@@ -93,7 +95,8 @@ export const ChartWrapper: React.FC<ChartWrapperProps> = ({
     title: config.title,
     metrics: config.metrics,
     dimension: config.dimension,
-    dataset_id: (config as any).dataset_id
+    dataset_id: (config as any).dataset_id,
+    containerSize
   });
 
   /**
@@ -104,16 +107,16 @@ export const ChartWrapper: React.FC<ChartWrapperProps> = ({
     switch (config.type) {
       // ===== BASIC CHARTS =====
       case 'time_series':
-        return <TimeSeriesChart {...config} />;
+        return <TimeSeriesChart {...config} containerSize={containerSize} />;
 
       case 'bar_chart':
-        return <BarChart {...config} />;
+        return <BarChart {...config} containerSize={containerSize} />;
 
       case 'line_chart':
-        return <LineChart {...config} />;
+        return <LineChart {...config} containerSize={containerSize} />;
 
       case 'pie_chart':
-        return <PieChart {...config} />;
+        return <PieChart {...config} containerSize={containerSize} />;
 
       case 'donut_chart':
         // Donut chart = Pie chart with hollow center
@@ -190,10 +193,10 @@ export const ChartWrapper: React.FC<ChartWrapperProps> = ({
 
       // ===== DATA DISPLAY =====
       case 'table':
-        return <TableChart {...config} />;
+        return <TableChart {...config} containerSize={containerSize} />;
 
       case 'scorecard':
-        return <Scorecard {...config} />;
+        return <Scorecard {...config} containerSize={containerSize} />;
 
       // ===== CONTROL COMPONENTS =====
       case 'date_range_filter':
@@ -326,19 +329,7 @@ export const ChartWrapper: React.FC<ChartWrapperProps> = ({
   return (
     <div
       onClick={onClick}
-      className={`
-        relative
-        w-full
-        h-full
-        cursor-pointer
-        transition-all
-        duration-200
-        rounded-lg
-        ${isSelected
-          ? 'ring-2 ring-blue-500 ring-offset-2 shadow-lg'
-          : 'hover:ring-2 hover:ring-blue-300 hover:ring-offset-1'
-        }
-      `.trim().replace(/\s+/g, ' ')}
+      className="relative w-full h-full"
       role="button"
       tabIndex={0}
       aria-label={`Chart component: ${config.title || config.type}`}
@@ -352,12 +343,7 @@ export const ChartWrapper: React.FC<ChartWrapperProps> = ({
     >
       {renderChart()}
 
-      {/* Selection indicator badge */}
-      {isSelected && (
-        <div className="absolute top-2 right-2 bg-blue-500 text-white text-xs px-2 py-1 rounded-full shadow-md">
-          Selected
-        </div>
-      )}
+      {/* Removed selection ring - handled by CanvasComponent wrapper */}
     </div>
   );
 };

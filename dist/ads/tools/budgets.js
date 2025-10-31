@@ -1,13 +1,14 @@
 /**
  * MCP Tools for Google Ads Budget Write Operations
  */
-import { UpdateBudgetSchema, microsToAmount, amountToMicros } from '../validation.js';
+import { UpdateBudgetSchema, microsToAmount, amountToMicros, extractCustomerId } from '../validation.js';
 import { validateBudgetChange } from '../../shared/interceptor.js';
 import { getLogger } from '../../shared/logger.js';
 import { getApprovalEnforcer, DryRunResultBuilder } from '../../shared/approval-enforcer.js';
 import { extractRefreshToken } from '../../shared/oauth-client-factory.js';
 import { createGoogleAdsClientFromRefreshToken } from '../client.js';
 import { getAuditLogger } from '../../gsc/audit.js';
+import { formatDiscoveryResponse, injectGuidance } from '../../shared/interactive-workflow.js';
 const logger = getLogger('ads.tools.budgets');
 const audit = getAuditLogger();
 /**
@@ -237,11 +238,10 @@ Before calling this tool, you MUST:
                 description: 'Confirmation token from dry-run preview (optional - if not provided, will show preview)',
             },
         },
-        required: ['customerId', 'budgetId', 'newDailyAmountDollars'],
+        required: [], // Make optional for discovery
     },
     async handler(input) {
         try {
-            UpdateBudgetSchema.parse(input);
             const { customerId, budgetId, newDailyAmountDollars, confirmationToken } = input;
             // Extract OAuth tokens from request
             const refreshToken = extractRefreshToken(input);
@@ -254,6 +254,77 @@ Before calling this tool, you MUST:
             }
             // Create Google Ads client with user's refresh token
             const client = createGoogleAdsClientFromRefreshToken(refreshToken, developerToken);
+            // ═══ STEP 1: ACCOUNT DISCOVERY ═══
+            if (!customerId) {
+                const resourceNames = await client.listAccessibleAccounts();
+                const accounts = resourceNames.map((rn) => ({
+                    resourceName: rn,
+                    customerId: extractCustomerId(rn),
+                }));
+                return formatDiscoveryResponse({
+                    step: '1/4',
+                    title: 'SELECT GOOGLE ADS ACCOUNT',
+                    items: accounts,
+                    itemFormatter: (a, i) => `${i + 1}. Customer ID: ${a.customerId}`,
+                    prompt: '🚨 CRITICAL: Which account\'s budget do you want to modify?',
+                    nextParam: 'customerId',
+                    emoji: '💰',
+                });
+            }
+            // ═══ STEP 2: BUDGET DISCOVERY ═══
+            if (!budgetId) {
+                const budgets = await client.listBudgets(customerId);
+                return formatDiscoveryResponse({
+                    step: '2/4',
+                    title: 'SELECT BUDGET TO MODIFY',
+                    items: budgets,
+                    itemFormatter: (b, i) => {
+                        const budget = b.campaign_budget;
+                        const dailyAmount = microsToAmount(budget?.amount_micros || 0);
+                        return `${i + 1}. ${budget?.name || 'Unnamed Budget'}
+   ID: ${budget?.id}
+   Current: ${dailyAmount}/day
+   ${budget?.recommended_budget_amount_micros ? `⚠️ Google Recommends: ${microsToAmount(budget.recommended_budget_amount_micros)}/day` : ''}`;
+                    },
+                    prompt: '💰 Which budget do you want to modify?',
+                    nextParam: 'budgetId',
+                    context: { customerId },
+                });
+            }
+            // ═══ STEP 3: AMOUNT SPECIFICATION ═══
+            if (!newDailyAmountDollars) {
+                const budgets = await client.listBudgets(customerId);
+                const currentBudget = budgets.find((b) => b.campaign_budget.id === budgetId);
+                const currentAmount = currentBudget?.campaign_budget?.amount_micros ? microsToAmount(currentBudget.campaign_budget.amount_micros) : '$0.00';
+                const guidanceText = `📊 SPECIFY NEW BUDGET AMOUNT (Step 3/4)
+
+**Current Budget:** ${currentBudget?.campaign_budget?.name || budgetId}
+**Current Amount:** ${currentAmount}/day
+
+🚨 **CRITICAL OPERATION WARNING:**
+- Changes take effect IMMEDIATELY
+- Affects ALL campaigns using this budget
+- Increasing = potential for more daily spend
+- Decreasing below today's spend may pause delivery
+
+💡 **HOW TO SPECIFY:**
+Provide newDailyAmountDollars as a number (e.g., 75 for $75/day)
+
+**Examples:**
+- Increase to $75/day: newDailyAmountDollars=75
+- Decrease to $40/day: newDailyAmountDollars=40
+
+⚠️ **SAFETY GUIDELINES:**
+- Don't increase >50% in single change
+- For >20% increases, do 10-15% increments
+- Wait 7 days between increases for algorithm optimization
+- Always check performance before increasing
+
+What should the new daily budget be (in dollars)?`;
+                return injectGuidance({ customerId, budgetId, currentAmount }, guidanceText);
+            }
+            // ═══ STEP 4: DRY-RUN PREVIEW (existing approval flow) ═══
+            UpdateBudgetSchema.parse(input);
             const newAmountMicros = amountToMicros(newDailyAmountDollars);
             // Get current budget for comparison
             const budgets = await client.listBudgets(customerId);

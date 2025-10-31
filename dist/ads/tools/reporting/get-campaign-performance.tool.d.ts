@@ -29,21 +29,8 @@ export declare const getCampaignPerformanceTool: {
                 description: string;
             };
         };
-        required: string[];
+        required: never[];
     };
-    handler(input: any): Promise<{
-        success: boolean;
-        data: {
-            customerId: any;
-            campaignId: any;
-            dateRange: string | {
-                startDate: any;
-                endDate: any;
-            };
-            campaigns: any[];
-            count: number;
-            message: string;
-        };
-    }>;
+    handler(input: any): Promise<import("../../../shared/interactive-workflow.js").McpResponse>;
 };
 //# sourceMappingURL=get-campaign-performance.tool.d.ts.map

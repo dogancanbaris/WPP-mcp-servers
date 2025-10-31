@@ -15,14 +15,7 @@ export declare const analyticsTools: ({
         properties: {};
         required: never[];
     };
-    handler(_input: any): Promise<{
-        success: boolean;
-        data: {
-            accounts: import("../types.js").AnalyticsAccount[];
-            count: number;
-            message: string;
-        };
-    }>;
+    handler(_input: any): Promise<import("../../shared/interactive-workflow.js").McpResponse>;
 } | {
     name: string;
     description: string;
@@ -464,14 +457,7 @@ export declare const readOnlyAnalyticsTools: ({
         properties: {};
         required: never[];
     };
-    handler(_input: any): Promise<{
-        success: boolean;
-        data: {
-            accounts: import("../types.js").AnalyticsAccount[];
-            count: number;
-            message: string;
-        };
-    }>;
+    handler(_input: any): Promise<import("../../shared/interactive-workflow.js").McpResponse>;
 } | {
     name: string;
     description: string;

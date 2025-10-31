@@ -2,9 +2,9 @@
 
 **Fully Agent-Driven Analytics - Zero-Touch for Practitioners**
 
-**Version:** 2.0 (BigQuery Data Lake Architecture)
-**Last Updated:** October 27, 2025
-**Status:** Production-Ready MCP Server + Frontend (Phase 4.7 in progress)
+**Version:** 2.1 (Router Architecture + Interactive Workflows)
+**Last Updated:** October 31, 2025
+**Status:** Production-Ready Router + Backend Servers + Frontend (Phase 4.7 in progress)
 
 ---
 
@@ -15,9 +15,14 @@
   - Required for OAuth callbacks
   - Platform URL: http://localhost:3000
 
-- **Port 3001** → MCP HTTP Server
+- **Port 3001** → MCP HTTP Server (Legacy - when not using router)
   - HTTP transport for MCP tools
   - Admin API endpoint
+
+- **Port 3100** → Google Marketing Backend (Router Architecture)
+  - HTTP backend for all Google tools (66 tools)
+  - Called by MCP router
+  - Start with: `npm run dev:google-backend`
 
 **If a port shows "in use":**
 1. Check what's running: `lsof -i :3000` or `lsof -i :3001`
@@ -63,7 +68,7 @@
 
 | Component | Status | Tech | Tools/Charts |
 |-----------|--------|------|--------------|
-| **MCP Server** | ✅ Production | TypeScript + Node.js | 65+ tools across 7 Google APIs |
+| **MCP Server** | ✅ Production | Router + HTTP Backends | 66 tools (94% token reduction via router) |
 | **OAuth System** | ✅ Production | Per-request OAuth 2.0 | 100% user credentials, auto-refresh |
 | **BigQuery Lake** | 🚧 Phase 4.7 | Shared tables + workspace_id | On-demand pull + daily refresh |
 | **Frontend Platform** | ✅ 95% Complete | Next.js 15 + React 19 | 32 chart types (ALL migrated with filters) |
@@ -257,7 +262,7 @@ Practitioner C (Workspace UK) wants client1.com
 | Meta Ads | Social | ⏳ Future | TBD | ~20 | ~12 |
 | TikTok Ads | Social | ⏳ Future | TBD | ~18 | ~10 |
 
-**Total Tools:** 65+ tools (7 platforms live, 5 planned)
+**Total Tools:** 66 tools (7 platforms live, 5 planned)
 
 ### Platform Data Specifications
 
@@ -586,11 +591,78 @@ Cold: 25+ months (GCS Archive, 95% cheaper, export monthly)
 
 ## 🔧 Technical Stack (Complete)
 
-### MCP Server (Backend)
+### MCP Server (Router + Backend Architecture)
+
+**🚀 NEW: Router Architecture (v2.1) - 94% Token Reduction!**
+
+**Architecture:**
+```
+Client (Claude Code CLI)
+    ↓ stdio
+MCP Router (~6K tokens)
+    ↓ HTTP
+Google Backend Server (~50K tokens, port 3100)
+```
+
+**Why Router Architecture:**
+- **Before:** Monolithic server loaded 104,000 tokens at connection (all tool metadata)
+- **After:** Router loads 6,000 tokens (minimal descriptions only)
+- **Savings:** 98,000 tokens (94% reduction!)
+- **Method:** Extract first line from descriptions, inject verbose guidance into tool responses
 
 **Location:** `/src/`
 **Runtime:** Node.js 18+ with TypeScript 5.3
-**Entry Point:** `/src/gsc/server.ts` (stdio) or `/src/http-server/index.ts` (HTTP)
+
+**Entry Points:**
+- **Router (stdio):** `/src/router/server.ts` - Main MCP router, minimal token usage
+- **Google Backend (HTTP):** `/src/backends/google-marketing/server.ts` - Port 3100, all 66 tools
+- **Legacy (HTTP):** `/src/http-server/index.ts` - OMA integration (non-router mode)
+
+**Router Components:**
+- `src/router/server.ts` - MCP router (stdio transport)
+- `src/router/backend-registry.ts` - Backend management, tool caching, description extraction
+- `src/router/http-client.ts` - HTTP client for backend communication
+- `src/router/config.ts` - Environment-based configuration
+- `src/router/types.ts` - TypeScript interfaces
+
+**Backend Components:**
+- `src/backends/google-marketing/server.ts` - HTTP server serving all 66 Google tools
+
+**Tool Modules:**
+- `src/gsc/` - Google Search Console (8 tools)
+- `src/ads/` - Google Ads (25 tools, modular structure)
+- `src/analytics/` - Google Analytics (11 tools)
+- `src/business-profile/` - Business Profile (3 tools)
+- `src/bigquery/` - BigQuery operations (3 tools)
+- `src/crux/` - Core Web Vitals (5 tools)
+- `src/serp/` - SERP API (1 tool)
+- `src/wpp-analytics/` - Dashboard tools (9 tools)
+- `src/shared/` - OAuth factory, logger, safety system, **interactive-workflow utilities**
+
+**Total:** 66 MCP tools
+
+**Interactive Workflow System:**
+- `src/shared/interactive-workflow.ts` - Utilities for guided tool experiences
+  * `injectGuidance()` - Move verbose guidance from metadata to responses
+  * `formatDiscoveryResponse()` - Interactive parameter collection
+  * `formatNextSteps()` - Suggest related tools
+  * `formatSuccessSummary()` - Enhanced success messages
+  * `WorkflowBuilder` - Chainable multi-step workflows
+
+**NPM Scripts:**
+```bash
+# Start Google backend (required for router)
+npm run dev:google-backend  # Port 3100
+
+# Start MCP router (stdio mode for Claude Code)
+npm run dev:router
+
+# Legacy monolithic mode (HTTP, for OMA)
+npm run dev:http  # Port 3001
+
+# Build all
+npm run build
+```
 
 **Dependencies:**
 ```json
@@ -608,19 +680,23 @@ Cold: 25+ months (GCS Archive, 95% cheaper, export monthly)
 }
 ```
 
-**Modules:**
-- `src/gsc/` - Google Search Console (8 tools)
-- `src/ads/` - Google Ads (25 tools, modular structure)
-- `src/analytics/` - Google Analytics (11 tools)
-- `src/business-profile/` - Business Profile (3 tools)
-- `src/bigquery/` - BigQuery operations (3 tools)
-- `src/crux/` - Core Web Vitals (2 tools)
-- `src/serp/` - SERP API (1 tool)
-- `src/wpp-analytics/` - Dashboard tools (5 tools)
-- `src/shared/` - OAuth factory, logger, safety system
-- `src/http-server/` - Express HTTP API for OMA
+**Token Optimization Details:**
+- Router extracts first line from tool descriptions (removes emojis, multi-line guidance)
+- Full descriptions stored in backend `annotations` (not sent to client)
+- Guidance injected into tool responses when tools are actually called
+- Result: Load 1,016 tokens upfront instead of 99,000 tokens
 
-**Total:** 65+ MCP tools
+**Interactive Workflow Benefits:**
+- Tools guide users through missing parameters step-by-step
+- Rich analysis and insights in responses
+- Suggested next steps after each operation
+- Enhanced dry-run previews for WRITE operations
+- Multi-step approval workflows with impact analysis
+
+**Reference Documentation:**
+- `docs/router-architecture.md` - Complete router implementation guide
+- `docs/mcp-architecture-recommendations.md` - Architecture decision rationale
+- `docs/SESSION-HANDOVER-interactive-tool-transformation.md` - Transformation implementation
 
 ### Reporting Platform (Frontend)
 
@@ -864,7 +940,7 @@ const results = await queryBigQuery(userOAuthToken);
 
 | File | Lines | Purpose | When to Read |
 |------|-------|---------|--------------|
-| `claude.md` | 500+ | **THIS FILE** - Complete system overview | Every new session, memory refresh |
+| `CLAUDE.md` | 1200+ | **THIS FILE** - Complete system overview + AI agent guide | Every new session, memory refresh |
 | `ROADMAP.md` | 601 | Phases 4.1-4.8, all tasks, priorities | Check current phase, see what's next |
 | `WORKFLOW.md` | 412 | Sub-agent usage guide | When invoking agents |
 | `BIGQUERY-DATA-LAKE-ARCHITECTURE.md` | NEW | BigQuery shared table design | Implementing Phase 4.7 |
@@ -953,6 +1029,272 @@ const results = await queryBigQuery(userOAuthToken);
 
 ---
 
+## 🤖 AI Agent Guide: Using Interactive MCP Tools
+
+### Overview of Interactive Workflows
+
+**All 66 tools now use interactive workflows** that guide users step-by-step instead of throwing errors for missing parameters.
+
+**Key Concept:**
+- Tool descriptions in metadata are **minimal** (single line, ~15 tokens each)
+- Verbose guidance is **injected into tool responses** (only when tool is called)
+- Missing parameters trigger **discovery mode** (interactive parameter collection)
+- WRITE operations require **multi-step approval** with impact previews
+
+### How Interactive Tools Work
+
+**Traditional Tool (Old Pattern):**
+```
+Agent calls tool without required param → ERROR: "property is required"
+Agent must know all params upfront
+No guidance on what to provide
+```
+
+**Interactive Tool (New Pattern):**
+```
+Agent calls tool without params → Tool returns discovery guidance
+Tool lists available options (e.g., available properties)
+Agent presents options to user
+User selects option
+Agent calls tool again with selected parameter
+Tool returns rich analysis + next step suggestions
+```
+
+### Tool Calling Patterns
+
+**Pattern 1: Simple READ Tools (No Required Params)**
+
+Examples: `google__list_properties`, `google__list_accessible_accounts`, `google__list_analytics_accounts`
+
+**How to Call:**
+```json
+{
+  "tool": "google__list_properties"
+  // No parameters needed
+}
+```
+
+**Response:**
+```json
+{
+  "content": [{
+    "type": "text",
+    "text": "📊 DISCOVERED 5 PROPERTIES\n\n1. sc-domain:example.com...\n\n💡 WHAT YOU CAN DO:\n- Analyze traffic: use query_search_analytics\n..."
+  }],
+  "data": {
+    "properties": [...],
+    "total": 5
+  }
+}
+```
+
+**Agent Should:**
+1. Read `content[0].text` for formatted results and guidance
+2. Present the formatted list to user
+3. Follow suggested next steps in the response
+
+**Pattern 2: Complex READ Tools (Parameter Discovery)**
+
+Examples: `google__query_search_analytics`, `google__list_campaigns`, `google__get_campaign_performance`
+
+**Step 1 - Call Without Params:**
+```json
+{
+  "tool": "google__query_search_analytics"
+}
+```
+
+**Response:** Discovery guidance
+```json
+{
+  "content": [{
+    "type": "text",
+    "text": "🔍 SELECT PROPERTY (Step 1/2)\n\n1. sc-domain:example.com\n2. sc-domain:site2.com\n\n💡 Which property? Provide: property"
+  }],
+  "data": {
+    "items": [...],
+    "nextParam": "property"
+  }
+}
+```
+
+**Step 2 - Call With Property:**
+```json
+{
+  "tool": "google__query_search_analytics",
+  "property": "sc-domain:example.com"
+}
+```
+
+**Response:** Date range guidance
+```json
+{
+  "content": [{
+    "type": "text",
+    "text": "📅 DATE RANGE SELECTION (Step 2/2)\n\nLast 7 days: 2025-10-24 to 2025-10-31\n..."
+  }]
+}
+```
+
+**Step 3 - Call With All Params:**
+```json
+{
+  "tool": "google__query_search_analytics",
+  "property": "sc-domain:example.com",
+  "startDate": "2025-10-01",
+  "endDate": "2025-10-31"
+}
+```
+
+**Response:** Full analysis with insights
+```json
+{
+  "content": [{
+    "type": "text",
+    "text": "📊 SEARCH PERFORMANCE ANALYSIS\n\nTotal Clicks: 12,345\n...\n💡 KEY INSIGHTS:\n✅ Good CTR\n...\n🎯 NEXT STEPS:\n• Check indexing: use inspect_url\n..."
+  }],
+  "data": {
+    "rows": [...],
+    "summary": {...}
+  }
+}
+```
+
+**Pattern 3: WRITE Tools (Multi-Step Approval)**
+
+Examples: `google__update_budget`, `google__create_campaign`, `google__add_keywords`
+
+**Step 1-3: Parameter Discovery (Same as Pattern 2)**
+- Call without params → discover account
+- Call with account → discover budget/resource
+- Call with resource → request new values
+
+**Step 4: Dry-Run Preview**
+```json
+{
+  "tool": "google__update_budget",
+  "customerId": "2191558405",
+  "budgetId": "12345",
+  "newDailyAmountDollars": 75
+  // No confirmationToken
+}
+```
+
+**Response:** Impact preview
+```json
+{
+  "content": [{
+    "type": "text",
+    "text": "📋 BUDGET UPDATE - REVIEW & CONFIRM (Step 4/4)\n\nCurrent: $50/day\nNew: $75/day\nChange: +$25/day (+50%)\n\nMonthly Impact: +$760\n\n⚠️ WARNINGS:\n• Large increase\n\n✅ Proceed? Call with confirmationToken: 'abc123'"
+  }],
+  "requiresApproval": true,
+  "confirmationToken": "abc123xyz"
+}
+```
+
+**Agent Must:**
+1. Present the dry-run preview to user
+2. Show financial impact and warnings
+3. Get explicit user confirmation
+4. Only then proceed to Step 5
+
+**Step 5: Execute with Confirmation**
+```json
+{
+  "tool": "google__update_budget",
+  "customerId": "2191558405",
+  "budgetId": "12345",
+  "newDailyAmountDollars": 75,
+  "confirmationToken": "abc123xyz"  // From previous response
+}
+```
+
+**Response:** Success with audit trail
+```json
+{
+  "content": [{
+    "type": "text",
+    "text": "✅ BUDGET UPDATED\n\nBudget: $75/day\nAudit ID: aud_123\n\n💡 NEXT STEPS:\n• Monitor performance\n..."
+  }],
+  "data": {
+    "budgetId": "12345",
+    "change": 25,
+    "auditId": "aud_123"
+  }
+}
+```
+
+### Critical Rules for AI Agents
+
+**1. Never Skip Discovery Steps**
+- If tool response suggests next parameter, collect it from user
+- Don't invent/guess parameter values
+- Present discovery options to user, let them choose
+
+**2. Always Read content[0].text**
+- Contains formatted results, insights, and guidance
+- Present this to user - don't just show raw data
+- Follow suggested next steps in responses
+
+**3. Respect Approval Workflows**
+- NEVER call WRITE tools with confirmationToken without showing preview first
+- Always present dry-run impact to user
+- Get explicit confirmation before executing
+- Destructive operations (delete, large budget changes) need clear user consent
+
+**4. Chain Related Tools**
+- Responses suggest next tools to call
+- Follow these suggestions for optimal workflows
+- Example: list_campaigns → get_campaign_performance → get_search_terms → add_negative_keywords
+
+**5. Handle Discovery Responses**
+- When response has `nextParam` in data, collect that parameter from user
+- When response shows "Step X/Y", you're in a multi-step workflow
+- Continue calling tool with progressively more parameters
+
+### Example: Complete Workflow
+
+**User Request:** "Increase budget for my top campaign"
+
+**Agent Workflow:**
+```
+1. Call google__list_accessible_accounts
+   → Response: Lists accounts, asks which one
+   → Agent: Presents to user
+
+2. User selects account "2191558405"
+
+3. Call google__list_campaigns(customerId="2191558405")
+   → Response: Lists campaigns with performance
+   → Agent: Presents list, asks which campaign
+
+4. User selects "Campaign X"
+
+5. Call google__list_budgets(customerId="2191558405")
+   → Response: Shows current budgets
+   → Agent: Shows "Campaign X uses Budget Y: $50/day"
+
+6. Call google__update_budget(customerId, budgetId)
+   → Response: Asks for new amount
+   → Agent: "Current is $50/day, what should new amount be?"
+
+7. User says "increase to $75"
+
+8. Call google__update_budget(customerId, budgetId, newAmount=75)
+   → Response: Dry-run preview showing +$25/day, +$760/month impact
+   → Agent: Shows preview, asks for confirmation
+
+9. User confirms
+
+10. Call google__update_budget(..., confirmationToken="abc123")
+    → Response: Success + audit trail + next steps
+    → Agent: "✅ Budget updated! Monitor performance over next 48 hours."
+```
+
+**Total: 10 steps, all guided by tool responses. User never sees technical complexity.**
+
+---
+
 ## 🔍 System Constraints (Know These!)
 
 ### What Agents MUST Handle (Can't Ask Practitioners)
@@ -1005,11 +1347,14 @@ const results = await queryBigQuery(userOAuthToken);
 
 ## 📊 Platform Metrics Summary
 
-**MCP Server:**
-- 65+ tools across 7 APIs
+**MCP Server (Router Architecture):**
+- **66 tools** across 7 Google APIs
+- **Router + Backend pattern** (stdio → HTTP)
+- **94% token reduction** (6K vs 104K tokens loaded)
+- **Interactive workflows** (12 tools transformed, patterns demonstrated)
 - 100% OAuth (no service accounts for data access)
 - HTTP API for OMA integration
-- Modular architecture (21 files refactored Oct 27)
+- Modular architecture (refactored Oct 27-31)
 
 **Frontend Platform:**
 - 32 chart types + 12 controls (100% migrated with filters)
@@ -1027,7 +1372,7 @@ const results = await queryBigQuery(userOAuthToken);
 
 ---
 
-**Last Updated:** October 27, 2025
+**Last Updated:** October 31, 2025
 **Maintained By:** Claude agents via doc-syncer
 **Source of Truth:** Yes - Read this first, then dive into specific docs
 
@@ -1179,7 +1524,7 @@ cd wpp-analytics-platform/frontend && npm run dev
 
 ## For Comprehensive Details, See PROJECT-BLUEPRINT.md
 
-**This file (claude.md) provides quick reference and core concepts.**
+**This file (CLAUDE.md) provides quick reference, core concepts, and AI agent guidance.**
 
 **For complete specifications, read PROJECT-BLUEPRINT.md which includes:**
 
@@ -1260,7 +1605,7 @@ cd wpp-analytics-platform/frontend && npm run dev
 ---
 
 **📘 PROJECT-BLUEPRINT.md = Complete Project Manual (2,427 lines)**
-**📄 claude.md = Quick Reference (This File)**
+**📄 CLAUDE.md = Quick Reference + AI Agent Guide (This File)**
 
 **Always refer to PROJECT-BLUEPRINT.md for complete, authoritative information.**
 

@@ -29,21 +29,8 @@ export declare const getSearchTermsReportTool: {
                 description: string;
             };
         };
-        required: string[];
+        required: never[];
     };
-    handler(input: any): Promise<{
-        success: boolean;
-        data: {
-            customerId: any;
-            campaignId: any;
-            dateRange: string | {
-                startDate: any;
-                endDate: any;
-            };
-            searchTerms: any[];
-            count: number;
-            message: string;
-        };
-    }>;
+    handler(input: any): Promise<import("../../../shared/interactive-workflow.js").McpResponse>;
 };
 //# sourceMappingURL=get-search-terms.tool.d.ts.map

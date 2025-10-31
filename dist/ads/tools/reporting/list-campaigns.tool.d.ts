@@ -17,16 +17,8 @@ export declare const listCampaignsTool: {
                 description: string;
             };
         };
-        required: string[];
+        required: never[];
     };
-    handler(input: any): Promise<{
-        success: boolean;
-        data: {
-            customerId: any;
-            campaigns: any[];
-            count: number;
-            message: string;
-        };
-    }>;
+    handler(input: any): Promise<import("../../../shared/interactive-workflow.js").McpResponse>;
 };
 //# sourceMappingURL=list-campaigns.tool.d.ts.map

@@ -12,17 +12,7 @@ export declare const listPropertiesTool: {
         properties: {};
         required: never[];
     };
-    handler(_input: any): Promise<{
-        success: boolean;
-        data: {
-            properties: {
-                url: string | null | undefined;
-                permissionLevel: string | null | undefined;
-            }[];
-            total: number;
-            message: string;
-        };
-    }>;
+    handler(_input: any): Promise<import("../../shared/interactive-workflow.js").McpResponse>;
 };
 /**
  * Get property details tool
@@ -40,13 +30,7 @@ export declare const getPropertyTool: {
         };
         required: string[];
     };
-    handler(input: any): Promise<{
-        success: boolean;
-        data: {
-            url: string | null | undefined;
-            permissionLevel: string | null | undefined;
-        };
-    }>;
+    handler(input: any): Promise<import("../../shared/interactive-workflow.js").McpResponse>;
 };
 /**
  * Add property tool (WRITE)

@@ -7,6 +7,7 @@ import { getAuditLogger } from '../audit.js';
 import { DryRunResultBuilder, getApprovalManager, formatDryRunResult } from '../approval.js';
 import { validateGSCProperty } from '../validation.js';
 import { getLogger } from '../../shared/logger.js';
+import { injectGuidance, formatNextSteps } from '../../shared/interactive-workflow.js';
 const logger = getLogger('gsc.tools.properties');
 /**
  * List all properties tool
@@ -42,14 +43,39 @@ export const listPropertiesTool = {
                 totalProperties: sites.length,
                 discoveredProperties: allProperties.length,
             });
-            return {
-                success: true,
-                data: {
-                    properties: allProperties,
-                    total: allProperties.length,
-                    message: `Found ${allProperties.length} properties in your Google Search Console account`,
-                },
-            };
+            // Inject rich guidance into response
+            const guidanceText = `📊 DISCOVERED ${allProperties.length} GOOGLE SEARCH CONSOLE PROPERTIES
+
+${allProperties.map((p, i) => `${i + 1}. ${p.url} (${p.permissionLevel})`).join('\n')}
+
+💡 WHAT YOU CAN DO WITH THESE PROPERTIES:
+
+**Performance Analysis:**
+- Analyze search traffic: use query_search_analytics
+- Get search terms report: specify property + date range
+- Track ranking changes: compare different time periods
+
+**Index Management:**
+- Check URL indexing status: use inspect_url
+- View sitemaps: use list_sitemaps
+- Submit new sitemaps: use submit_sitemap
+
+**Technical SEO:**
+- Check Core Web Vitals: use get_core_web_vitals_origin
+- Analyze page speed: use get_core_web_vitals_url
+- Compare device performance: use compare_cwv_form_factors
+
+${formatNextSteps([
+                'Start with traffic analysis: call query_search_analytics with a property',
+                'Check site health: call inspect_url for your homepage',
+                'Monitor Core Web Vitals: call get_core_web_vitals_origin'
+            ])}
+
+Which property would you like to analyze?`;
+            return injectGuidance({
+                properties: allProperties,
+                total: allProperties.length,
+            }, guidanceText);
         }
         catch (error) {
             logger.error('Failed to list properties', error);
@@ -95,13 +121,30 @@ export const getPropertyTool = {
             await audit.logReadOperation('user', 'get_property', property, {
                 permissionLevel: site.permissionLevel,
             });
-            return {
-                success: true,
-                data: {
-                    url: site.siteUrl,
-                    permissionLevel: site.permissionLevel,
-                },
-            };
+            // Inject guidance with next steps
+            const guidanceText = `📋 PROPERTY DETAILS
+
+**Property:** ${site.siteUrl}
+**Permission Level:** ${site.permissionLevel}
+
+💡 WHAT THIS MEANS:
+
+**Permission Level "${site.permissionLevel}":**
+${site.permissionLevel === 'siteOwner' ? '✅ Full access - Can manage everything' :
+                site.permissionLevel === 'siteFullUser' ? '✅ Full user - Can view and manage most settings' :
+                    site.permissionLevel === 'siteRestrictedUser' ? '⚠️  Limited access - Read-only permissions' :
+                        'ℹ️  Standard access level'}
+
+${formatNextSteps([
+                'Analyze traffic: use query_search_analytics',
+                'Check URL indexing: use inspect_url',
+                'Review sitemaps: use list_sitemaps',
+                'Monitor performance: use get_core_web_vitals_origin'
+            ])}`;
+            return injectGuidance({
+                url: site.siteUrl,
+                permissionLevel: site.permissionLevel,
+            }, guidanceText);
         }
         catch (error) {
             logger.error('Failed to get property', error);

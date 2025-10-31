@@ -23,17 +23,7 @@ export declare const googleAdsTools: ({
         properties: {};
         required: never[];
     };
-    handler(input: any): Promise<{
-        success: boolean;
-        data: {
-            accounts: {
-                resourceName: string;
-                customerId: string;
-            }[];
-            count: number;
-            message: string;
-        };
-    }>;
+    handler(input: any): Promise<import("../../shared/interactive-workflow.js").McpResponse>;
 } | {
     name: string;
     description: string;
@@ -352,32 +342,14 @@ export declare const googleAdsTools: ({
                 description: string;
             };
         };
-        required: string[];
+        required: never[];
     };
-    handler(input: any): Promise<{
+    handler(input: any): Promise<import("../../shared/interactive-workflow.js").McpResponse | {
         success: boolean;
         requiresApproval: boolean;
         preview: string;
         confirmationToken: string;
         message: string;
-        data?: undefined;
-    } | {
-        success: boolean;
-        data: {
-            customerId: any;
-            budgetId: any;
-            previousAmount: string;
-            newAmount: string;
-            dailyDifference: string;
-            monthlyImpact: string;
-            percentageChange: string;
-            result: any;
-            message: string;
-        };
-        requiresApproval?: undefined;
-        preview?: undefined;
-        confirmationToken?: undefined;
-        message?: undefined;
     }>;
 } | {
     name: string;
@@ -704,89 +676,6 @@ export declare const googleAdsTools: ({
                 type: string;
                 description: string;
             };
-        };
-        required: string[];
-    };
-    handler(input: any): Promise<{
-        success: boolean;
-        data: {
-            customerId: any;
-            campaigns: any[];
-            count: number;
-            message: string;
-        };
-    }>;
-} | {
-    name: string;
-    description: string;
-    inputSchema: {
-        type: "object";
-        properties: {
-            customerId: {
-                type: string;
-                description: string;
-            };
-            campaignId: {
-                type: string;
-                description: string;
-            };
-            startDate: {
-                type: string;
-                description: string;
-            };
-            endDate: {
-                type: string;
-                description: string;
-            };
-        };
-        required: string[];
-    };
-    handler(input: any): Promise<{
-        success: boolean;
-        data: {
-            customerId: any;
-            campaignId: any;
-            dateRange: string | {
-                startDate: any;
-                endDate: any;
-            };
-            searchTerms: any[];
-            count: number;
-            message: string;
-        };
-    }>;
-} | {
-    name: string;
-    description: string;
-    inputSchema: {
-        type: "object";
-        properties: {
-            customerId: {
-                type: string;
-                description: string;
-            };
-        };
-        required: string[];
-    };
-    handler(input: any): Promise<{
-        success: boolean;
-        data: {
-            customerId: any;
-            budgets: any[];
-            count: number;
-            message: string;
-        };
-    }>;
-} | {
-    name: string;
-    description: string;
-    inputSchema: {
-        type: "object";
-        properties: {
-            customerId: {
-                type: string;
-                description: string;
-            };
             campaignId: {
                 type: string;
                 description: string;
@@ -1099,100 +988,7 @@ export declare const readOnlyAdsTools: ({
         properties: {};
         required: never[];
     };
-    handler(input: any): Promise<{
-        success: boolean;
-        data: {
-            accounts: {
-                resourceName: string;
-                customerId: string;
-            }[];
-            count: number;
-            message: string;
-        };
-    }>;
-} | {
-    name: string;
-    description: string;
-    inputSchema: {
-        type: "object";
-        properties: {
-            customerId: {
-                type: string;
-                description: string;
-            };
-        };
-        required: string[];
-    };
-    handler(input: any): Promise<{
-        success: boolean;
-        data: {
-            customerId: any;
-            campaigns: any[];
-            count: number;
-            message: string;
-        };
-    }>;
-} | {
-    name: string;
-    description: string;
-    inputSchema: {
-        type: "object";
-        properties: {
-            customerId: {
-                type: string;
-                description: string;
-            };
-            campaignId: {
-                type: string;
-                description: string;
-            };
-            startDate: {
-                type: string;
-                description: string;
-            };
-            endDate: {
-                type: string;
-                description: string;
-            };
-        };
-        required: string[];
-    };
-    handler(input: any): Promise<{
-        success: boolean;
-        data: {
-            customerId: any;
-            campaignId: any;
-            dateRange: string | {
-                startDate: any;
-                endDate: any;
-            };
-            searchTerms: any[];
-            count: number;
-            message: string;
-        };
-    }>;
-} | {
-    name: string;
-    description: string;
-    inputSchema: {
-        type: "object";
-        properties: {
-            customerId: {
-                type: string;
-                description: string;
-            };
-        };
-        required: string[];
-    };
-    handler(input: any): Promise<{
-        success: boolean;
-        data: {
-            customerId: any;
-            budgets: any[];
-            count: number;
-            message: string;
-        };
-    }>;
+    handler(input: any): Promise<import("../../shared/interactive-workflow.js").McpResponse>;
 } | {
     name: string;
     description: string;
@@ -1306,32 +1102,14 @@ export declare const writeAdsTools: ({
                 description: string;
             };
         };
-        required: string[];
+        required: never[];
     };
-    handler(input: any): Promise<{
+    handler(input: any): Promise<import("../../shared/interactive-workflow.js").McpResponse | {
         success: boolean;
         requiresApproval: boolean;
         preview: string;
         confirmationToken: string;
         message: string;
-        data?: undefined;
-    } | {
-        success: boolean;
-        data: {
-            customerId: any;
-            budgetId: any;
-            previousAmount: string;
-            newAmount: string;
-            dailyDifference: string;
-            monthlyImpact: string;
-            percentageChange: string;
-            result: any;
-            message: string;
-        };
-        requiresApproval?: undefined;
-        preview?: undefined;
-        confirmationToken?: undefined;
-        message?: undefined;
     }>;
 } | {
     name: string;

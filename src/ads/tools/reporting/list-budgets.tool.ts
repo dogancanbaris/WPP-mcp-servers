@@ -4,10 +4,11 @@
  * MCP tool for listing all campaign budgets.
  */
 
-import { microsToAmount } from '../../validation.js';
+import { microsToAmount, extractCustomerId } from '../../validation.js';
 import { getLogger } from '../../../shared/logger.js';
 import { extractRefreshToken } from '../../../shared/oauth-client-factory.js';
 import { createGoogleAdsClientFromRefreshToken } from '../../client.js';
+import { injectGuidance, formatDiscoveryResponse, formatNextSteps } from '../../../shared/interactive-workflow.js';
 
 const logger = getLogger('ads.tools.reporting.list-budgets');
 
@@ -16,29 +17,7 @@ const logger = getLogger('ads.tools.reporting.list-budgets');
  */
 export const listBudgetsTool = {
   name: 'list_budgets',
-  description: `List all campaign budgets in a Google Ads account.
-
-💡 AGENT GUIDANCE - BUDGET MONITORING:
-- Shows all budgets with current spend and limits
-- Critical to check before any budget modifications
-- Use to understand budget allocation across campaigns
-
-📊 WHAT YOU'LL GET:
-- Budget ID and name
-- Daily amount (in account currency)
-- Delivery method (Standard vs Accelerated)
-- Status
-- Google's recommended budget (if available)
-
-🎯 USE CASES:
-- "What are my daily budgets?"
-- "Which budgets are being recommended for increases?"
-- "How are budgets allocated across campaigns?"
-
-⚠️ BEFORE MODIFYING BUDGETS:
-- Always call this first to see current state
-- Check recommended budget amounts
-- Understand current allocation`,
+  description: 'List all campaign budgets in a Google Ads account.',
   inputSchema: {
     type: 'object' as const,
     properties: {
@@ -47,7 +26,7 @@ export const listBudgetsTool = {
         description: 'Customer ID (10 digits)',
       },
     },
-    required: ['customerId'],
+    required: [],
   },
   async handler(input: any) {
     try {
@@ -67,6 +46,27 @@ export const listBudgetsTool = {
       // Create Google Ads client with user's refresh token
       const client = createGoogleAdsClientFromRefreshToken(refreshToken, developerToken);
 
+      // ═══ ACCOUNT DISCOVERY ═══
+      if (!customerId) {
+        const resourceNames = await client.listAccessibleAccounts();
+        const accounts = resourceNames.map((rn) => ({
+          resourceName: rn,
+          customerId: extractCustomerId(rn),
+        }));
+
+        return formatDiscoveryResponse({
+          step: '1/1',
+          title: 'SELECT GOOGLE ADS ACCOUNT',
+          items: accounts,
+          itemFormatter: (a, i) =>
+            `${i + 1}. Customer ID: ${a.customerId}`,
+          prompt: 'Which account\'s budgets would you like to view?',
+          nextParam: 'customerId',
+          emoji: '💰',
+        });
+      }
+
+      // ═══ EXECUTE WITH ANALYSIS ═══
       logger.info('Listing budgets', { customerId });
 
       const budgets = await client.listBudgets(customerId);
@@ -82,15 +82,63 @@ export const listBudgetsTool = {
           : null,
       }));
 
-      return {
-        success: true,
-        data: {
+      // Calculate total daily spend
+      const totalDaily = processed.reduce((sum, b) => {
+        const amount = parseFloat(b.dailyAmount.replace('$', '').replace(',', ''));
+        return sum + amount;
+      }, 0);
+
+      // Find budgets with recommendations
+      const withRecommendations = processed.filter(b => b.recommendedAmount);
+
+      const guidanceText = `💰 BUDGET OVERVIEW - ACCOUNT ${customerId}
+
+**Total Budgets:** ${processed.length}
+**Total Daily Spend:** $${totalDaily.toFixed(2)}
+**Monthly Estimate:** $${(totalDaily * 30.4).toFixed(2)}
+
+${withRecommendations.length > 0 ? `⚠️ **Google Recommends ${withRecommendations.length} Budget Increase(s)**\n` : ''}
+
+**BUDGET LIST:**
+${processed.map((b, i) => {
+  const budget = b.campaign_budget;
+  return `${i + 1}. ${budget?.name || 'Unnamed Budget'}
+   ID: ${budget?.id}
+   Daily: ${b.dailyAmount}${b.recommendedAmount ? `\n   ⚠️ Recommended: ${b.recommendedAmount}` : ''}
+   Delivery: ${budget?.delivery_method || 'N/A'}`;
+}).join('\n\n')}
+
+💡 WHAT YOU CAN DO WITH THESE BUDGETS:
+
+**Budget Management:**
+- Increase budget: use update_budget (affects spend immediately!)
+- Create new budget: use create_budget
+- View campaign performance: use get_campaign_performance
+
+**Analysis:**
+- Check if budgets are limiting performance
+- Review recommended increases (if any)
+- Analyze spend distribution across campaigns
+
+${formatNextSteps([
+  withRecommendations.length > 0 ? 'Review recommended increases: consider budget adjustments' : 'Monitor performance: call get_campaign_performance',
+  'Adjust budget: use update_budget with budgetId and new amount',
+  'View campaigns: call list_campaigns to see which campaigns use these budgets'
+])}
+
+⚠️ IMPORTANT: Budget changes affect spend immediately. Always review current performance before increasing.`;
+
+      return injectGuidance(
+        {
           customerId,
           budgets: processed,
           count: processed.length,
-          message: `Found ${processed.length} budget(s) in account ${customerId}`,
+          totalDailySpend: totalDaily,
+          monthlyEstimate: totalDaily * 30.4,
+          hasRecommendations: withRecommendations.length > 0,
         },
-      };
+        guidanceText
+      );
     } catch (error) {
       logger.error('Failed to list budgets', error as Error);
       throw error;

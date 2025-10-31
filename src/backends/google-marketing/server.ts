@@ -90,7 +90,8 @@ async function initializeServer() {
 
       logger.info(`Tool call successful: ${name}`);
 
-      return result;
+      // Return as MCP-compatible result (type assertion for flexibility)
+      return result as any;
     } catch (error) {
       logger.error(`Tool call failed: ${name}`, error);
       throw error;

@@ -67,6 +67,7 @@ async function initializeServer() {
             // Call the tool handler
             const result = await tool.handler(args);
             logger.info(`Tool call successful: ${name}`);
+            // Return as MCP-compatible result (type assertion for flexibility)
             return result;
         }
         catch (error) {

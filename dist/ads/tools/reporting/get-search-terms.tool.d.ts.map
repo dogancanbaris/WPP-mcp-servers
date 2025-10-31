@@ -1,1 +1,1 @@
-{"version":3,"file":"get-search-terms.tool.d.ts","sourceRoot":"","sources":["../../../../src/ads/tools/reporting/get-search-terms.tool.ts"],"names":[],"mappings":"AAAA;;;;GAIG;AASH;;GAEG;AACH,eAAO,MAAM,wBAAwB;;;;;;;;;;;;;;;;;;;;;;;;;mBAwDd,GAAG;;;;;;;;;;;;;;CA0CzB,CAAC"}
+{"version":3,"file":"get-search-terms.tool.d.ts","sourceRoot":"","sources":["../../../../src/ads/tools/reporting/get-search-terms.tool.ts"],"names":[],"mappings":"AAAA;;;;GAIG;AAUH;;GAEG;AACH,eAAO,MAAM,wBAAwB;;;;;;;;;;;;;;;;;;;;;;;;;mBAyBd,GAAG;CAwIzB,CAAC"}

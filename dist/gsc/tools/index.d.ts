@@ -10,25 +10,6 @@ export declare const allTools: ({
     description: string;
     inputSchema: {
         type: "object";
-        properties: {};
-        required: never[];
-    };
-    handler(input: any): Promise<{
-        success: boolean;
-        data: {
-            accounts: {
-                resourceName: string;
-                customerId: string;
-            }[];
-            count: number;
-            message: string;
-        };
-    }>;
-} | {
-    name: string;
-    description: string;
-    inputSchema: {
-        type: "object";
         properties: {
             customerId: {
                 type: string;
@@ -342,32 +323,14 @@ export declare const allTools: ({
                 description: string;
             };
         };
-        required: string[];
+        required: never[];
     };
-    handler(input: any): Promise<{
+    handler(input: any): Promise<import("../../shared/interactive-workflow.js").McpResponse | {
         success: boolean;
         requiresApproval: boolean;
         preview: string;
         confirmationToken: string;
         message: string;
-        data?: undefined;
-    } | {
-        success: boolean;
-        data: {
-            customerId: any;
-            budgetId: any;
-            previousAmount: string;
-            newAmount: string;
-            dailyDifference: string;
-            monthlyImpact: string;
-            percentageChange: string;
-            result: any;
-            message: string;
-        };
-        requiresApproval?: undefined;
-        preview?: undefined;
-        confirmationToken?: undefined;
-        message?: undefined;
     }>;
 } | {
     name: string;
@@ -694,89 +657,6 @@ export declare const allTools: ({
                 type: string;
                 description: string;
             };
-        };
-        required: string[];
-    };
-    handler(input: any): Promise<{
-        success: boolean;
-        data: {
-            customerId: any;
-            campaigns: any[];
-            count: number;
-            message: string;
-        };
-    }>;
-} | {
-    name: string;
-    description: string;
-    inputSchema: {
-        type: "object";
-        properties: {
-            customerId: {
-                type: string;
-                description: string;
-            };
-            campaignId: {
-                type: string;
-                description: string;
-            };
-            startDate: {
-                type: string;
-                description: string;
-            };
-            endDate: {
-                type: string;
-                description: string;
-            };
-        };
-        required: string[];
-    };
-    handler(input: any): Promise<{
-        success: boolean;
-        data: {
-            customerId: any;
-            campaignId: any;
-            dateRange: string | {
-                startDate: any;
-                endDate: any;
-            };
-            searchTerms: any[];
-            count: number;
-            message: string;
-        };
-    }>;
-} | {
-    name: string;
-    description: string;
-    inputSchema: {
-        type: "object";
-        properties: {
-            customerId: {
-                type: string;
-                description: string;
-            };
-        };
-        required: string[];
-    };
-    handler(input: any): Promise<{
-        success: boolean;
-        data: {
-            customerId: any;
-            budgets: any[];
-            count: number;
-            message: string;
-        };
-    }>;
-} | {
-    name: string;
-    description: string;
-    inputSchema: {
-        type: "object";
-        properties: {
-            customerId: {
-                type: string;
-                description: string;
-            };
             campaignId: {
                 type: string;
                 description: string;
@@ -1073,22 +953,6 @@ export declare const allTools: ({
                 lowTopPageBid: number | undefined;
                 highTopPageBid: number | undefined;
             }[];
-            count: number;
-            message: string;
-        };
-    }>;
-} | {
-    name: string;
-    description: string;
-    inputSchema: {
-        type: "object";
-        properties: {};
-        required: never[];
-    };
-    handler(_input: any): Promise<{
-        success: boolean;
-        data: {
-            accounts: import("../../analytics/types.js").AnalyticsAccount[];
             count: number;
             message: string;
         };
@@ -1527,45 +1391,6 @@ export declare const allTools: ({
     description: string;
     inputSchema: {
         type: "object";
-        properties: {};
-        required: never[];
-    };
-    handler(_input: any): Promise<{
-        success: boolean;
-        data: {
-            properties: {
-                url: string | null | undefined;
-                permissionLevel: string | null | undefined;
-            }[];
-            total: number;
-            message: string;
-        };
-    }>;
-} | {
-    name: string;
-    description: string;
-    inputSchema: {
-        type: "object";
-        properties: {
-            property: {
-                type: string;
-                description: string;
-            };
-        };
-        required: string[];
-    };
-    handler(input: any): Promise<{
-        success: boolean;
-        data: {
-            url: string | null | undefined;
-            permissionLevel: string | null | undefined;
-        };
-    }>;
-} | {
-    name: string;
-    description: string;
-    inputSchema: {
-        type: "object";
         properties: {
             siteUrl: {
                 type: string;
@@ -1589,64 +1414,6 @@ export declare const allTools: ({
             message: string;
             requiresApproval?: undefined;
             dryRun?: undefined;
-        };
-    }>;
-} | {
-    name: string;
-    description: string;
-    inputSchema: {
-        type: "object";
-        properties: {
-            property: {
-                type: string;
-                description: string;
-            };
-            startDate: {
-                type: string;
-                description: string;
-            };
-            endDate: {
-                type: string;
-                description: string;
-            };
-            dimensions: {
-                type: string;
-                items: {
-                    type: string;
-                };
-                description: string;
-            };
-            searchType: {
-                type: string;
-                enum: string[];
-                description: string;
-            };
-            rowLimit: {
-                type: string;
-                description: string;
-            };
-        };
-        required: string[];
-    };
-    handler(input: any): Promise<{
-        success: boolean;
-        data: {
-            property: any;
-            dateRange: {
-                start: any;
-                end: any;
-            };
-            dimensions: any;
-            searchType: any;
-            rows: {
-                keys: any;
-                clicks: any;
-                impressions: any;
-                ctr: any;
-                position: any;
-            }[];
-            rowCount: number;
-            message: string;
         };
     }>;
 } | {
@@ -2072,19 +1839,7 @@ export declare const allTools: ({
         type: "object";
         properties: {};
     };
-    handler(_input: any): Promise<{
-        success: boolean;
-        data: {
-            datasets: {
-                id: any;
-                friendlyName: any;
-                location: any;
-                creationTime: any;
-            }[];
-            count: number;
-            message: string;
-        };
-    }>;
+    handler(_input: any): Promise<import("../../shared/interactive-workflow.js").McpResponse>;
 } | {
     name: string;
     description: string;
@@ -2984,17 +2739,7 @@ export declare const readTools: ({
         properties: {};
         required: never[];
     };
-    handler(_input: any): Promise<{
-        success: boolean;
-        data: {
-            properties: {
-                url: string | null | undefined;
-                permissionLevel: string | null | undefined;
-            }[];
-            total: number;
-            message: string;
-        };
-    }>;
+    handler(_input: any): Promise<import("../../shared/interactive-workflow.js").McpResponse>;
 } | {
     name: string;
     description: string;
@@ -3008,71 +2753,7 @@ export declare const readTools: ({
         };
         required: string[];
     };
-    handler(input: any): Promise<{
-        success: boolean;
-        data: {
-            url: string | null | undefined;
-            permissionLevel: string | null | undefined;
-        };
-    }>;
-} | {
-    name: string;
-    description: string;
-    inputSchema: {
-        type: "object";
-        properties: {
-            property: {
-                type: string;
-                description: string;
-            };
-            startDate: {
-                type: string;
-                description: string;
-            };
-            endDate: {
-                type: string;
-                description: string;
-            };
-            dimensions: {
-                type: string;
-                items: {
-                    type: string;
-                };
-                description: string;
-            };
-            searchType: {
-                type: string;
-                enum: string[];
-                description: string;
-            };
-            rowLimit: {
-                type: string;
-                description: string;
-            };
-        };
-        required: string[];
-    };
-    handler(input: any): Promise<{
-        success: boolean;
-        data: {
-            property: any;
-            dateRange: {
-                start: any;
-                end: any;
-            };
-            dimensions: any;
-            searchType: any;
-            rows: {
-                keys: any;
-                clicks: any;
-                impressions: any;
-                ctr: any;
-                position: any;
-            }[];
-            rowCount: number;
-            message: string;
-        };
-    }>;
+    handler(input: any): Promise<import("../../shared/interactive-workflow.js").McpResponse>;
 } | {
     name: string;
     description: string;

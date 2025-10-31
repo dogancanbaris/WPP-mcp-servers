@@ -12,16 +12,6 @@ export declare const listAccessibleAccountsTool: {
         properties: {};
         required: never[];
     };
-    handler(input: any): Promise<{
-        success: boolean;
-        data: {
-            accounts: {
-                resourceName: string;
-                customerId: string;
-            }[];
-            count: number;
-            message: string;
-        };
-    }>;
+    handler(input: any): Promise<import("../../shared/interactive-workflow.js").McpResponse>;
 };
 //# sourceMappingURL=accounts.d.ts.map

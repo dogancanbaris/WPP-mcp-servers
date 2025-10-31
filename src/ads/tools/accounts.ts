@@ -6,6 +6,7 @@ import { extractCustomerId } from '../validation.js';
 import { getLogger } from '../../shared/logger.js';
 import { extractRefreshToken } from '../../shared/oauth-client-factory.js';
 import { createGoogleAdsClientFromRefreshToken } from '../client.js';
+import { injectGuidance, formatNextSteps } from '../../shared/interactive-workflow.js';
 
 const logger = getLogger('ads.tools.accounts');
 
@@ -14,22 +15,7 @@ const logger = getLogger('ads.tools.accounts');
  */
 export const listAccessibleAccountsTool = {
   name: 'list_accessible_accounts',
-  description: `List all Google Ads accounts accessible with your credentials.
-
-💡 AGENT GUIDANCE - START HERE:
-- This should be the FIRST tool you call when working with Google Ads
-- Returns all customer accounts you have permission to access
-- Use the customer IDs returned here for all subsequent Google Ads operations
-- Each customer ID represents a separate Google Ads account
-
-📊 WHAT YOU'LL GET:
-- Customer resource names (e.g., customers/1234567890)
-- Extract the numeric ID for use in other tools
-
-🎯 TYPICAL WORKFLOW:
-1. Call this tool to discover available accounts
-2. Pick the relevant customer ID for the user's request
-3. Use that customer ID in all other Google Ads tools`,
+  description: 'List all Google Ads accounts accessible with your credentials.',
   inputSchema: {
     type: 'object' as const,
     properties: {},
@@ -61,14 +47,59 @@ export const listAccessibleAccountsTool = {
         customerId: extractCustomerId(rn),
       }));
 
-      return {
-        success: true,
-        data: {
+      // Inject rich guidance into response
+      const guidanceText = `🏢 DISCOVERED ${accounts.length} GOOGLE ADS ACCOUNT(S)
+
+${accounts.map((a, i) =>
+  `${i + 1}. Customer ID: ${a.customerId}
+   Resource: ${a.resourceName}`
+).join('\n\n')}
+
+💡 AGENT GUIDANCE - START HERE:
+
+**This should be the FIRST tool you call when working with Google Ads**
+
+These customer IDs are required for all subsequent Google Ads operations.
+Each customer ID represents a separate Google Ads account with its own:
+- Campaigns and ad groups
+- Budgets and billing settings
+- Keywords and targeting
+- Performance data
+
+📊 WHAT YOU CAN DO WITH THESE ACCOUNTS:
+
+**Campaign Management:**
+- View campaigns: use list_campaigns with customerId
+- Create campaigns: use create_campaign
+- Manage budgets: use list_budgets, create_budget, update_budget
+- Pause/enable campaigns: use update_campaign_status
+
+**Performance Analysis:**
+- Campaign metrics: use get_campaign_performance
+- Keyword performance: use get_keyword_performance
+- Search terms: use get_search_terms_report
+
+**Optimization:**
+- Add keywords: use add_keywords
+- Manage negative keywords: use add_negative_keywords
+- Adjust budgets: use update_budget
+- Track conversions: use list_conversion_actions
+
+${formatNextSteps([
+  'Check campaign status: call list_campaigns with a customerId',
+  'Review budgets: call list_budgets with a customerId',
+  'Analyze performance: call get_campaign_performance with customerId and date range'
+])}
+
+Which account would you like to work with?`;
+
+      return injectGuidance(
+        {
           accounts,
           count: accounts.length,
-          message: `Found ${accounts.length} accessible Google Ads account(s)`,
         },
-      };
+        guidanceText
+      );
     } catch (error) {
       logger.error('Failed to list accessible accounts', error as Error);
       throw error;

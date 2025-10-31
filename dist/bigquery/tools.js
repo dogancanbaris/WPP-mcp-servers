@@ -6,25 +6,14 @@ import { extractOAuthToken, createBigQueryClient } from '../shared/oauth-client-
 import { getLogger } from '../shared/logger.js';
 import { getApprovalEnforcer, DryRunResultBuilder } from '../shared/approval-enforcer.js';
 import { detectAndEnforceVagueness } from '../shared/vagueness-detector.js';
+import { injectGuidance, formatNextSteps } from '../shared/interactive-workflow.js';
 const logger = getLogger('bigquery.tools');
 /**
  * List datasets
  */
 export const listDatasetsTool = {
     name: 'list_bigquery_datasets',
-    description: `List all BigQuery datasets in your project.
-
-💡 AGENT GUIDANCE - BIGQUERY DATASETS:
-
-📊 WHAT ARE DATASETS:
-- Containers for tables (like databases)
-- Organize tables by project, client, or purpose
-- Control access at dataset level
-
-🎯 USE CASES:
-- "Show all BigQuery datasets"
-- "List datasets for data blending"
-- "Check what data is stored"`,
+    description: 'List all BigQuery datasets in your project.',
     inputSchema: {
         type: 'object',
         properties: {},
@@ -46,14 +35,50 @@ export const listDatasetsTool = {
                 location: ds.metadata?.location,
                 creationTime: ds.metadata?.creationTime,
             }));
-            return {
-                success: true,
-                data: {
-                    datasets: formatted,
-                    count: formatted.length,
-                    message: `Found ${formatted.length} dataset(s)`,
-                },
-            };
+            // Inject rich guidance into response
+            const guidanceText = `📊 DISCOVERED ${formatted.length} BIG QUERY DATASET(S)
+
+${formatted.map((ds, i) => `${i + 1}. ${ds.friendlyName || ds.id}
+   Dataset ID: ${ds.id}
+   Location: ${ds.location || 'N/A'}
+   Created: ${ds.creationTime ? new Date(parseInt(ds.creationTime)).toLocaleDateString() : 'N/A'}`).join('\n\n')}
+
+💡 WHAT ARE BIGQUERY DATASETS:
+
+**Datasets are containers for tables** - think of them as databases:
+- Organize tables by project, client, or purpose
+- Control access and permissions at dataset level
+- Store related data together for efficient querying
+- Each dataset has a location (US, EU, etc.) affecting query performance
+
+📊 WHAT YOU CAN DO WITH THESE DATASETS:
+
+**Data Exploration:**
+- Run SQL queries: use run_bigquery_query
+- Join data across tables within a dataset
+- Query multiple datasets for data blending
+
+**Data Management:**
+- Create new datasets: use create_bigquery_dataset
+- Upload data from marketing platforms: use push_platform_data_to_bigquery
+- Organize tables by client or project
+
+**Reporting:**
+- Build custom dashboards: use create_dashboard_from_table
+- Analyze marketing performance: combine GSC, Ads, Analytics data
+- Generate insights: use analyze_gsc_data_for_insights
+
+${formatNextSteps([
+                'Run a query: call run_bigquery_query with SQL',
+                'Upload marketing data: call push_platform_data_to_bigquery',
+                'Create dashboard: call create_dashboard_from_table with a BigQuery table'
+            ])}
+
+Which dataset would you like to work with?`;
+            return injectGuidance({
+                datasets: formatted,
+                count: formatted.length,
+            }, guidanceText);
         }
         catch (error) {
             logger.error('Failed to list datasets', error);

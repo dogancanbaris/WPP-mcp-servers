@@ -39,28 +39,8 @@ export declare const querySearchAnalyticsTool: {
                 description: string;
             };
         };
-        required: string[];
+        required: never[];
     };
-    handler(input: any): Promise<{
-        success: boolean;
-        data: {
-            property: any;
-            dateRange: {
-                start: any;
-                end: any;
-            };
-            dimensions: any;
-            searchType: any;
-            rows: {
-                keys: any;
-                clicks: any;
-                impressions: any;
-                ctr: any;
-                position: any;
-            }[];
-            rowCount: number;
-            message: string;
-        };
-    }>;
+    handler(input: any): Promise<import("../../shared/interactive-workflow.js").McpResponse>;
 };
 //# sourceMappingURL=analytics.d.ts.map

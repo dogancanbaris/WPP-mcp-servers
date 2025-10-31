@@ -23,6 +23,7 @@ export interface TimeSeriesChartProps extends Partial<ComponentConfig> {
   sortBy?: string;
   sortDirection?: 'ASC' | 'DESC';
   limit?: number;
+  containerSize?: { width: number; height: number };
 }
 
 export const TimeSeriesChart: React.FC<TimeSeriesChartProps> = (props) => {
@@ -407,10 +408,21 @@ export const TimeSeriesChart: React.FC<TimeSeriesChartProps> = (props) => {
     console.log('[TimeSeriesChart:series]', { seriesCount: series.length, names: series.map(s => s.name), sample });
   } catch {}
 
+  // Use container size for responsive height, or default
+  const chartHeight = containerSize?.height
+    ? `${containerSize.height - (showTitle ? 40 : 0)}px` // Subtract title height if shown
+    : '400px';
+
   return (
     <div style={containerStyle}>
       {showTitle && <div style={titleStyle}>{title}</div>}
-      <ReactECharts option={option} style={{ height: '400px', width: '100%' }} />
+      <ReactECharts
+        option={option}
+        style={{ height: chartHeight, width: '100%' }}
+        opts={{ renderer: 'svg' }} // SVG for better scaling
+        notMerge={false} // Better performance - merge with previous option
+        lazyUpdate={true} // Lazy update for better performance
+      />
     </div>
   );
 };

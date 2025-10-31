@@ -22,78 +22,9 @@ export declare const reportingTools: ({
                 description: string;
             };
         };
-        required: string[];
+        required: never[];
     };
-    handler(input: any): Promise<{
-        success: boolean;
-        data: {
-            customerId: any;
-            campaigns: any[];
-            count: number;
-            message: string;
-        };
-    }>;
-} | {
-    name: string;
-    description: string;
-    inputSchema: {
-        type: "object";
-        properties: {
-            customerId: {
-                type: string;
-                description: string;
-            };
-            campaignId: {
-                type: string;
-                description: string;
-            };
-            startDate: {
-                type: string;
-                description: string;
-            };
-            endDate: {
-                type: string;
-                description: string;
-            };
-        };
-        required: string[];
-    };
-    handler(input: any): Promise<{
-        success: boolean;
-        data: {
-            customerId: any;
-            campaignId: any;
-            dateRange: string | {
-                startDate: any;
-                endDate: any;
-            };
-            searchTerms: any[];
-            count: number;
-            message: string;
-        };
-    }>;
-} | {
-    name: string;
-    description: string;
-    inputSchema: {
-        type: "object";
-        properties: {
-            customerId: {
-                type: string;
-                description: string;
-            };
-        };
-        required: string[];
-    };
-    handler(input: any): Promise<{
-        success: boolean;
-        data: {
-            customerId: any;
-            budgets: any[];
-            count: number;
-            message: string;
-        };
-    }>;
+    handler(input: any): Promise<import("../../../shared/interactive-workflow.js").McpResponse>;
 } | {
     name: string;
     description: string;

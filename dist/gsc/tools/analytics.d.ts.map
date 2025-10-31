@@ -1,1 +1,1 @@
-{"version":3,"file":"analytics.d.ts","sourceRoot":"","sources":["../../../src/gsc/tools/analytics.ts"],"names":[],"mappings":"AAAA;;GAEG;AASH;;GAEG;AACH,eAAO,MAAM,wBAAwB;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;mBAqCd,GAAG;;;;;;;;;;;;;;;;;;;;;CAgGzB,CAAC"}
+{"version":3,"file":"analytics.d.ts","sourceRoot":"","sources":["../../../src/gsc/tools/analytics.ts"],"names":[],"mappings":"AAAA;;GAEG;AAeH;;GAEG;AACH,eAAO,MAAM,wBAAwB;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;mBAqCd,GAAG;CA4OzB,CAAC"}

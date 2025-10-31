@@ -4,27 +4,14 @@
 import { getAnalyticsClient } from '../client.js';
 import { ListPropertiesSchema } from '../validation.js';
 import { getLogger } from '../../shared/logger.js';
+import { injectGuidance, formatNextSteps } from '../../shared/interactive-workflow.js';
 const logger = getLogger('analytics.tools.accounts');
 /**
  * List Analytics accounts
  */
 export const listAnalyticsAccountsTool = {
     name: 'list_analytics_accounts',
-    description: `List all Google Analytics 4 (GA4) accounts you have access to.
-
-💡 AGENT GUIDANCE - START HERE FOR ANALYTICS:
-
-📊 WHAT THIS RETURNS:
-- All GA4 accounts accessible with your credentials
-- Account IDs needed for listing properties
-- Account display names
-
-🎯 TYPICAL WORKFLOW:
-1. Call this tool first to discover available accounts
-2. Use account IDs to list properties
-3. Use property IDs for all reporting operations
-
-ℹ️ NOTE: Only GA4 accounts are returned (Universal Analytics sunset July 2024)`,
+    description: 'List all Google Analytics 4 (GA4) accounts you have access to.',
     inputSchema: {
         type: 'object',
         properties: {},
@@ -35,14 +22,52 @@ export const listAnalyticsAccountsTool = {
             const client = getAnalyticsClient();
             logger.info('Listing Analytics accounts');
             const accounts = await client.listAccounts();
-            return {
-                success: true,
-                data: {
-                    accounts,
-                    count: accounts.length,
-                    message: `Found ${accounts.length} Google Analytics 4 account(s)`,
-                },
-            };
+            // Inject rich guidance into response
+            const guidanceText = `📊 DISCOVERED ${accounts.length} GOOGLE ANALYTICS 4 ACCOUNT(S)
+
+${accounts.map((a, i) => `${i + 1}. ${a.displayName || a.name}
+   Account ID: ${a.name?.replace('accounts/', '') || 'N/A'}`).join('\n\n')}
+
+💡 AGENT GUIDANCE - START HERE FOR ANALYTICS:
+
+**This is the entry point for Google Analytics data access**
+
+GA4 accounts are the top-level containers that hold properties (websites/apps).
+To access any Analytics data, you need to:
+1. Know which account contains your property
+2. Get the property ID from that account
+3. Use the property ID in all reporting tools
+
+📊 WHAT YOU CAN DO WITH THESE ACCOUNTS:
+
+**Property Discovery:**
+- List properties: use list_analytics_properties with accountId
+- List all properties: use list_analytics_properties without accountId
+- View data streams: use list_data_streams with propertyId
+
+**Reporting:**
+- Run custom reports: use run_analytics_report
+- Get real-time users: use get_realtime_users
+- Analyze traffic patterns: specify metrics and dimensions
+
+**Account Management:**
+- Create properties: use create_analytics_property
+- Set up data streams: use create_data_stream
+- Configure tracking: use create_custom_dimension, create_custom_metric
+
+${formatNextSteps([
+                'List properties: call list_analytics_properties (optionally with accountId)',
+                'Check real-time traffic: call get_realtime_users with propertyId',
+                'Run custom report: call run_analytics_report with propertyId and date range'
+            ])}
+
+ℹ️ NOTE: Only GA4 accounts are shown (Universal Analytics sunset July 2024)
+
+Which account would you like to explore?`;
+            return injectGuidance({
+                accounts,
+                count: accounts.length,
+            }, guidanceText);
         }
         catch (error) {
             logger.error('Failed to list Analytics accounts', error);

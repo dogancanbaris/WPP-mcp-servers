@@ -12,19 +12,7 @@ export declare const listDatasetsTool: {
         type: "object";
         properties: {};
     };
-    handler(_input: any): Promise<{
-        success: boolean;
-        data: {
-            datasets: {
-                id: any;
-                friendlyName: any;
-                location: any;
-                creationTime: any;
-            }[];
-            count: number;
-            message: string;
-        };
-    }>;
+    handler(_input: any): Promise<import("../shared/interactive-workflow.js").McpResponse>;
 };
 /**
  * Create dataset
@@ -111,19 +99,7 @@ export declare const bigQueryTools: ({
         type: "object";
         properties: {};
     };
-    handler(_input: any): Promise<{
-        success: boolean;
-        data: {
-            datasets: {
-                id: any;
-                friendlyName: any;
-                location: any;
-                creationTime: any;
-            }[];
-            count: number;
-            message: string;
-        };
-    }>;
+    handler(_input: any): Promise<import("../shared/interactive-workflow.js").McpResponse>;
 } | {
     name: string;
     description: string;

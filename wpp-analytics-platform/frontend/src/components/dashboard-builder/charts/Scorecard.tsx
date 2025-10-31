@@ -20,7 +20,29 @@ import { useCascadedFilters } from '@/hooks/useCascadedFilters';
 import { Badge } from '@/components/ui/badge';
 import { getChartDefaults } from '@/lib/defaults/chart-defaults';
 
-export interface ScorecardProps extends Partial<ComponentConfig> {}
+export interface ScorecardProps extends Partial<ComponentConfig> {
+  containerSize?: { width: number; height: number };
+}
+
+/**
+ * Calculate responsive font size based on container dimensions
+ */
+function getResponsiveFontSize(containerSize?: { width: number; height: number }) {
+  if (!containerSize) return { title: '14px', value: '32px' };
+
+  const { width, height } = containerSize;
+  const area = width * height;
+
+  // Scale fonts based on container area
+  // Smaller containers = smaller fonts
+  const titleSize = Math.max(10, Math.min(18, Math.sqrt(area) / 15));
+  const valueSize = Math.max(16, Math.min(48, Math.sqrt(area) / 8));
+
+  return {
+    title: `${titleSize}px`,
+    value: `${valueSize}px`
+  };
+}
 
 export const Scorecard: React.FC<ScorecardProps> = (props) => {
   // Apply global theme
@@ -33,8 +55,12 @@ export const Scorecard: React.FC<ScorecardProps> = (props) => {
     dateRange,
     title = 'KPI Scorecard',
     showTitle = true,
+    containerSize,
     ...rest
   } = props;
+
+  // Get responsive font sizes based on container
+  const responsiveFonts = getResponsiveFontSize(containerSize);
 
   const firstMetric = metrics[0];
   const currentPageId = useCurrentPageId();
@@ -87,7 +113,7 @@ export const Scorecard: React.FC<ScorecardProps> = (props) => {
   };
 
   const titleStyle: React.CSSProperties = {
-    fontSize: theme.titleFontSize,
+    fontSize: responsiveFonts.title, // Responsive!
     fontWeight: theme.titleFontWeight,
     color: theme.titleColor,
     marginBottom: theme.titleMarginBottom,
@@ -96,7 +122,7 @@ export const Scorecard: React.FC<ScorecardProps> = (props) => {
   };
 
   const valueStyle: React.CSSProperties = {
-    fontSize: theme.valueFontSize,
+    fontSize: responsiveFonts.value, // Responsive!
     fontWeight: theme.valueFontWeight,
     color: chartColor,
     lineHeight: theme.valueLineHeight,
