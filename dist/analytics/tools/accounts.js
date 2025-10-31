@@ -1,10 +1,10 @@
 /**
  * MCP Tools for Google Analytics Account & Property Management
  */
-import { getAnalyticsClient } from '../client.js';
 import { ListPropertiesSchema } from '../validation.js';
 import { getLogger } from '../../shared/logger.js';
 import { injectGuidance, formatNextSteps } from '../../shared/interactive-workflow.js';
+import { extractOAuthToken, createAnalyticsClient } from '../../shared/oauth-client-factory.js';
 const logger = getLogger('analytics.tools.accounts');
 /**
  * List Analytics accounts
@@ -19,7 +19,13 @@ export const listAnalyticsAccountsTool = {
     },
     async handler(_input) {
         try {
-            const client = getAnalyticsClient();
+            // Extract OAuth token from request (per-request pattern like GSC)
+            const oauthToken = await extractOAuthToken(_input);
+            if (!oauthToken) {
+                throw new Error('OAuth token required for Google Analytics API access');
+            }
+            // Create Analytics client with user's OAuth token (per-request)
+            const client = await createAnalyticsClient(oauthToken);
             logger.info('Listing Analytics accounts');
             const accounts = await client.listAccounts();
             // Inject rich guidance into response
@@ -122,7 +128,13 @@ export const listAnalyticsPropertiesTool = {
         try {
             ListPropertiesSchema.parse(input);
             const { accountId } = input;
-            const client = getAnalyticsClient();
+            // Extract OAuth token from request (per-request pattern)
+            const oauthToken = await extractOAuthToken(input);
+            if (!oauthToken) {
+                throw new Error('OAuth token required for Google Analytics API access');
+            }
+            // Create Analytics client with user's OAuth token
+            const client = await createAnalyticsClient(oauthToken);
             logger.info('Listing Analytics properties', { accountId });
             const properties = await client.listProperties(accountId);
             return {
@@ -180,7 +192,13 @@ export const listDataStreamsTool = {
     async handler(input) {
         try {
             const { propertyId } = input;
-            const client = getAnalyticsClient();
+            // Extract OAuth token from request (per-request pattern)
+            const oauthToken = await extractOAuthToken(input);
+            if (!oauthToken) {
+                throw new Error('OAuth token required for Google Analytics API access');
+            }
+            // Create Analytics client with user's OAuth token
+            const client = await createAnalyticsClient(oauthToken);
             logger.info('Listing data streams', { propertyId });
             const streams = await client.listDataStreams(propertyId);
             return {

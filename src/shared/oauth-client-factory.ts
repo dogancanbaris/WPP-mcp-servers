@@ -93,7 +93,7 @@ export function createAnalyticsAdminClient(accessToken: string): AnalyticsAdminS
 export async function createAnalyticsClient(accessToken: string) {
   const { AnalyticsClient } = await import('../analytics/client.js');
   const auth = createOAuth2ClientFromToken(accessToken);
-  return new AnalyticsClient(auth);
+  return new AnalyticsClient(auth as any);
 }
 
 /**

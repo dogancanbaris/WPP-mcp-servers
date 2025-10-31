@@ -42,16 +42,16 @@ export declare const RunReportSchema: z.ZodObject<{
     startDate: string;
     endDate: string;
     propertyId: string;
-    limit?: number | undefined;
     dimensions?: string[] | undefined;
     metrics?: string[] | undefined;
+    limit?: number | undefined;
 }, {
     startDate: string;
     endDate: string;
     propertyId: string;
-    limit?: number | undefined;
     dimensions?: string[] | undefined;
     metrics?: string[] | undefined;
+    limit?: number | undefined;
 }>;
 /**
  * Realtime report schema
@@ -63,14 +63,14 @@ export declare const RunRealtimeReportSchema: z.ZodObject<{
     limit: z.ZodOptional<z.ZodNumber>;
 }, "strip", z.ZodTypeAny, {
     propertyId: string;
-    limit?: number | undefined;
     dimensions?: string[] | undefined;
     metrics?: string[] | undefined;
+    limit?: number | undefined;
 }, {
     propertyId: string;
-    limit?: number | undefined;
     dimensions?: string[] | undefined;
     metrics?: string[] | undefined;
+    limit?: number | undefined;
 }>;
 /**
  * Helper to extract property ID from resource name

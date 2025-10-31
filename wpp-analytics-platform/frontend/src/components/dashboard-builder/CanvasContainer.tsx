@@ -37,17 +37,18 @@ interface CanvasContainerProps {
  * - Zoom support
  * - Bounds for react-rnd components
  */
-export const CanvasContainer: React.FC<CanvasContainerProps> = ({
-  canvasWidth,
-  canvasHeight = 800,
-  onCanvasWidthChange,
-  onCanvasHeightChange,
-  children,
-  showGrid = true,
-  isEditing = true,
-  zoom = 100,
-  className,
-}) => {
+export const CanvasContainer = React.forwardRef<HTMLDivElement, CanvasContainerProps>(
+  function CanvasContainer({
+    canvasWidth,
+    canvasHeight = 800,
+    onCanvasWidthChange,
+    onCanvasHeightChange,
+    children,
+    showGrid = true,
+    isEditing = true,
+    zoom = 100,
+    className,
+  }, ref) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [inputWidth, setInputWidth] = React.useState(canvasWidth.toString());
   const [inputHeight, setInputHeight] = React.useState(canvasHeight.toString());
@@ -175,7 +176,7 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
       >
         {/* Canvas Content - Fixed width, scales with zoom */}
         <div
-          ref={containerRef}
+          ref={ref}
           data-canvas
           className="mx-auto smooth-zoom origin-top bg-white dark:bg-gray-950 rounded-lg shadow-sm"
           style={{
@@ -223,4 +224,4 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
       `}</style>
     </div>
   );
-};
+});

@@ -3,11 +3,11 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
+import Selecto from 'react-selecto';
 import { useDashboardStore, useCurrentPage } from '@/store/dashboardStore';
 import { CanvasContainer } from './CanvasContainer';
 import { CanvasComponent } from './CanvasComponent';
 import { AlignmentGuides } from './AlignmentGuides';
-import { SelectionBox } from './SelectionBox';
 import { rowColumnToAbsolute } from '@/lib/utils/layout-converter';
 import { cn } from '@/lib/utils';
 import type { ComponentType, CanvasComponent as CanvasComponentType } from '@/types/dashboard-builder';
@@ -58,13 +58,8 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
   // Track active component for alignment guides
   const [activeCanvasComponent, setActiveCanvasComponent] = useState<CanvasComponentType | null>(null);
 
-  // Selection box state for drag-to-select
-  const [selectionBox, setSelectionBox] = useState<{
-    start: { x: number; y: number };
-    current: { x: number; y: number };
-  } | null>(null);
-
   const canvasRef = useRef<HTMLDivElement>(null);
+  const selectoRef = useRef<Selecto>(null);
 
   // Get components from current page
   const canvasComponents = currentPage?.components || [];
@@ -177,115 +172,59 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
     setCanvasWidth(width);
   };
 
-  // Selection box handlers for drag-to-select
-  const handleCanvasMouseDown = (e: React.MouseEvent) => {
-    // Only start selection if clicking directly on canvas (not on a component)
-    const target = e.target as HTMLElement;
-    const isCanvasBackground = target.hasAttribute('data-canvas') || target.classList.contains('canvas-background');
-
-    if (isCanvasBackground && isEditing) {
-      const rect = canvasRef.current?.getBoundingClientRect();
-      if (!rect) return;
-
-      setSelectionBox({
-        start: {
-          x: e.clientX - rect.left,
-          y: e.clientY - rect.top,
-        },
-        current: {
-          x: e.clientX - rect.left,
-          y: e.clientY - rect.top,
-        },
-      });
-    }
-  };
-
-  const handleCanvasMouseMove = (e: React.MouseEvent) => {
-    if (selectionBox && canvasRef.current) {
-      const rect = canvasRef.current.getBoundingClientRect();
-
-      setSelectionBox({
-        ...selectionBox,
-        current: {
-          x: e.clientX - rect.left,
-          y: e.clientY - rect.top,
-        },
-      });
-    }
-  };
-
-  const handleCanvasMouseUp = () => {
-    if (selectionBox) {
-      // Find components within selection box
-      const selectedIds = findComponentsInBox(selectionBox, canvasComponents);
-
-      if (selectedIds.length > 0) {
-        selectMultiple(selectedIds);
-      } else {
-        deselectAll();
-      }
-
-      setSelectionBox(null);
-    }
-  };
-
-  // Find components that intersect with selection box
-  const findComponentsInBox = (
-    box: { start: { x: number; y: number }; current: { x: number; y: number } },
-    components: CanvasComponentType[]
-  ): string[] => {
-    const boxLeft = Math.min(box.start.x, box.current.x);
-    const boxRight = Math.max(box.start.x, box.current.x);
-    const boxTop = Math.min(box.start.y, box.current.y);
-    const boxBottom = Math.max(box.start.y, box.current.y);
-
-    return components
-      .filter((comp) => {
-        const compLeft = comp.x;
-        const compRight = comp.x + comp.width;
-        const compTop = comp.y;
-        const compBottom = comp.y + comp.height;
-
-        // Check if selection box intersects component bounds
-        return !(
-          compRight < boxLeft ||
-          compLeft > boxRight ||
-          compBottom < boxTop ||
-          compTop > boxBottom
-        );
-      })
-      .map((comp) => comp.id);
-  };
-
   const isEditing = viewMode === 'edit';
 
   return (
     <div className="relative w-full h-full flex flex-col dashboard-canvas">
       {/* Canvas Container */}
       <CanvasContainer
+        ref={canvasRef}
         canvasWidth={pageCanvasWidth}
         onCanvasWidthChange={handleCanvasWidthChange}
         showGrid={showGrid}
         isEditing={isEditing}
         zoom={zoom}
       >
-        {/* Canvas background with selection handlers */}
-        <div
-          ref={canvasRef}
-          data-canvas
-          className="canvas-background absolute inset-0"
-          onMouseDown={handleCanvasMouseDown}
-          onMouseMove={handleCanvasMouseMove}
-          onMouseUp={handleCanvasMouseUp}
-          onMouseLeave={() => setSelectionBox(null)} // Cancel selection if mouse leaves
-          style={{ zIndex: -1 }} // Behind all components
-        />
+        {/* Selecto.js - Professional drag-to-select */}
+        {isEditing && canvasRef.current && (
+          <Selecto
+            ref={selectoRef}
+            container={canvasRef.current}
+            dragContainer={canvasRef.current}
+            selectableTargets={['.canvas-component']}
+            hitRate={0} // Any intersection selects (Looker/Figma style)
+            selectByClick={false} // Prevent click conflicts with component clicks
+            selectFromInside={false} // Must drag from outside components
+            continueSelect={false} // Don't continue adding to selection automatically
+            continueSelectWithoutDeselect={true} // Keep existing selection when shift held
+            toggleContinueSelect={['shift']} // Shift key for multi-select
+            keyContainer={window}
+            onSelectStart={(e) => {
+              // Clear alignment guides when starting selection
+              setActiveCanvasComponent(null);
+            }}
+            onSelect={(e) => {
+              // Get canvas IDs from selected DOM elements
+              const selectedCanvasIds: string[] = [];
 
-        {/* Selection Box */}
-        {selectionBox && (
-          <SelectionBox
-            start={selectionBox.start}
-            current={selectionBox.current}
+              e.selected.forEach((el) => {
+                const canvasId = el.getAttribute('data-canvas-id');
+                if (canvasId) {
+                  selectedCanvasIds.push(canvasId);
+                }
+              });
+
+              if (selectedCanvasIds.length > 0) {
+                selectMultiple(selectedCanvasIds);
+              } else if (e.selected.length === 0 && !e.inputEvent.shiftKey) {
+                // Deselect if no components selected and not shift-selecting
+                deselectAll();
+              }
+            }}
+            onSelectEnd={(e) => {
+              // Optional: Handle drag start after selection for group move
+              console.log('[Selecto] Selected:', e.selected.length, 'components');
+            }}
           />
         )}
 

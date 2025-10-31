@@ -3,9 +3,9 @@ export { EditorTopbar } from './topbar';
 export { DashboardCanvas } from './DashboardCanvas';
 export { SettingsSidebar } from './sidebar';
 
-// Layout Components
-export { Row } from './Row';
-export { Column } from './Column';
+// Layout Components (Row/Column deprecated - using Canvas mode now)
+// export { Row } from './Row';
+// export { Column } from './Column';
 
 // Component Utilities
 export { ComponentPlaceholder } from './ComponentPlaceholder';

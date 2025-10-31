@@ -232,6 +232,7 @@ const CanvasComponentInner: React.FC<CanvasComponentProps> = ({
           isLocked && 'locked',
           isSelected && 'selected'
         )}
+        data-canvas-id={id} // For Selecto.js to identify components
         onClick={(e) => {
           e.stopPropagation();
           onSelect(id, e); // Pass event for shift-click detection
@@ -376,7 +377,8 @@ const CanvasComponentInner: React.FC<CanvasComponentProps> = ({
         </div>
       )}
     </Rnd>
-    </div> {/* Close z-index wrapper */}
+    {/* Close z-index wrapper */}
+    </div>
   );
 };
 
