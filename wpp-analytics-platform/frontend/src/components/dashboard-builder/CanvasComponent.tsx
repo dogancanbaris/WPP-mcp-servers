@@ -199,45 +199,44 @@ const CanvasComponentInner: React.FC<CanvasComponentProps> = ({
   }, [id, onSizeChange]);
 
   return (
-    <div style={{ zIndex, position: 'absolute' }}> {/* Wrapper for z-index */}
-      <Rnd
-        size={{ width: position.width, height: position.height }}
-        position={{ x: position.x, y: position.y }}
-        onDragStart={handleDragStart}
-        onDragStop={handleDragStop}
-        onResize={handleResize} // Live resize preview
-        onResizeStop={handleResizeStop}
-        bounds="parent"
-        grid={[20, 20]} // 20px grid snapping
-        minWidth={minWidth}
-        minHeight={minHeight}
-        disableDragging={!enableDrag}
-        enableResizing={
-          enableResize
-            ? {
-                top: true,
-                right: true,
-                bottom: true,
-                left: true,
-                topRight: true,
-                bottomRight: true,
-                bottomLeft: true,
-                topLeft: true,
-              }
-            : false
-        }
-        style={rndStyle}
-        className={cn(
-          'group canvas-component',
-          isLocked && 'locked',
-          isSelected && 'selected'
-        )}
-        data-canvas-id={id} // For Selecto.js to identify components
-        onClick={(e) => {
-          e.stopPropagation();
-          onSelect(id, e); // Pass event for shift-click detection
-        }}
-      >
+    <Rnd
+      size={{ width: position.width, height: position.height }}
+      position={{ x: position.x, y: position.y }}
+      onDragStart={handleDragStart}
+      onDragStop={handleDragStop}
+      onResize={handleResize} // Live resize preview
+      onResizeStop={handleResizeStop}
+      bounds="parent"
+      grid={[20, 20]} // 20px grid snapping
+      minWidth={minWidth}
+      minHeight={minHeight}
+      disableDragging={!enableDrag}
+      enableResizing={
+        enableResize
+          ? {
+              top: true,
+              right: true,
+              bottom: true,
+              left: true,
+              topRight: true,
+              bottomRight: true,
+              bottomLeft: true,
+              topLeft: true,
+            }
+          : false
+      }
+      style={{ ...rndStyle, zIndex }} // Apply z-index in Rnd style (works!)
+      className={cn(
+        'group canvas-component',
+        isLocked && 'locked',
+        isSelected && 'selected'
+      )}
+      data-canvas-id={id} // For Selecto.js to identify components
+      onClick={(e) => {
+        e.stopPropagation();
+        onSelect(id, e); // Pass event for shift-click detection
+      }}
+    >
       {/* Drag Handle */}
       {isEditing && !isLocked && (
         <div
@@ -377,8 +376,6 @@ const CanvasComponentInner: React.FC<CanvasComponentProps> = ({
         </div>
       )}
     </Rnd>
-    {/* Close z-index wrapper */}
-    </div>
   );
 };
 

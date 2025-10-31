@@ -973,7 +973,12 @@ export declare const allTools: ({
         success: boolean;
         data: {
             accountId: any;
-            properties: import("../../analytics/types.js").AnalyticsProperty[];
+            properties: {
+                name: any;
+                displayName: any;
+                timeZone: any;
+                currencyCode: any;
+            }[];
             count: number;
             message: string;
         };
@@ -995,7 +1000,12 @@ export declare const allTools: ({
         success: boolean;
         data: {
             propertyId: any;
-            streams: import("../../analytics/types.js").DataStream[];
+            streams: {
+                name: any;
+                type: any;
+                displayName: any;
+                webStreamData: any;
+            }[];
             count: number;
             message: string;
         };

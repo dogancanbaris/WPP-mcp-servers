@@ -33,7 +33,12 @@ export declare const listAnalyticsPropertiesTool: {
         success: boolean;
         data: {
             accountId: any;
-            properties: import("../types.js").AnalyticsProperty[];
+            properties: {
+                name: any;
+                displayName: any;
+                timeZone: any;
+                currencyCode: any;
+            }[];
             count: number;
             message: string;
         };
@@ -59,7 +64,12 @@ export declare const listDataStreamsTool: {
         success: boolean;
         data: {
             propertyId: any;
-            streams: import("../types.js").DataStream[];
+            streams: {
+                name: any;
+                type: any;
+                displayName: any;
+                webStreamData: any;
+            }[];
             count: number;
             message: string;
         };

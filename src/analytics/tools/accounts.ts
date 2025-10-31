@@ -5,7 +5,7 @@
 import { ListPropertiesSchema } from '../validation.js';
 import { getLogger } from '../../shared/logger.js';
 import { injectGuidance, formatNextSteps } from '../../shared/interactive-workflow.js';
-import { extractOAuthToken, createAnalyticsClient } from '../../shared/oauth-client-factory.js';
+import { extractOAuthToken, createGoogleAnalyticsAdminClient } from '../../shared/oauth-client-factory.js';
 
 const logger = getLogger('analytics.tools.accounts');
 
@@ -28,12 +28,19 @@ export const listAnalyticsAccountsTool = {
         throw new Error('OAuth token required for Google Analytics API access');
       }
 
-      // Create Analytics client with user's OAuth token (per-request)
-      const client = await createAnalyticsClient(oauthToken);
+      // Create Analytics Admin client using googleapis wrapper (avoids gRPC issues)
+      const analyticsAdmin = createGoogleAnalyticsAdminClient(oauthToken);
 
       logger.info('Listing Analytics accounts');
 
-      const accounts = await client.listAccounts();
+      // Call Analytics Admin API
+      const res = await analyticsAdmin.accounts.list({});
+      const accountList = res.data.accounts || [];
+
+      const accounts = accountList.map((account: any) => ({
+        name: account.name,
+        displayName: account.displayName,
+      }));
 
       // Inject rich guidance into response
       const guidanceText = `📊 DISCOVERED ${accounts.length} GOOGLE ANALYTICS 4 ACCOUNT(S)
@@ -149,12 +156,23 @@ export const listAnalyticsPropertiesTool = {
         throw new Error('OAuth token required for Google Analytics API access');
       }
 
-      // Create Analytics client with user's OAuth token
-      const client = await createAnalyticsClient(oauthToken);
+      // Create Analytics Admin client using googleapis wrapper
+      const analyticsAdmin = createGoogleAnalyticsAdminClient(oauthToken);
 
       logger.info('Listing Analytics properties', { accountId });
 
-      const properties = await client.listProperties(accountId);
+      // Call Analytics Admin API - omit filter entirely if no accountId
+      const res = accountId
+        ? await analyticsAdmin.properties.list({ filter: `parent:accounts/${accountId}` })
+        : await analyticsAdmin.properties.list({});
+      const propertyList = res.data.properties || [];
+
+      const properties = propertyList.map((prop: any) => ({
+        name: prop.name,
+        displayName: prop.displayName,
+        timeZone: prop.timeZone,
+        currencyCode: prop.currencyCode,
+      }));
 
       return {
         success: true,
@@ -218,12 +236,23 @@ export const listDataStreamsTool = {
         throw new Error('OAuth token required for Google Analytics API access');
       }
 
-      // Create Analytics client with user's OAuth token
-      const client = await createAnalyticsClient(oauthToken);
+      // Create Analytics Admin client using googleapis wrapper
+      const analyticsAdmin = createGoogleAnalyticsAdminClient(oauthToken);
 
       logger.info('Listing data streams', { propertyId });
 
-      const streams = await client.listDataStreams(propertyId);
+      // Call Analytics Admin API
+      const res = await analyticsAdmin.properties.dataStreams.list({
+        parent: `properties/${propertyId}`,
+      });
+      const streamList = res.data.dataStreams || [];
+
+      const streams = streamList.map((stream: any) => ({
+        name: stream.name,
+        type: stream.type,
+        displayName: stream.displayName,
+        webStreamData: stream.webStreamData,
+      }));
 
       return {
         success: true,

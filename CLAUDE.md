@@ -1343,6 +1343,55 @@ Examples: `google__update_budget`, `google__create_campaign`, `google__add_keywo
 - Uses service account OR user OAuth
 - Returns data filtered by workspace_id (RLS)
 
+### Google Ads API Developer Token Access Levels
+
+**CRITICAL:** Google Ads requires BOTH OAuth + Developer Token
+
+**Current Status:** TEST access (test accounts only)
+
+**Access Levels:**
+
+| Level | Test Accounts | Production Accounts | Daily Limit | Application Required | Status |
+|-------|--------------|---------------------|-------------|---------------------|---------|
+| **TEST** | ✅ All tools work | ❌ Cannot access | 15,000 ops/day | No (default) | ✅ Current |
+| **Basic** | ✅ All tools work | ✅ All tools work | 15,000 ops/day | Yes (form) | ⏳ Need to apply |
+| **Standard** | ✅ All tools work | ✅ All tools work | **Unlimited** | Yes (from Basic) | 🎯 Recommended for production |
+
+**What This Means for Development:**
+- ✅ **All 25 Google Ads tools work** with test accounts
+- ❌ **Production accounts blocked** (e.g., account 2191558405)
+- Error: "developer token is only approved for use with test accounts"
+
+**How to Upgrade (When Ready for Production):**
+
+**Step 1: Apply for Basic Access**
+1. Go to: https://ads.google.com/aw/apicenter
+2. Click "Apply for Basic Access"
+3. Fill out application form (describe use case: "WPP Marketing Analytics Platform")
+4. Wait for Google approval (typically 1-3 business days)
+5. Get new developer token or existing token upgraded
+
+**Step 2: Apply for Standard Access (Recommended)**
+1. After Basic approval, apply for Standard Access
+2. Describe usage: "Multi-tenant marketing analytics for 1,000+ practitioners"
+3. Expected operations: 100K-1M+/day at scale
+4. Get unlimited operations
+
+**Step 3: Update Configuration**
+```bash
+# Update .env
+GOOGLE_ADS_DEVELOPER_TOKEN=your-upgraded-token
+
+# Restart backend
+npm run dev:google-backend
+```
+
+**For WPP Platform Scale:**
+- **Pilot (10-100 users):** Basic sufficient (15K ops/day)
+- **Production (1,000+ users):** Standard required (unlimited ops)
+
+**File:** `.env` line 7 - `GOOGLE_ADS_DEVELOPER_TOKEN=_rj-sEShX-fFZuMAIx3ouA` (current TEST token)
+
 ---
 
 ## 📊 Platform Metrics Summary

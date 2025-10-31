@@ -115,7 +115,9 @@ interface DashboardStore {
 
   // Canvas mode actions (NEW)
   canvasWidth: number;
+  canvasHeight: number;
   setCanvasWidth: (width: number) => void;
+  setCanvasHeight: (height: number) => void;
   moveComponentAbsolute: (canvasId: string, x: number, y: number) => void;
   resizeComponent: (canvasId: string, width: number, height: number, x: number, y: number) => void;
   convertToCanvas: () => void;
@@ -271,6 +273,7 @@ export const useDashboardStore = create<DashboardStore>()(
       styleClipboard: null,
       // Canvas mode state
       canvasWidth: 1200,
+      canvasHeight: 800,
 
       // Dashboard Actions
       loadDashboard: async (id: string) => {
@@ -1554,6 +1557,29 @@ export const useDashboardStore = create<DashboardStore>()(
               pages: state.config.pages.map(page =>
                 page.id === currentPageId
                   ? { ...page, canvasWidth: width }
+                  : page
+              )
+            }
+          });
+        }
+
+        get().autoSave();
+      },
+
+      setCanvasHeight: (height: number) => {
+        set({ canvasHeight: height });
+
+        // Also update current page's canvasHeight
+        const state = get();
+        const currentPageId = state.currentPageId;
+
+        if (state.config.pages && currentPageId) {
+          set({
+            config: {
+              ...state.config,
+              pages: state.config.pages.map(page =>
+                page.id === currentPageId
+                  ? { ...page, canvasHeight: height }
                   : page
               )
             }

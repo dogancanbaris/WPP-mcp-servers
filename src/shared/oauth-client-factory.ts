@@ -87,8 +87,19 @@ export function createAnalyticsAdminClient(accessToken: string): AnalyticsAdminS
 }
 
 /**
+ * Create Google Analytics Admin API client using googleapis wrapper
+ * This avoids gRPC compatibility issues with google-auth-library@10.4.1
+ */
+export function createGoogleAnalyticsAdminClient(accessToken: string) {
+  const auth = createOAuth2ClientFromToken(accessToken);
+  return google.analyticsadmin({ version: 'v1alpha', auth: auth as any });
+}
+
+/**
  * Create Google Analytics client (wrapper with both Data and Admin clients)
  * Per-request pattern - creates new client instance for each API call
+ *
+ * NOTE: Uses googleapis wrapper to avoid gRPC/headers compatibility issues
  */
 export async function createAnalyticsClient(accessToken: string) {
   const { AnalyticsClient } = await import('../analytics/client.js');

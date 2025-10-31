@@ -6,7 +6,7 @@
 import { getLogger } from '../../shared/logger.js';
 import { getApprovalEnforcer, DryRunResultBuilder } from '../../shared/approval-enforcer.js';
 import { detectAndEnforceVagueness } from '../../shared/vagueness-detector.js';
-import { extractOAuthToken, createAnalyticsAdminClient } from '../../shared/oauth-client-factory.js';
+import { extractOAuthToken, createGoogleAnalyticsAdminClient } from '../../shared/oauth-client-factory.js';
 
 const logger = getLogger('analytics.tools.admin');
 
@@ -95,8 +95,8 @@ export const createPropertyTool = {
         throw new Error('OAuth token required for Google Analytics API access');
       }
 
-      // Create Analytics Admin client with user's OAuth token
-      const client = createAnalyticsAdminClient(oauthToken);
+      // Create Analytics Admin client using googleapis wrapper (avoids gRPC issues)
+      const client = createGoogleAnalyticsAdminClient(oauthToken);
 
       // Build dry-run preview
       const approvalEnforcer = getApprovalEnforcer();
@@ -261,8 +261,8 @@ export const createDataStreamTool = {
         throw new Error('OAuth token required for Google Analytics API access');
       }
 
-      // Create Analytics Admin client with user's OAuth token
-      const client = createAnalyticsAdminClient(oauthToken);
+      // Create Analytics Admin client using googleapis wrapper (avoids gRPC issues)
+      const client = createGoogleAnalyticsAdminClient(oauthToken);
 
       // Build dry-run preview
       const approvalEnforcer = getApprovalEnforcer();
@@ -438,8 +438,8 @@ Custom dimension: "Customer Tier" → parameter: customer_tier, scope: EVENT`,
         throw new Error('OAuth token required for Google Analytics API access');
       }
 
-      // Create Analytics Admin client with user's OAuth token
-      const client = createAnalyticsAdminClient(oauthToken);
+      // Create Analytics Admin client using googleapis wrapper (avoids gRPC issues)
+      const client = createGoogleAnalyticsAdminClient(oauthToken);
 
       // Build dry-run preview
       const approvalEnforcer = getApprovalEnforcer();
@@ -605,8 +605,8 @@ export const createCustomMetricTool = {
         throw new Error('OAuth token required for Google Analytics API access');
       }
 
-      // Create Analytics Admin client with user's OAuth token
-      const client = createAnalyticsAdminClient(oauthToken);
+      // Create Analytics Admin client using googleapis wrapper (avoids gRPC issues)
+      const client = createGoogleAnalyticsAdminClient(oauthToken);
 
       const approvalEnforcer = getApprovalEnforcer();
       const dryRunBuilder = new DryRunResultBuilder(
@@ -723,8 +723,8 @@ export const createConversionEventTool = {
         throw new Error('OAuth token required for Google Analytics API access');
       }
 
-      // Create Analytics Admin client with user's OAuth token
-      const client = createAnalyticsAdminClient(oauthToken);
+      // Create Analytics Admin client using googleapis wrapper (avoids gRPC issues)
+      const client = createGoogleAnalyticsAdminClient(oauthToken);
 
       const approvalEnforcer = getApprovalEnforcer();
 
@@ -835,8 +835,8 @@ export const createGoogleAdsLinkTool = {
         throw new Error('OAuth token required for Google Analytics API access');
       }
 
-      // Create Analytics Admin client with user's OAuth token
-      const client = createAnalyticsAdminClient(oauthToken);
+      // Create Analytics Admin client using googleapis wrapper (avoids gRPC issues)
+      const client = createGoogleAnalyticsAdminClient(oauthToken);
 
       const approvalEnforcer = getApprovalEnforcer();
 

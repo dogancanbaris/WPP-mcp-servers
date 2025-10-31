@@ -39,7 +39,9 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
     selectedComponentId,
     selectedComponentIds,
     canvasWidth,
+    canvasHeight,
     setCanvasWidth,
+    setCanvasHeight,
     moveComponentAbsolute,
     resizeComponent,
     removeComponent,
@@ -64,14 +66,25 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
   // Get components from current page
   const canvasComponents = currentPage?.components || [];
   const pageCanvasWidth = currentPage?.canvasWidth || canvasWidth;
+  const pageCanvasHeight = currentPage?.canvasHeight || canvasHeight;
 
   // Auto-convert rows to canvas if needed
   useEffect(() => {
     if (currentPage && !currentPage.components && currentPage.rows && currentPage.rows.length > 0) {
-      console.log('Auto-converting row/column layout to canvas mode...');
+      console.log('[DashboardCanvas] Auto-converting row/column layout to canvas mode...');
+      console.log('[DashboardCanvas] Rows count:', currentPage.rows.length);
       convertToCanvas();
+    } else if (currentPage?.components) {
+      console.log('[DashboardCanvas] Canvas mode - components:', currentPage.components.length);
+      console.log('[DashboardCanvas] First 3 positions:', currentPage.components.slice(0, 3).map(c => ({
+        id: c.id,
+        x: c.x,
+        y: c.y,
+        width: c.width,
+        height: c.height
+      })));
     }
-  }, [currentPage?.id, convertToCanvas]);
+  }, [currentPage?.id, convertToCanvas, currentPage?.components, currentPage?.rows]);
 
   // Keyboard shortcuts for multi-select
   useEffect(() => {
@@ -172,6 +185,10 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
     setCanvasWidth(width);
   };
 
+  const handleCanvasHeightChange = (height: number) => {
+    setCanvasHeight(height);
+  };
+
   const isEditing = viewMode === 'edit';
 
   return (
@@ -180,7 +197,9 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
       <CanvasContainer
         ref={canvasRef}
         canvasWidth={pageCanvasWidth}
+        canvasHeight={pageCanvasHeight}
         onCanvasWidthChange={handleCanvasWidthChange}
+        onCanvasHeightChange={handleCanvasHeightChange}
         showGrid={showGrid}
         isEditing={isEditing}
         zoom={zoom}
@@ -199,6 +218,16 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
             continueSelectWithoutDeselect={true} // Keep existing selection when shift held
             toggleContinueSelect={['shift']} // Shift key for multi-select
             keyContainer={window}
+            onDragStart={(e) => {
+              // CRITICAL: If clicking a component, stop Selecto and let react-rnd handle it!
+              const target = e.inputEvent.target as HTMLElement;
+              const componentEl = target.closest('.canvas-component');
+
+              if (componentEl) {
+                e.stop(); // Let react-rnd handle the drag
+                return;
+              }
+            }}
             onSelectStart={(e) => {
               // Clear alignment guides when starting selection
               setActiveCanvasComponent(null);
