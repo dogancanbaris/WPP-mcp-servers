@@ -91,10 +91,14 @@ All actions include:
 - ❌ `DashboardCanvas.old.tsx` - Replaced with canvas version
 
 ### Dependencies
-- ❌ Uninstalled: `@dnd-kit/core`, `@dnd-kit/sortable`, `@dnd-kit/modifiers`, `@dnd-kit/utilities`
-- ✅ Installed: `react-rnd`
+- ✅ Installed: `react-rnd` (for canvas-based dashboard layout)
+- ✅ Reinstalled: `@dnd-kit/core`, `@dnd-kit/sortable`, `@dnd-kit/modifiers`, `@dnd-kit/utilities`
 
-**Note**: dnd-kit remains for PageTabs component (tab reordering), which is a separate feature.
+**Note**: dnd-kit packages were initially removed during implementation but were reinstalled because they're still required for:
+- **PageTabs.tsx**: Tab reordering functionality
+- **MetricSelector.tsx**: Metric reordering in sidebar
+
+These components use dnd-kit independently from the dashboard canvas system (which uses react-rnd).
 
 ## Architecture Comparison
 
