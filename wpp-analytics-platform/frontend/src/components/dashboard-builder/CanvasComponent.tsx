@@ -163,15 +163,30 @@ const CanvasComponentInner: React.FC<CanvasComponentProps> = ({
   }, [id, position.x, position.y, onDragStart]);
 
   const handleDragStop = useCallback((_e: any, d: { x: number; y: number }) => {
+    console.log('🔄 [Drag] handleDragStop');
+    console.log('  - Component ID:', id);
+    console.log('  - New position from Rnd:', d);
+    console.log('  - Start position:', dragStartPos.current);
+    console.log('  - Is multi-select?', isMultiSelect);
+    console.log('  - Selected IDs:', Array.from(selectedComponentIds || []));
+    console.log('  - This ID in selection?', selectedComponentIds?.has(id));
+    console.log('  - Selection size:', selectedComponentIds?.size);
+    console.log('  - Has onGroupMove?', !!onGroupMove);
+
     // Check if this component is part of a multi-select group
     if (isMultiSelect && selectedComponentIds && selectedComponentIds.has(id) && selectedComponentIds.size > 1 && onGroupMove) {
       // Calculate delta from start position
       const deltaX = d.x - dragStartPos.current.x;
       const deltaY = d.y - dragStartPos.current.y;
 
+      console.log('  - ✅ GROUP DRAG TRIGGERED');
+      console.log('  - Delta:', { deltaX, deltaY });
+      console.log('  - Moving', selectedComponentIds.size, 'components');
+
       // Move entire group
       onGroupMove(selectedComponentIds, deltaX, deltaY);
     } else {
+      console.log('  - Single component move to:', d);
       // Single component move
       onPositionChange(id, d.x, d.y);
     }
@@ -223,8 +238,8 @@ const CanvasComponentInner: React.FC<CanvasComponentProps> = ({
       minWidth={minWidth}
       minHeight={minHeight}
       disableDragging={!enableDrag}
-      dragHandleClassName="drag-handle" // Only drag via this element
-      cancel=".settings-button, .lock-button, .remove-button, .dropdown-trigger" // Don't start drag on these
+      // dragHandleClassName removed - can drag from anywhere on component!
+      cancel=".settings-button, .lock-button, .remove-button, .dropdown-trigger, button, input, select, textarea" // Don't start drag on interactive elements
       enableResizing={
         enableResize
           ? {
@@ -349,13 +364,45 @@ const CanvasComponentInner: React.FC<CanvasComponentProps> = ({
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+              {/* Group Actions - Show when multiple selected */}
+              {isMultiSelect && selectedComponentIds && selectedComponentIds.size > 1 && (
+                <>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      console.log('🗑️ [Group Action] Delete', selectedComponentIds.size, 'components');
+                      selectedComponentIds.forEach(canvasId => {
+                        const comp = component; // Will need to get actual components
+                        onRemove(canvasId);
+                      });
+                    }}
+                    className="text-red-600 dark:text-red-400"
+                  >
+                    Delete {selectedComponentIds.size} Components
+                  </DropdownMenuItem>
+
+                  {onToggleLock && (
+                    <DropdownMenuItem onClick={() => {
+                      console.log('🔒 [Group Action] Lock', selectedComponentIds.size, 'components');
+                      selectedComponentIds.forEach(canvasId => {
+                        onToggleLock(canvasId);
+                      });
+                    }}>
+                      Lock {selectedComponentIds.size} Components
+                    </DropdownMenuItem>
+                  )}
+
+                  <DropdownMenuSeparator />
+                </>
+              )}
+
+              {/* Single Component Actions */}
               <DropdownMenuItem onClick={() => onSelect(id)}>
                 Configure Component
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => {/* Duplicate */}}>
                 Duplicate
               </DropdownMenuItem>
-              {onToggleLock && (
+              {onToggleLock && !isMultiSelect && (
                 <DropdownMenuItem onClick={() => onToggleLock(id)}>
                   {isLocked ? 'Unlock' : 'Lock'} Position
                 </DropdownMenuItem>
@@ -372,12 +419,14 @@ const CanvasComponentInner: React.FC<CanvasComponentProps> = ({
                 </DropdownMenuItem>
               )}
               {(onBringToFront || onSendToBack) && <DropdownMenuSeparator />}
-              <DropdownMenuItem
-                onClick={() => onRemove(id)}
-                className="text-red-600 dark:text-red-400"
-              >
-                Remove Component
-              </DropdownMenuItem>
+              {!isMultiSelect && (
+                <DropdownMenuItem
+                  onClick={() => onRemove(id)}
+                  className="text-red-600 dark:text-red-400"
+                >
+                  Remove Component
+                </DropdownMenuItem>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
 
