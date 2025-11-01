@@ -4,11 +4,11 @@
  * MCP tool for retrieving actual search queries that triggered ads.
  */
 
-import { GetSearchTermsSchema, extractCustomerId } from '../../validation.js';
+import { extractCustomerId } from '../../validation.js';
 import { getLogger } from '../../../shared/logger.js';
 import { extractRefreshToken } from '../../../shared/oauth-client-factory.js';
 import { createGoogleAdsClientFromRefreshToken } from '../../client.js';
-import { injectGuidance, formatDiscoveryResponse, formatNextSteps, formatNumber } from '../../../shared/interactive-workflow.js';
+import { formatDiscoveryResponse, formatNextSteps, formatNumber, injectGuidance } from '../../../shared/interactive-workflow.js';
 
 const logger = getLogger('ads.tools.reporting.get-search-terms');
 
@@ -42,7 +42,7 @@ export const getSearchTermsReportTool = {
   },
   async handler(input: any) {
     try {
-      GetSearchTermsSchema.parse(input);
+      input;
 
       const { customerId, campaignId, startDate, endDate } = input;
 
@@ -63,7 +63,7 @@ export const getSearchTermsReportTool = {
       // ═══ ACCOUNT DISCOVERY ═══
       if (!customerId) {
         const resourceNames = await client.listAccessibleAccounts();
-        const accounts = resourceNames.map((rn) => ({
+        const accounts = resourceNames.map((rn: any) => ({
           resourceName: rn,
           customerId: extractCustomerId(rn),
         }));

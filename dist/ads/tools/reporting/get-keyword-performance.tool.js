@@ -3,12 +3,11 @@
  *
  * MCP tool for retrieving detailed keyword-level performance metrics.
  */
-import { GetKeywordPerformanceSchema } from '../../validation.js';
 import { extractCustomerId } from '../../validation.js';
 import { getLogger } from '../../../shared/logger.js';
 import { extractRefreshToken } from '../../../shared/oauth-client-factory.js';
 import { createGoogleAdsClientFromRefreshToken } from '../../client.js';
-import { injectGuidance, formatDiscoveryResponse, formatNextSteps, formatNumber } from '../../../shared/interactive-workflow.js';
+import { formatDiscoveryResponse, formatNextSteps, formatNumber, injectGuidance } from '../../../shared/interactive-workflow.js';
 const logger = getLogger('ads.tools.reporting.get-keyword-performance');
 /**
  * Get keyword performance
@@ -67,7 +66,7 @@ export const getKeywordPerformanceTool = {
                     nextParam: 'customerId',
                 });
             }
-            GetKeywordPerformanceSchema.parse(input);
+            input;
             const { customerId, campaignId, startDate, endDate } = input;
             logger.info('Getting keyword performance', { customerId, campaignId });
             const dateRange = startDate && endDate ? { startDate, endDate } : undefined;

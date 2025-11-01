@@ -86,6 +86,19 @@ export const AlignmentGuides: React.FC<AlignmentGuidesProps> = ({
 
     // ENHANCED: For EACH active component, find alignments to all others
     activeComponents.forEach((activeComponent) => {
+      // FIX: Skip components with invalid dimensions (prevents NaN errors)
+      if (!activeComponent ||
+          typeof activeComponent.x !== 'number' ||
+          typeof activeComponent.y !== 'number' ||
+          typeof activeComponent.width !== 'number' ||
+          typeof activeComponent.height !== 'number' ||
+          isNaN(activeComponent.x) ||
+          isNaN(activeComponent.y) ||
+          isNaN(activeComponent.width) ||
+          isNaN(activeComponent.height)) {
+        return;
+      }
+
       // Get active component bounds
       const activeLeft = activeComponent.x;
       const activeRight = activeComponent.x + activeComponent.width;
@@ -97,6 +110,19 @@ export const AlignmentGuides: React.FC<AlignmentGuidesProps> = ({
       // Compare with all other components
       allComponents.forEach((comp) => {
         if (comp.id === activeComponent.id) return; // Skip self
+
+        // FIX: Skip components with invalid dimensions
+        if (!comp ||
+            typeof comp.x !== 'number' ||
+            typeof comp.y !== 'number' ||
+            typeof comp.width !== 'number' ||
+            typeof comp.height !== 'number' ||
+            isNaN(comp.x) ||
+            isNaN(comp.y) ||
+            isNaN(comp.width) ||
+            isNaN(comp.height)) {
+          return;
+        }
 
         const compLeft = comp.x;
         const compRight = comp.x + comp.width;
@@ -235,6 +261,10 @@ export const AlignmentGuides: React.FC<AlignmentGuidesProps> = ({
     >
       {relevantGuides.map((guide, index) => {
         const { x1, y1, x2, y2 } = guide.position;
+        // Guard against invalid coordinates (prevents NaN warnings in SVG)
+        if (!Number.isFinite(x1) || !Number.isFinite(y1) || !Number.isFinite(x2) || !Number.isFinite(y2)) {
+          return null;
+        }
         const isHorizontal = Math.abs(y1 - y2) < 1;
         const isVertical = Math.abs(x1 - x2) < 1;
 

@@ -9,9 +9,25 @@
  */
 
 import { useQuery } from '@tanstack/react-query';
-import ReactECharts from 'echarts-for-react';
-import 'echarts-wordcloud';
+import dynamic from 'next/dynamic';
 import { Loader2 } from 'lucide-react';
+
+// Dynamic import to prevent SSR issues with echarts-wordcloud
+const ReactECharts = dynamic(
+  () => import('echarts-for-react').then((mod) => {
+    // Import wordcloud plugin on client-side only
+    import('echarts-wordcloud');
+    return mod;
+  }),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex items-center justify-center h-full w-full">
+        <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+      </div>
+    ),
+  }
+);
 import { ComponentConfig } from '@/types/dashboard-builder';
 import { formatChartLabel } from '@/lib/utils/label-formatter';
 import { useCascadedFilters } from '@/hooks/useCascadedFilters';

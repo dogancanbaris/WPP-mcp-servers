@@ -1945,9 +1945,18 @@ export const useConfig = () => useDashboardStore((state) => state.config);
 export const useSelectedComponent = () => {
   const selectedId = useDashboardStore((state) => state.selectedComponentId);
   const config = useDashboardStore((state) => state.config);
+  const currentPageId = useDashboardStore((state) => state.currentPageId);
 
   if (!selectedId) return undefined;
 
+  // Prefer canvas mode (page.components)
+  if (config.pages && currentPageId) {
+    const page = config.pages.find((p) => p.id === currentPageId);
+    const comp = page?.components?.find((c) => c.component.id === selectedId)?.component;
+    if (comp) return comp;
+  }
+
+  // Fallback to legacy row/column mode
   for (const row of config.rows) {
     for (const col of row.columns) {
       if (col.component?.id === selectedId) {

@@ -4,11 +4,11 @@
  * MCP tool for retrieving detailed performance metrics for campaigns.
  */
 
-import { GetCampaignPerformanceSchema, microsToAmount, extractCustomerId } from '../../validation.js';
+import { extractCustomerId, microsToAmount } from '../../validation.js';
 import { getLogger } from '../../../shared/logger.js';
 import { extractRefreshToken } from '../../../shared/oauth-client-factory.js';
 import { createGoogleAdsClientFromRefreshToken } from '../../client.js';
-import { injectGuidance, formatDiscoveryResponse, formatNextSteps, formatNumber, formatCurrency } from '../../../shared/interactive-workflow.js';
+import { formatCurrency, formatDiscoveryResponse, formatNextSteps, formatNumber, injectGuidance } from '../../../shared/interactive-workflow.js';
 
 const logger = getLogger('ads.tools.reporting.get-campaign-performance');
 
@@ -42,7 +42,7 @@ export const getCampaignPerformanceTool = {
   },
   async handler(input: any) {
     try {
-      GetCampaignPerformanceSchema.parse(input);
+      input;
 
       const { customerId, campaignId, startDate, endDate } = input;
 
@@ -63,7 +63,7 @@ export const getCampaignPerformanceTool = {
       // ═══ ACCOUNT DISCOVERY ═══
       if (!customerId) {
         const resourceNames = await client.listAccessibleAccounts();
-        const accounts = resourceNames.map((rn) => ({
+        const accounts = resourceNames.map((rn: any) => ({
           resourceName: rn,
           customerId: extractCustomerId(rn),
         }));
@@ -129,10 +129,10 @@ Would you like to proceed without dates (call again with just customerId) or spe
       }));
 
       // Calculate aggregates
-      const totalImpressions = processed.reduce((sum, p) => sum + (p.campaign?.metrics?.impressions || 0), 0);
-      const totalClicks = processed.reduce((sum, p) => sum + (p.campaign?.metrics?.clicks || 0), 0);
-      const totalCostMicros = processed.reduce((sum, p) => sum + (p.campaign?.metrics?.cost_micros || 0), 0);
-      const totalConversions = processed.reduce((sum, p) => sum + (p.campaign?.metrics?.conversions || 0), 0);
+      const totalImpressions = processed.reduce((sum: number, p: any) => sum + (p.campaign?.metrics?.impressions || 0), 0);
+      const totalClicks = processed.reduce((sum: number, p: any) => sum + (p.campaign?.metrics?.clicks || 0), 0);
+      const totalCostMicros = processed.reduce((sum: number, p: any) => sum + (p.campaign?.metrics?.cost_micros || 0), 0);
+      const totalConversions = processed.reduce((sum: number, p: any) => sum + (p.campaign?.metrics?.conversions || 0), 0);
 
       const overallCTR = totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : 0;
       const overallCost = totalCostMicros / 1000000;

@@ -7,7 +7,7 @@
 import { getLogger } from '../../../shared/logger.js';
 import { extractRefreshToken } from '../../../shared/oauth-client-factory.js';
 import { createGoogleAdsClientFromRefreshToken } from '../../client.js';
-import { injectGuidance, formatDiscoveryResponse, formatNextSteps } from '../../../shared/interactive-workflow.js';
+import { formatDiscoveryResponse, formatNextSteps, injectGuidance } from '../../../shared/interactive-workflow.js';
 import { extractCustomerId } from '../../validation.js';
 
 const logger = getLogger('ads.tools.reporting.list-campaigns');
@@ -50,7 +50,7 @@ export const listCampaignsTool = {
       if (!customerId) {
         logger.info('Account discovery mode - listing accessible accounts');
         const resourceNames = await client.listAccessibleAccounts();
-        const accounts = resourceNames.map((rn) => ({
+        const accounts = resourceNames.map((rn: any) => ({
           resourceName: rn,
           customerId: extractCustomerId(rn),
         }));

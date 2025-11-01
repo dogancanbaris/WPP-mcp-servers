@@ -115,7 +115,7 @@ export const updateCampaignStatusTool = {
       // ═══ STEP 1: ACCOUNT DISCOVERY ═══
       if (!customerId) {
         const resourceNames = await client.listAccessibleAccounts();
-        const accounts = resourceNames.map((rn) => ({
+        const accounts = resourceNames.map((rn: any) => ({
           resourceName: rn,
           customerId: extractCustomerId(rn),
         }));

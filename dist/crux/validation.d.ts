@@ -26,10 +26,10 @@ export declare const QueryByOriginSchema: z.ZodObject<{
     formFactor: z.ZodOptional<z.ZodEnum<["PHONE", "TABLET", "DESKTOP", "ALL"]>>;
 }, "strip", z.ZodTypeAny, {
     origin: string;
-    formFactor?: "PHONE" | "TABLET" | "DESKTOP" | "ALL" | undefined;
+    formFactor?: "DESKTOP" | "TABLET" | "PHONE" | "ALL" | undefined;
 }, {
     origin: string;
-    formFactor?: "PHONE" | "TABLET" | "DESKTOP" | "ALL" | undefined;
+    formFactor?: "DESKTOP" | "TABLET" | "PHONE" | "ALL" | undefined;
 }>;
 /**
  * Query by URL schema
@@ -39,10 +39,10 @@ export declare const QueryByUrlSchema: z.ZodObject<{
     formFactor: z.ZodOptional<z.ZodEnum<["PHONE", "TABLET", "DESKTOP", "ALL"]>>;
 }, "strip", z.ZodTypeAny, {
     url: string;
-    formFactor?: "PHONE" | "TABLET" | "DESKTOP" | "ALL" | undefined;
+    formFactor?: "DESKTOP" | "TABLET" | "PHONE" | "ALL" | undefined;
 }, {
     url: string;
-    formFactor?: "PHONE" | "TABLET" | "DESKTOP" | "ALL" | undefined;
+    formFactor?: "DESKTOP" | "TABLET" | "PHONE" | "ALL" | undefined;
 }>;
 /**
  * Combined query schema
@@ -52,19 +52,19 @@ export declare const CruxQuerySchema: z.ZodUnion<[z.ZodObject<{
     formFactor: z.ZodOptional<z.ZodEnum<["PHONE", "TABLET", "DESKTOP", "ALL"]>>;
 }, "strip", z.ZodTypeAny, {
     origin: string;
-    formFactor?: "PHONE" | "TABLET" | "DESKTOP" | "ALL" | undefined;
+    formFactor?: "DESKTOP" | "TABLET" | "PHONE" | "ALL" | undefined;
 }, {
     origin: string;
-    formFactor?: "PHONE" | "TABLET" | "DESKTOP" | "ALL" | undefined;
+    formFactor?: "DESKTOP" | "TABLET" | "PHONE" | "ALL" | undefined;
 }>, z.ZodObject<{
     url: z.ZodString;
     formFactor: z.ZodOptional<z.ZodEnum<["PHONE", "TABLET", "DESKTOP", "ALL"]>>;
 }, "strip", z.ZodTypeAny, {
     url: string;
-    formFactor?: "PHONE" | "TABLET" | "DESKTOP" | "ALL" | undefined;
+    formFactor?: "DESKTOP" | "TABLET" | "PHONE" | "ALL" | undefined;
 }, {
     url: string;
-    formFactor?: "PHONE" | "TABLET" | "DESKTOP" | "ALL" | undefined;
+    formFactor?: "DESKTOP" | "TABLET" | "PHONE" | "ALL" | undefined;
 }>]>;
 /**
  * Validate and parse CrUX query input

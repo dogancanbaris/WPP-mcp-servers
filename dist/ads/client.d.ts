@@ -86,6 +86,82 @@ export declare class GoogleAdsClient {
      * Create campaign
      */
     createCampaign(customerId: string, name: string, budgetId: string, campaignType: string, status?: string): Promise<any>;
+    /**
+     * Create portfolio bidding strategy
+     */
+    createBiddingStrategy(customerId: string, name: string, type: 'TARGET_CPA' | 'TARGET_ROAS' | 'MAXIMIZE_CONVERSIONS' | 'MAXIMIZE_CONVERSION_VALUE', targetValue?: number): Promise<any>;
+    /**
+     * Update bidding strategy
+     */
+    updateBiddingStrategy(customerId: string, strategyId: string, targetValue: number): Promise<any>;
+    /**
+     * Set ad group CPC bid
+     */
+    setAdGroupCpcBid(customerId: string, adGroupId: string, cpcBidMicros: number): Promise<any>;
+    /**
+     * Create sitelink extensions
+     */
+    createSitelinkExtensions(customerId: string, sitelinks: Array<{
+        linkText: string;
+        finalUrls: string[];
+        description1?: string;
+        description2?: string;
+    }>): Promise<any>;
+    /**
+     * Update sitelink extension
+     */
+    updateSitelinkExtension(customerId: string, assetId: string, updates: {
+        linkText?: string;
+        finalUrls?: string[];
+        description1?: string;
+        description2?: string;
+    }): Promise<any>;
+    /**
+     * Create callout extensions
+     */
+    createCalloutExtensions(customerId: string, callouts: Array<{
+        calloutText: string;
+    }>): Promise<any>;
+    /**
+     * Update callout extension
+     */
+    updateCalloutExtension(customerId: string, assetId: string, calloutText: string): Promise<any>;
+    /**
+     * Update keyword (change match type, status, or bid)
+     */
+    updateKeyword(customerId: string, keywordResourceName: string, updates: {
+        matchType?: string;
+        status?: string;
+        cpcBidMicros?: number;
+    }): Promise<any>;
+    /**
+     * List keywords with details (for selection in update operations)
+     */
+    listKeywords(customerId: string, adGroupId?: string, campaignId?: string): Promise<any[]>;
+    /**
+     * List labels for a customer
+     */
+    listLabels(customerId: string): Promise<any[]>;
+    /**
+     * Create label
+     */
+    createLabel(customerId: string, name: string, description?: string): Promise<any>;
+    /**
+     * Remove (delete) label
+     */
+    removeLabel(customerId: string, labelId: string): Promise<any>;
+    /**
+     * Apply label to campaign
+     */
+    applyCampaignLabel(customerId: string, campaignId: string, labelId: string): Promise<any>;
+    /**
+     * Apply label to ad group
+     */
+    applyAdGroupLabel(customerId: string, adGroupId: string, labelId: string): Promise<any>;
+    /**
+     * Apply label to keyword (ad group criterion)
+     */
+    applyKeywordLabel(customerId: string, criterionId: string, labelId: string): Promise<any>;
 }
 /**
  * Get Google Ads client instance

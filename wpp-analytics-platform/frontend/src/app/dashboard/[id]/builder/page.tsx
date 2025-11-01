@@ -151,10 +151,14 @@ export default function DashboardBuilder() {
         {viewMode === 'edit' && filtersReady && (
           <div className="z-sidebar slide-in-right">
             <SettingsSidebar
-              selectedComponent={currentPage?.rows
-                ?.flatMap((r: RowConfig) => r.columns)
-                .find((c: ColumnConfig) => c.component?.id === selectedComponentId)
-                ?.component
+              selectedComponent={
+                // Prefer canvas mode components
+                currentPage?.components?.find((cc) => cc.component.id === selectedComponentId)?.component
+                // Fallback to legacy row/column mode
+                || currentPage?.rows
+                  ?.flatMap((r: RowConfig) => r.columns)
+                  .find((c: ColumnConfig) => c.component?.id === selectedComponentId)
+                  ?.component
               }
               onUpdateComponent={updateComponent}
             />

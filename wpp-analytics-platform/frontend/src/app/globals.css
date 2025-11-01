@@ -479,3 +479,13 @@
 }
 }
 
+/* Moveable overlay layering + pointer-events */
+@layer builder {
+  /* Ensure Moveable controls sit above charts but below modals/menus */
+  :global(.moveable-control-box) { z-index: 100000; pointer-events: none; }
+  :global(.moveable-line),
+  :global(.moveable-control) { pointer-events: auto; }
+  /* Keep Selecto selection visible */
+  :global(.selecto-selection) { z-index: 99999 !important; }
+}
+

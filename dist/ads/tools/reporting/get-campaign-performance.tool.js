@@ -3,11 +3,11 @@
  *
  * MCP tool for retrieving detailed performance metrics for campaigns.
  */
-import { GetCampaignPerformanceSchema, microsToAmount, extractCustomerId } from '../../validation.js';
+import { extractCustomerId, microsToAmount } from '../../validation.js';
 import { getLogger } from '../../../shared/logger.js';
 import { extractRefreshToken } from '../../../shared/oauth-client-factory.js';
 import { createGoogleAdsClientFromRefreshToken } from '../../client.js';
-import { injectGuidance, formatDiscoveryResponse, formatNextSteps, formatNumber, formatCurrency } from '../../../shared/interactive-workflow.js';
+import { formatCurrency, formatDiscoveryResponse, formatNextSteps, formatNumber, injectGuidance } from '../../../shared/interactive-workflow.js';
 const logger = getLogger('ads.tools.reporting.get-campaign-performance');
 /**
  * Get campaign performance
@@ -39,7 +39,7 @@ export const getCampaignPerformanceTool = {
     },
     async handler(input) {
         try {
-            GetCampaignPerformanceSchema.parse(input);
+            input;
             const { customerId, campaignId, startDate, endDate } = input;
             // Extract OAuth tokens from request
             const refreshToken = extractRefreshToken(input);

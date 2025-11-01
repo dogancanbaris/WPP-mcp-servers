@@ -384,6 +384,394 @@ export class GoogleAdsClient {
             throw new Error(`Failed to create campaign: ${error.message}`);
         }
     }
+    /**
+     * Create portfolio bidding strategy
+     */
+    async createBiddingStrategy(customerId, name, type, targetValue // CPA in micros or ROAS as decimal
+    ) {
+        try {
+            const customer = this.getCustomer(customerId);
+            logger.info('Creating bidding strategy', { customerId, name, type });
+            const strategy = {
+                name,
+                type,
+                status: 'ENABLED',
+            };
+            // Add target values based on type
+            if (type === 'TARGET_CPA' && targetValue) {
+                strategy.target_cpa = {
+                    target_cpa_micros: targetValue,
+                };
+            }
+            else if (type === 'TARGET_ROAS' && targetValue) {
+                strategy.target_roas = {
+                    target_roas: targetValue,
+                };
+            }
+            const result = await customer.biddingStrategies.create([strategy]);
+            logger.info('Bidding strategy created', { customerId, strategyId: result });
+            return result;
+        }
+        catch (error) {
+            logger.error('Failed to create bidding strategy', error);
+            throw new Error(`Failed to create bidding strategy: ${error.message}`);
+        }
+    }
+    /**
+     * Update bidding strategy
+     */
+    async updateBiddingStrategy(customerId, strategyId, targetValue // CPA in micros or ROAS as decimal
+    ) {
+        try {
+            const customer = this.getCustomer(customerId);
+            logger.info('Updating bidding strategy', { customerId, strategyId });
+            // First get current strategy to determine type
+            const strategies = await customer.query(`
+        SELECT
+          bidding_strategy.id,
+          bidding_strategy.type
+        FROM bidding_strategy
+        WHERE bidding_strategy.id = ${strategyId}
+      `);
+            if (!strategies || strategies.length === 0) {
+                throw new Error(`Bidding strategy ${strategyId} not found`);
+            }
+            const strategyType = strategies[0]?.bidding_strategy?.type;
+            const update = {
+                resource_name: `customers/${customerId}/biddingStrategies/${strategyId}`,
+            };
+            if (strategyType === 'TARGET_CPA') {
+                update.target_cpa = {
+                    target_cpa_micros: targetValue,
+                };
+            }
+            else if (strategyType === 'TARGET_ROAS') {
+                update.target_roas = {
+                    target_roas: targetValue,
+                };
+            }
+            else {
+                throw new Error(`Cannot update target for strategy type ${strategyType}`);
+            }
+            const result = await customer.biddingStrategies.update([update]);
+            logger.info('Bidding strategy updated', { customerId, strategyId });
+            return result;
+        }
+        catch (error) {
+            logger.error('Failed to update bidding strategy', error);
+            throw new Error(`Failed to update bidding strategy: ${error.message}`);
+        }
+    }
+    /**
+     * Set ad group CPC bid
+     */
+    async setAdGroupCpcBid(customerId, adGroupId, cpcBidMicros) {
+        try {
+            const customer = this.getCustomer(customerId);
+            logger.info('Setting ad group CPC bid', { customerId, adGroupId, cpcBidMicros });
+            const update = {
+                resource_name: `customers/${customerId}/adGroups/${adGroupId}`,
+                cpc_bid_micros: cpcBidMicros,
+            };
+            const result = await customer.adGroups.update([update]);
+            logger.info('Ad group CPC bid updated', { customerId, adGroupId });
+            return result;
+        }
+        catch (error) {
+            logger.error('Failed to set ad group CPC bid', error);
+            throw new Error(`Failed to set ad group CPC bid: ${error.message}`);
+        }
+    }
+    /**
+     * Create sitelink extensions
+     */
+    async createSitelinkExtensions(customerId, sitelinks) {
+        try {
+            const customer = this.getCustomer(customerId);
+            logger.info('Creating sitelink extensions', { customerId, count: sitelinks.length });
+            const operations = sitelinks.map((sitelink) => ({
+                type: 'SITELINK',
+                sitelink_asset: {
+                    link_text: sitelink.linkText,
+                    description1: sitelink.description1 || '',
+                    description2: sitelink.description2 || '',
+                },
+                final_urls: sitelink.finalUrls,
+            }));
+            const result = await customer.assets.create(operations);
+            logger.info('Sitelink extensions created', { customerId, count: sitelinks.length });
+            return result;
+        }
+        catch (error) {
+            logger.error('Failed to create sitelink extensions', error);
+            throw new Error(`Failed to create sitelink extensions: ${error.message}`);
+        }
+    }
+    /**
+     * Update sitelink extension
+     */
+    async updateSitelinkExtension(customerId, assetId, updates) {
+        try {
+            const customer = this.getCustomer(customerId);
+            logger.info('Updating sitelink extension', { customerId, assetId });
+            const operation = {
+                resource_name: `customers/${customerId}/assets/${assetId}`,
+            };
+            if (updates.linkText || updates.description1 || updates.description2) {
+                operation.sitelink_asset = {};
+                if (updates.linkText)
+                    operation.sitelink_asset.link_text = updates.linkText;
+                if (updates.description1)
+                    operation.sitelink_asset.description1 = updates.description1;
+                if (updates.description2)
+                    operation.sitelink_asset.description2 = updates.description2;
+            }
+            if (updates.finalUrls) {
+                operation.final_urls = updates.finalUrls;
+            }
+            const result = await customer.assets.update([operation]);
+            logger.info('Sitelink extension updated', { customerId, assetId });
+            return result;
+        }
+        catch (error) {
+            logger.error('Failed to update sitelink extension', error);
+            throw new Error(`Failed to update sitelink extension: ${error.message}`);
+        }
+    }
+    /**
+     * Create callout extensions
+     */
+    async createCalloutExtensions(customerId, callouts) {
+        try {
+            const customer = this.getCustomer(customerId);
+            logger.info('Creating callout extensions', { customerId, count: callouts.length });
+            const operations = callouts.map((callout) => ({
+                type: 'CALLOUT',
+                callout_asset: {
+                    callout_text: callout.calloutText,
+                },
+            }));
+            const result = await customer.assets.create(operations);
+            logger.info('Callout extensions created', { customerId, count: callouts.length });
+            return result;
+        }
+        catch (error) {
+            logger.error('Failed to create callout extensions', error);
+            throw new Error(`Failed to create callout extensions: ${error.message}`);
+        }
+    }
+    /**
+     * Update callout extension
+     */
+    async updateCalloutExtension(customerId, assetId, calloutText) {
+        try {
+            const customer = this.getCustomer(customerId);
+            logger.info('Updating callout extension', { customerId, assetId });
+            const operation = {
+                resource_name: `customers/${customerId}/assets/${assetId}`,
+                callout_asset: {
+                    callout_text: calloutText,
+                },
+            };
+            const result = await customer.assets.update([operation]);
+            logger.info('Callout extension updated', { customerId, assetId });
+            return result;
+        }
+        catch (error) {
+            logger.error('Failed to update callout extension', error);
+            throw new Error(`Failed to update callout extension: ${error.message}`);
+        }
+    }
+    /**
+     * Update keyword (change match type, status, or bid)
+     */
+    async updateKeyword(customerId, keywordResourceName, updates) {
+        try {
+            const customer = this.getCustomer(customerId);
+            logger.info('Updating keyword', { customerId, keywordResourceName, updates });
+            const operation = {
+                resource_name: keywordResourceName,
+            };
+            if (updates.matchType !== undefined) {
+                operation.keyword = {
+                    match_type: updates.matchType,
+                };
+            }
+            if (updates.status !== undefined) {
+                operation.status = updates.status;
+            }
+            if (updates.cpcBidMicros !== undefined) {
+                operation.cpc_bid_micros = updates.cpcBidMicros;
+            }
+            const result = await customer.adGroupCriteria.update([operation]);
+            logger.info('Keyword updated', { customerId, keywordResourceName });
+            return result;
+        }
+        catch (error) {
+            logger.error('Failed to update keyword', error);
+            throw new Error(`Failed to update keyword: ${error.message}`);
+        }
+    }
+    /**
+     * List keywords with details (for selection in update operations)
+     */
+    async listKeywords(customerId, adGroupId, campaignId) {
+        try {
+            const customer = this.getCustomer(customerId);
+            logger.debug('Listing keywords', { customerId, adGroupId, campaignId });
+            let query = `
+        SELECT
+          ad_group_criterion.resource_name,
+          ad_group_criterion.criterion_id,
+          ad_group_criterion.keyword.text,
+          ad_group_criterion.keyword.match_type,
+          ad_group_criterion.status,
+          ad_group_criterion.cpc_bid_micros,
+          ad_group.id,
+          ad_group.name,
+          campaign.id,
+          campaign.name
+        FROM keyword_view
+        WHERE ad_group_criterion.type = 'KEYWORD'
+      `;
+            if (campaignId) {
+                query += ` AND campaign.id = ${campaignId}`;
+            }
+            if (adGroupId) {
+                query += ` AND ad_group.id = ${adGroupId}`;
+            }
+            query += ' ORDER BY ad_group_criterion.keyword.text';
+            const results = await customer.query(query);
+            logger.info('Keywords retrieved', { customerId, count: results.length });
+            return results;
+        }
+        catch (error) {
+            logger.error('Failed to list keywords', error);
+            throw new Error(`Failed to list keywords: ${error.message}`);
+        }
+    }
+    /**
+     * List labels for a customer
+     */
+    async listLabels(customerId) {
+        try {
+            const customer = this.getCustomer(customerId);
+            logger.debug('Listing labels', { customerId });
+            const labels = await customer.query(`
+        SELECT
+          label.id,
+          label.name,
+          label.resource_name,
+          label.status
+        FROM label
+        ORDER BY label.name
+      `);
+            logger.info('Labels retrieved', { customerId, count: labels.length });
+            return labels;
+        }
+        catch (error) {
+            logger.error('Failed to list labels', error);
+            throw new Error(`Failed to list labels: ${error.message}`);
+        }
+    }
+    /**
+     * Create label
+     */
+    async createLabel(customerId, name, description) {
+        try {
+            const customer = this.getCustomer(customerId);
+            logger.info('Creating label', { customerId, name });
+            const label = {
+                name,
+                status: 'ENABLED',
+                ...(description && { description }),
+            };
+            const result = await customer.labels.create([label]);
+            logger.info('Label created', { customerId, labelId: result });
+            return result;
+        }
+        catch (error) {
+            logger.error('Failed to create label', error);
+            throw new Error(`Failed to create label: ${error.message}`);
+        }
+    }
+    /**
+     * Remove (delete) label
+     */
+    async removeLabel(customerId, labelId) {
+        try {
+            const customer = this.getCustomer(customerId);
+            logger.info('Removing label', { customerId, labelId });
+            const resourceName = `customers/${customerId}/labels/${labelId}`;
+            const result = await customer.labels.remove([resourceName]);
+            logger.info('Label removed', { customerId, labelId });
+            return result;
+        }
+        catch (error) {
+            logger.error('Failed to remove label', error);
+            throw new Error(`Failed to remove label: ${error.message}`);
+        }
+    }
+    /**
+     * Apply label to campaign
+     */
+    async applyCampaignLabel(customerId, campaignId, labelId) {
+        try {
+            const customer = this.getCustomer(customerId);
+            logger.info('Applying label to campaign', { customerId, campaignId, labelId });
+            const campaignLabel = {
+                campaign: `customers/${customerId}/campaigns/${campaignId}`,
+                label: `customers/${customerId}/labels/${labelId}`,
+            };
+            const result = await customer.campaignLabels.create([campaignLabel]);
+            logger.info('Label applied to campaign', { customerId, campaignId, labelId });
+            return result;
+        }
+        catch (error) {
+            logger.error('Failed to apply label to campaign', error);
+            throw new Error(`Failed to apply label to campaign: ${error.message}`);
+        }
+    }
+    /**
+     * Apply label to ad group
+     */
+    async applyAdGroupLabel(customerId, adGroupId, labelId) {
+        try {
+            const customer = this.getCustomer(customerId);
+            logger.info('Applying label to ad group', { customerId, adGroupId, labelId });
+            const adGroupLabel = {
+                ad_group: `customers/${customerId}/adGroups/${adGroupId}`,
+                label: `customers/${customerId}/labels/${labelId}`,
+            };
+            const result = await customer.adGroupLabels.create([adGroupLabel]);
+            logger.info('Label applied to ad group', { customerId, adGroupId, labelId });
+            return result;
+        }
+        catch (error) {
+            logger.error('Failed to apply label to ad group', error);
+            throw new Error(`Failed to apply label to ad group: ${error.message}`);
+        }
+    }
+    /**
+     * Apply label to keyword (ad group criterion)
+     */
+    async applyKeywordLabel(customerId, criterionId, labelId) {
+        try {
+            const customer = this.getCustomer(customerId);
+            logger.info('Applying label to keyword', { customerId, criterionId, labelId });
+            const criterionLabel = {
+                ad_group_criterion: `customers/${customerId}/adGroupCriteria/${criterionId}`,
+                label: `customers/${customerId}/labels/${labelId}`,
+            };
+            const result = await customer.adGroupCriterionLabels.create([criterionLabel]);
+            logger.info('Label applied to keyword', { customerId, criterionId, labelId });
+            return result;
+        }
+        catch (error) {
+            logger.error('Failed to apply label to keyword', error);
+            throw new Error(`Failed to apply label to keyword: ${error.message}`);
+        }
+    }
 }
 // Singleton instance
 let googleAdsClientInstance = null;

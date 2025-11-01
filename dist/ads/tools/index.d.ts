@@ -2,16 +2,21 @@
  * Export all Google Ads MCP tools
  */
 export { listAccessibleAccountsTool } from './accounts.js';
-export { listCampaignsTool, getCampaignPerformanceTool, getSearchTermsReportTool, getKeywordPerformanceTool, listBudgetsTool, } from './reporting/index.js';
+export { listCampaignsTool, getCampaignPerformanceTool, getSearchTermsReportTool, getKeywordPerformanceTool, listBudgetsTool, runCustomReportTool, getAdGroupPerformanceTool, getAdPerformanceTool, } from './reporting/index.js';
 export { updateCampaignStatusTool, createCampaignTool } from './campaigns/index.js';
+export { createAdGroupTool, updateAdGroupTool, listAdGroupsTool, updateAdGroupBidModifierTool, getAdGroupQualityScoreTool } from './ad-groups/index.js';
+export { createAdTool, listAdsTool, updateAdTool, pauseAdTool } from './ads/index.js';
 export { createBudgetTool, updateBudgetTool } from './budgets.js';
-export { addKeywordsTool, addNegativeKeywordsTool } from './keywords.js';
+export { addKeywordsTool, addNegativeKeywordsTool, removeNegativeKeywordsTool, listKeywordsTool, removeKeywordsTool, setKeywordBidTool, updateKeywordMatchTypeTool, } from './keywords.js';
+export { updateKeywordTool, pauseKeywordTool } from './keywords-update.js';
 export { conversionTools } from './conversions.js';
 export { audienceTools } from './audiences.js';
 export { assetTools } from './assets.js';
 export { keywordPlanningTools } from './keyword-planning.js';
 export { biddingTools } from './bidding.js';
 export { extensionTools } from './extensions.js';
+export { targetingTools } from './targeting/index.js';
+export { bidModifierTools } from './bid-modifiers/index.js';
 /**
  * All Google Ads tools
  */
@@ -453,6 +458,65 @@ export declare const googleAdsTools: ({
                 type: string;
                 description: string;
             };
+            campaignId: {
+                type: string;
+                description: string;
+            };
+            name: {
+                type: string;
+                description: string;
+            };
+            cpcBidMicros: {
+                type: string;
+                description: string;
+            };
+            status: {
+                type: string;
+                enum: string[];
+                description: string;
+            };
+            confirmationToken: {
+                type: string;
+                description: string;
+            };
+        };
+        required: never[];
+    };
+    handler(input: any): Promise<import("../../shared/interactive-workflow.js").McpResponse | {
+        success: boolean;
+        requiresApproval: boolean;
+        preview: string;
+        confirmationToken: string;
+        message: string;
+        data?: undefined;
+        nextSteps?: undefined;
+    } | {
+        success: boolean;
+        data: {
+            customerId: any;
+            campaignId: any;
+            adGroupId: any;
+            name: any;
+            status: any;
+            cpcBid: string;
+            message: string;
+        };
+        nextSteps: (string | null)[];
+        requiresApproval?: undefined;
+        preview?: undefined;
+        confirmationToken?: undefined;
+        message?: undefined;
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            customerId: {
+                type: string;
+                description: string;
+            };
             adGroupId: {
                 type: string;
                 description: string;
@@ -479,6 +543,149 @@ export declare const googleAdsTools: ({
                     };
                     required: string[];
                 };
+            };
+            confirmationToken: {
+                type: string;
+                description: string;
+            };
+        };
+        required: never[];
+    };
+    handler(input: any): Promise<import("../../shared/interactive-workflow.js").McpResponse | {
+        success: boolean;
+        requiresApproval: boolean;
+        preview: string;
+        confirmationToken: string;
+        message: string;
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            customerId: {
+                type: string;
+                description: string;
+            };
+            adGroupId: {
+                type: string;
+                description: string;
+            };
+            criterionIds: {
+                type: string;
+                description: string;
+                items: {
+                    type: string;
+                };
+            };
+            confirmationToken: {
+                type: string;
+                description: string;
+            };
+        };
+        required: never[];
+    };
+    handler(input: any): Promise<import("../../shared/interactive-workflow.js").McpResponse | {
+        success: boolean;
+        requiresApproval: boolean;
+        preview: string;
+        confirmationToken: string;
+        message: string;
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            customerId: {
+                type: string;
+                description: string;
+            };
+            adGroupId: {
+                type: string;
+                description: string;
+            };
+            criterionId: {
+                type: string;
+                description: string;
+            };
+            newBidDollars: {
+                type: string;
+                description: string;
+            };
+            confirmationToken: {
+                type: string;
+                description: string;
+            };
+        };
+        required: never[];
+    };
+    handler(input: any): Promise<import("../../shared/interactive-workflow.js").McpResponse | {
+        success: boolean;
+        requiresApproval: boolean;
+        preview: string;
+        confirmationToken: string;
+        message: string;
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            customerId: {
+                type: string;
+                description: string;
+            };
+            campaignId: {
+                type: string;
+                description: string;
+            };
+            criterionIds: {
+                type: string;
+                description: string;
+                items: {
+                    type: string;
+                };
+            };
+            confirmationToken: {
+                type: string;
+                description: string;
+            };
+        };
+        required: never[];
+    };
+    handler(input: any): Promise<import("../../shared/interactive-workflow.js").McpResponse | {
+        success: boolean;
+        requiresApproval: boolean;
+        preview: string;
+        confirmationToken: string;
+        message: string;
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            customerId: {
+                type: string;
+                description: string;
+            };
+            adGroupId: {
+                type: string;
+                description: string;
+            };
+            criterionId: {
+                type: string;
+                description: string;
+            };
+            newMatchType: {
+                type: string;
+                enum: string[];
+                description: string;
             };
             confirmationToken: {
                 type: string;
@@ -540,6 +747,277 @@ export declare const googleAdsTools: ({
         preview: string;
         confirmationToken: string;
         message: string;
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            customerId: {
+                type: string;
+                description: string;
+            };
+            campaignId: {
+                type: string;
+                description: string;
+            };
+            adGroupId: {
+                type: string;
+                description: string;
+            };
+            keywordResourceName: {
+                type: string;
+                description: string;
+            };
+            confirmationToken: {
+                type: string;
+                description: string;
+            };
+        };
+        required: never[];
+    };
+    handler(input: any): Promise<import("../../shared/interactive-workflow.js").McpResponse | {
+        success: boolean;
+        requiresApproval: boolean;
+        preview: string;
+        confirmationToken: string;
+        message: string;
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            customerId: {
+                type: string;
+                description: string;
+            };
+            campaignId: {
+                type: string;
+                description: string;
+            };
+            deviceType: {
+                type: string;
+                enum: string[];
+                description: string;
+            };
+            bidModifierPercent: {
+                type: string;
+                description: string;
+            };
+            confirmationToken: {
+                type: string;
+                description: string;
+            };
+        };
+        required: never[];
+    };
+    handler(input: any): Promise<import("../../shared/interactive-workflow.js").McpResponse | {
+        success: boolean;
+        requiresApproval: boolean;
+        preview: string;
+        confirmationToken: string;
+        message: string;
+        data?: undefined;
+        nextSteps?: undefined;
+    } | {
+        success: boolean;
+        data: {
+            customerId: any;
+            campaignId: any;
+            deviceType: any;
+            bidModifierPercent: any;
+            modifierId: any;
+            message: string;
+        };
+        nextSteps: string[];
+        requiresApproval?: undefined;
+        preview?: undefined;
+        confirmationToken?: undefined;
+        message?: undefined;
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            customerId: {
+                type: string;
+                description: string;
+            };
+            campaignId: {
+                type: string;
+                description: string;
+            };
+            locationId: {
+                type: string;
+                description: string;
+            };
+            locationName: {
+                type: string;
+                description: string;
+            };
+            bidModifierPercent: {
+                type: string;
+                description: string;
+            };
+            confirmationToken: {
+                type: string;
+                description: string;
+            };
+        };
+        required: never[];
+    };
+    handler(input: any): Promise<import("../../shared/interactive-workflow.js").McpResponse | {
+        success: boolean;
+        requiresApproval: boolean;
+        preview: string;
+        confirmationToken: string;
+        message: string;
+        data?: undefined;
+        nextSteps?: undefined;
+    } | {
+        success: boolean;
+        data: {
+            customerId: any;
+            campaignId: any;
+            locationId: any;
+            locationName: any;
+            bidModifierPercent: any;
+            modifierId: any;
+            message: string;
+        };
+        nextSteps: string[];
+        requiresApproval?: undefined;
+        preview?: undefined;
+        confirmationToken?: undefined;
+        message?: undefined;
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            customerId: {
+                type: string;
+                description: string;
+            };
+            adGroupId: {
+                type: string;
+                description: string;
+            };
+            demographicType: {
+                type: string;
+                enum: string[];
+                description: string;
+            };
+            demographicValue: {
+                type: string;
+                description: string;
+            };
+            bidModifierPercent: {
+                type: string;
+                description: string;
+            };
+            confirmationToken: {
+                type: string;
+                description: string;
+            };
+        };
+        required: never[];
+    };
+    handler(input: any): Promise<import("../../shared/interactive-workflow.js").McpResponse | {
+        success: boolean;
+        requiresApproval: boolean;
+        preview: string;
+        confirmationToken: string;
+        message: string;
+        data?: undefined;
+        nextSteps?: undefined;
+    } | {
+        success: boolean;
+        data: {
+            customerId: any;
+            adGroupId: any;
+            demographicType: any;
+            demographicValue: any;
+            bidModifierPercent: any;
+            modifierId: any;
+            message: string;
+        };
+        nextSteps: string[];
+        requiresApproval?: undefined;
+        preview?: undefined;
+        confirmationToken?: undefined;
+        message?: undefined;
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            customerId: {
+                type: string;
+                description: string;
+            };
+            campaignId: {
+                type: string;
+                description: string;
+            };
+            dayOfWeek: {
+                type: string;
+                enum: string[];
+                description: string;
+            };
+            startHour: {
+                type: string;
+                description: string;
+            };
+            endHour: {
+                type: string;
+                description: string;
+            };
+            bidModifierPercent: {
+                type: string;
+                description: string;
+            };
+            confirmationToken: {
+                type: string;
+                description: string;
+            };
+        };
+        required: never[];
+    };
+    handler(input: any): Promise<import("../../shared/interactive-workflow.js").McpResponse | {
+        success: boolean;
+        requiresApproval: boolean;
+        preview: string;
+        confirmationToken: string;
+        message: string;
+        data?: undefined;
+        nextSteps?: undefined;
+    } | {
+        success: boolean;
+        data: {
+            customerId: any;
+            campaignId: any;
+            dayOfWeek: any;
+            startHour: any;
+            endHour: any;
+            bidModifierPercent: any;
+            modifierId: any;
+            message: string;
+        };
+        nextSteps: string[];
+        requiresApproval?: undefined;
+        preview?: undefined;
+        confirmationToken?: undefined;
+        message?: undefined;
     }>;
 })[];
 /**
@@ -708,6 +1186,205 @@ export declare const writeAdsTools: ({
                 type: string;
                 description: string;
             };
+            campaignId: {
+                type: string;
+                description: string;
+            };
+            name: {
+                type: string;
+                description: string;
+            };
+            cpcBidMicros: {
+                type: string;
+                description: string;
+            };
+            status: {
+                type: string;
+                enum: string[];
+                description: string;
+            };
+            confirmationToken: {
+                type: string;
+                description: string;
+            };
+        };
+        required: never[];
+    };
+    handler(input: any): Promise<import("../../shared/interactive-workflow.js").McpResponse | {
+        success: boolean;
+        requiresApproval: boolean;
+        preview: string;
+        confirmationToken: string;
+        message: string;
+        data?: undefined;
+        nextSteps?: undefined;
+    } | {
+        success: boolean;
+        data: {
+            customerId: any;
+            campaignId: any;
+            adGroupId: any;
+            name: any;
+            status: any;
+            cpcBid: string;
+            message: string;
+        };
+        nextSteps: (string | null)[];
+        requiresApproval?: undefined;
+        preview?: undefined;
+        confirmationToken?: undefined;
+        message?: undefined;
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            customerId: {
+                type: string;
+                description: string;
+            };
+            campaignId: {
+                type: string;
+                description: string;
+            };
+            adGroupId: {
+                type: string;
+                description: string;
+            };
+            percentageChange: {
+                type: string;
+                description: string;
+            };
+            confirmationToken: {
+                type: string;
+                description: string;
+            };
+        };
+        required: never[];
+    };
+    handler(input: any): Promise<import("../../shared/interactive-workflow.js").McpResponse>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            customerId: {
+                type: string;
+                description: string;
+            };
+            adGroupId: {
+                type: string;
+                description: string;
+            };
+            headlines: {
+                type: string;
+                items: {
+                    type: string;
+                };
+                description: string;
+            };
+            descriptions: {
+                type: string;
+                items: {
+                    type: string;
+                };
+                description: string;
+            };
+            finalUrl: {
+                type: string;
+                description: string;
+            };
+            path1: {
+                type: string;
+                description: string;
+            };
+            path2: {
+                type: string;
+                description: string;
+            };
+            confirmationToken: {
+                type: string;
+                description: string;
+            };
+        };
+        required: never[];
+    };
+    handler(input: any): Promise<import("../../shared/interactive-workflow.js").McpResponse>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            customerId: {
+                type: string;
+                description: string;
+            };
+            adGroupId: {
+                type: string;
+                description: string;
+            };
+            adId: {
+                type: string;
+                description: string;
+            };
+            status: {
+                type: string;
+                enum: string[];
+                description: string;
+            };
+            confirmationToken: {
+                type: string;
+                description: string;
+            };
+        };
+        required: never[];
+    };
+    handler(input: any): Promise<import("../../shared/interactive-workflow.js").McpResponse>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            customerId: {
+                type: string;
+                description: string;
+            };
+            adGroupId: {
+                type: string;
+                description: string;
+            };
+            adId: {
+                type: string;
+                description: string;
+            };
+            action: {
+                type: string;
+                enum: string[];
+                description: string;
+            };
+            confirmationToken: {
+                type: string;
+                description: string;
+            };
+        };
+        required: never[];
+    };
+    handler(input: any): Promise<import("../../shared/interactive-workflow.js").McpResponse>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            customerId: {
+                type: string;
+                description: string;
+            };
             adGroupId: {
                 type: string;
                 description: string;
@@ -759,6 +1436,149 @@ export declare const writeAdsTools: ({
                 type: string;
                 description: string;
             };
+            adGroupId: {
+                type: string;
+                description: string;
+            };
+            criterionIds: {
+                type: string;
+                description: string;
+                items: {
+                    type: string;
+                };
+            };
+            confirmationToken: {
+                type: string;
+                description: string;
+            };
+        };
+        required: never[];
+    };
+    handler(input: any): Promise<import("../../shared/interactive-workflow.js").McpResponse | {
+        success: boolean;
+        requiresApproval: boolean;
+        preview: string;
+        confirmationToken: string;
+        message: string;
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            customerId: {
+                type: string;
+                description: string;
+            };
+            adGroupId: {
+                type: string;
+                description: string;
+            };
+            criterionId: {
+                type: string;
+                description: string;
+            };
+            newBidDollars: {
+                type: string;
+                description: string;
+            };
+            confirmationToken: {
+                type: string;
+                description: string;
+            };
+        };
+        required: never[];
+    };
+    handler(input: any): Promise<import("../../shared/interactive-workflow.js").McpResponse | {
+        success: boolean;
+        requiresApproval: boolean;
+        preview: string;
+        confirmationToken: string;
+        message: string;
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            customerId: {
+                type: string;
+                description: string;
+            };
+            campaignId: {
+                type: string;
+                description: string;
+            };
+            criterionIds: {
+                type: string;
+                description: string;
+                items: {
+                    type: string;
+                };
+            };
+            confirmationToken: {
+                type: string;
+                description: string;
+            };
+        };
+        required: never[];
+    };
+    handler(input: any): Promise<import("../../shared/interactive-workflow.js").McpResponse | {
+        success: boolean;
+        requiresApproval: boolean;
+        preview: string;
+        confirmationToken: string;
+        message: string;
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            customerId: {
+                type: string;
+                description: string;
+            };
+            adGroupId: {
+                type: string;
+                description: string;
+            };
+            criterionId: {
+                type: string;
+                description: string;
+            };
+            newMatchType: {
+                type: string;
+                enum: string[];
+                description: string;
+            };
+            confirmationToken: {
+                type: string;
+                description: string;
+            };
+        };
+        required: never[];
+    };
+    handler(input: any): Promise<import("../../shared/interactive-workflow.js").McpResponse | {
+        success: boolean;
+        requiresApproval: boolean;
+        preview: string;
+        confirmationToken: string;
+        message: string;
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            customerId: {
+                type: string;
+                description: string;
+            };
             campaignId: {
                 type: string;
                 description: string;
@@ -781,6 +1601,42 @@ export declare const writeAdsTools: ({
                     };
                     required: string[];
                 };
+            };
+            confirmationToken: {
+                type: string;
+                description: string;
+            };
+        };
+        required: never[];
+    };
+    handler(input: any): Promise<import("../../shared/interactive-workflow.js").McpResponse | {
+        success: boolean;
+        requiresApproval: boolean;
+        preview: string;
+        confirmationToken: string;
+        message: string;
+    }>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            customerId: {
+                type: string;
+                description: string;
+            };
+            campaignId: {
+                type: string;
+                description: string;
+            };
+            adGroupId: {
+                type: string;
+                description: string;
+            };
+            keywordResourceName: {
+                type: string;
+                description: string;
             };
             confirmationToken: {
                 type: string;

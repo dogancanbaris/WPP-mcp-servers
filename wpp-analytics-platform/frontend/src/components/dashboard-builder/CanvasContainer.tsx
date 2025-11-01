@@ -50,6 +50,7 @@ export const CanvasContainer = React.forwardRef<HTMLDivElement, CanvasContainerP
     className,
   }, ref) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [inputWidth, setInputWidth] = React.useState(canvasWidth.toString());
   const [inputHeight, setInputHeight] = React.useState(canvasHeight.toString());
 
@@ -61,6 +62,19 @@ export const CanvasContainer = React.forwardRef<HTMLDivElement, CanvasContainerP
   useEffect(() => {
     setInputHeight(canvasHeight.toString());
   }, [canvasHeight]);
+
+  // Reset scroll position on mount to prevent canvas from being scrolled off-screen
+  useEffect(() => {
+    if (scrollContainerRef.current) {
+      // Force scroll to top-left on initial load
+      scrollContainerRef.current.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+
+      // Disable browser scroll restoration
+      if ('scrollRestoration' in window.history) {
+        window.history.scrollRestoration = 'manual';
+      }
+    }
+  }, []);
 
   const handleWidthChange = (value: string) => {
     setInputWidth(value);
@@ -166,6 +180,7 @@ export const CanvasContainer = React.forwardRef<HTMLDivElement, CanvasContainerP
 
       {/* Canvas Area with Grid */}
       <div
+        ref={scrollContainerRef}
         className={cn(
           "flex-1 overflow-auto p-6 transition-colors",
           showGrid && "canvas-grid"

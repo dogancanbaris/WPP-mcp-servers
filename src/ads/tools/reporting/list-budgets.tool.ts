@@ -4,11 +4,11 @@
  * MCP tool for listing all campaign budgets.
  */
 
-import { microsToAmount, extractCustomerId } from '../../validation.js';
+import { extractCustomerId, microsToAmount } from '../../validation.js';
 import { getLogger } from '../../../shared/logger.js';
 import { extractRefreshToken } from '../../../shared/oauth-client-factory.js';
 import { createGoogleAdsClientFromRefreshToken } from '../../client.js';
-import { injectGuidance, formatDiscoveryResponse, formatNextSteps } from '../../../shared/interactive-workflow.js';
+import { formatDiscoveryResponse, formatNextSteps, injectGuidance } from '../../../shared/interactive-workflow.js';
 
 const logger = getLogger('ads.tools.reporting.list-budgets');
 
@@ -49,7 +49,7 @@ export const listBudgetsTool = {
       // ═══ ACCOUNT DISCOVERY ═══
       if (!customerId) {
         const resourceNames = await client.listAccessibleAccounts();
-        const accounts = resourceNames.map((rn) => ({
+        const accounts = resourceNames.map((rn: any) => ({
           resourceName: rn,
           customerId: extractCustomerId(rn),
         }));
@@ -83,7 +83,7 @@ export const listBudgetsTool = {
       }));
 
       // Calculate total daily spend
-      const totalDaily = processed.reduce((sum, b) => {
+      const totalDaily = processed.reduce((sum: number, b: any) => {
         const amount = parseFloat(b.dailyAmount.replace('$', '').replace(',', ''));
         return sum + amount;
       }, 0);

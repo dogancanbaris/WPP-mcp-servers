@@ -287,11 +287,14 @@ function buildPeriodQuery(
     const start = dateFilter?.values?.[0];
     const end = dateFilter?.values?.[1];
     if (start && end) {
-      // Build WHERE without date to avoid double filtering; join on generated series
+      // FIX: Keep date filter for BigQuery partition elimination (required for partitioned tables)
       const whereNoDate = whereConditions.filter((w) => !/\bdate\b\s+BETWEEN\s+/i.test(w));
       const metricSelects = metrics
         .map((metric) => `CAST(${getMetricAggregation(metric, platformMetadata)}(${metric}) AS FLOAT64) AS ${metric}`)
         .join(', ');
+
+      // Build WHERE clause including date filter for partition elimination
+      const allConditions = [...whereNoDate, `date BETWEEN '${start}' AND '${end}'`];
 
       return `
 WITH date_series AS (
@@ -303,7 +306,7 @@ base AS (
     FORMAT_DATE('%Y-%m-%d', date) AS date,
     ${metricSelects}
   FROM \`${bigqueryTable}\`
-  ${whereNoDate.length > 0 ? `WHERE ${whereNoDate.join(' AND ')}` : ''}
+  WHERE ${allConditions.join(' AND ')}
   GROUP BY 1
 )
 SELECT '${periodLabel}' AS period,
@@ -505,6 +508,23 @@ export async function GET(
       } catch (e) {
         // Invalid filters, ignore
       }
+    }
+
+    // Ensure a date partition filter exists (prevents BigQuery 500 on partitioned tables)
+    const hasDateFilter = filters.some((f: any) => ((f.field || (f as any).member) === 'date') && f.operator === 'inDateRange' && Array.isArray(f.values) && f.values.length >= 2);
+    if (!hasDateFilter) {
+      const fmt = (d: Date) => d.toISOString().slice(0, 10);
+      const today = new Date();
+      const end = new Date(today);
+      end.setDate(end.getDate() - 1); // yesterday inclusive
+      const start = new Date(end);
+      start.setDate(start.getDate() - 29); // last 30 days
+      const range: [string, string] = (Array.isArray(dateRange) && dateRange.length === 2)
+        ? [dateRange[0] as string, dateRange[1] as string]
+        : [fmt(start), fmt(end)];
+
+      filters.push({ field: 'date', operator: 'inDateRange', values: range });
+      console.log('[Dataset Query] Injected default date filter:', range);
     }
 
     // Build query config

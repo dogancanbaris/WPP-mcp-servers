@@ -134,8 +134,41 @@ ${formatNextSteps([
         }
     },
 };
+// Import new extension tools
+// TODO: Extension tools need API integration fixes - temporarily disabled
+// import {
+//   createStructuredSnippetTool,
+//   updateStructuredSnippetTool,
+//   createCallExtensionTool,
+//   updateCallExtensionTool,
+//   createSitelinkExtensionTool,
+//   updateSitelinkExtensionTool,
+//   createCalloutExtensionTool,
+//   updateCalloutExtensionTool,
+//   createLocationExtensionTool,
+//   updateLocationExtensionTool,
+//   createPriceExtensionTool,
+//   createPromotionExtensionTool,
+//   updatePromotionExtensionTool,
+// } from './extensions/index.js';
 /**
  * Export extension tools
  */
-export const extensionTools = [listAdExtensionsTool];
+export const extensionTools = [
+    listAdExtensionsTool,
+    // TODO: Extension creation tools temporarily disabled - need API fixes
+    // createStructuredSnippetTool,
+    // updateStructuredSnippetTool,
+    // createCallExtensionTool,
+    // updateCallExtensionTool,
+    // createSitelinkExtensionTool,
+    // updateSitelinkExtensionTool,
+    // createCalloutExtensionTool,
+    // updateCalloutExtensionTool,
+    // createLocationExtensionTool,
+    // updateLocationExtensionTool,
+    // createPriceExtensionTool,
+    // createPromotionExtensionTool,
+    // updatePromotionExtensionTool,
+];
 //# sourceMappingURL=extensions.js.map

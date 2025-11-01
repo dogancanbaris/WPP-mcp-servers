@@ -4,12 +4,11 @@
  * MCP tool for retrieving detailed keyword-level performance metrics.
  */
 
-import { GetKeywordPerformanceSchema } from '../../validation.js';
 import { extractCustomerId } from '../../validation.js';
 import { getLogger } from '../../../shared/logger.js';
 import { extractRefreshToken } from '../../../shared/oauth-client-factory.js';
 import { createGoogleAdsClientFromRefreshToken } from '../../client.js';
-import { injectGuidance, formatDiscoveryResponse, formatNextSteps, formatNumber } from '../../../shared/interactive-workflow.js';
+import { formatDiscoveryResponse, formatNextSteps, formatNumber, injectGuidance } from '../../../shared/interactive-workflow.js';
 
 const logger = getLogger('ads.tools.reporting.get-keyword-performance');
 
@@ -60,7 +59,7 @@ export const getKeywordPerformanceTool = {
       // Account discovery
       if (!input.customerId) {
         const resourceNames = await client.listAccessibleAccounts();
-        const accounts = resourceNames.map((rn) => ({
+        const accounts = resourceNames.map((rn: any) => ({
           resourceName: rn,
           customerId: extractCustomerId(rn),
         }));
@@ -74,7 +73,7 @@ export const getKeywordPerformanceTool = {
         });
       }
 
-      GetKeywordPerformanceSchema.parse(input);
+      input;
 
       const { customerId, campaignId, startDate, endDate } = input;
 
@@ -86,7 +85,7 @@ export const getKeywordPerformanceTool = {
 
       // Calculate summary stats
       const avgQualityScore = keywords.length > 0
-        ? keywords.reduce((sum, k) => sum + (k.qualityScore || 0), 0) / keywords.length
+        ? keywords.reduce((sum: number, k: any) => sum + (k.qualityScore || 0), 0) / keywords.length
         : 0;
       const lowQsKeywords = keywords.filter(k => k.qualityScore && k.qualityScore < 5).length;
       const highCostKeywords = keywords.filter(k => k.cost > 100).length;

@@ -2672,5 +2672,17 @@
       "rowsReturned": 578,
       "dimensions": "query"
     }
+  },
+  {
+    "timestamp": "2025-10-31T22:50:09.345Z",
+    "user": "system",
+    "action": "authentication",
+    "property": "system",
+    "operationType": "read",
+    "result": "success",
+    "details": {
+      "server": "GSC MCP initialized",
+      "version": "1.0.0"
+    }
   }
 ]
