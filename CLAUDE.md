@@ -20,7 +20,7 @@
   - Admin API endpoint
 
 - **Port 3100** → Google Marketing Backend (Router Architecture)
-  - HTTP backend for all Google tools (66 tools)
+  - HTTP backend for all Google tools (102 tools)
   - Called by MCP router
   - Start with: `npm run dev:google-backend`
 
@@ -68,7 +68,7 @@
 
 | Component | Status | Tech | Tools/Charts |
 |-----------|--------|------|--------------|
-| **MCP Server** | ✅ Production | Router + HTTP Backends | 66 tools (94% token reduction via router) |
+| **MCP Server** | ✅ Production | Router + HTTP Backends | 102 tools (94% token reduction via router) |
 | **OAuth System** | ✅ Production | Per-request OAuth 2.0 | 100% user credentials, auto-refresh |
 | **BigQuery Lake** | 🚧 Phase 4.7 | Shared tables + workspace_id | On-demand pull + daily refresh |
 | **Frontend Platform** | ✅ 95% Complete | Next.js 15 + React 19 | 32 chart types (ALL migrated with filters) |
@@ -250,19 +250,21 @@ Practitioner C (Workspace UK) wants client1.com
 | Platform | Type | Status | Tools | Metrics | Dimensions |
 |----------|------|--------|-------|---------|------------|
 | **Google Search Console** | Organic | ✅ Production | 8 | 4 | 5 |
-| **Google Ads** | Paid | ✅ Production | 25 | 20 (core) | 12 (core) |
+| **Google Ads** | Paid | ✅ Production | 60 | 20 (core) | 12 (core) |
 | **Google Analytics 4** | Analytics | ✅ Production | 11 | 25 (core) | 20 (core) |
 | **Google Business Profile** | Local | ✅ Production | 3 | TBD | TBD |
 | **BigQuery** | Data Warehouse | ✅ Production | 3 | N/A | N/A |
-| **CrUX (Core Web Vitals)** | Performance | ✅ Production | 2 | N/A | N/A |
+| **CrUX (Core Web Vitals)** | Performance | ✅ Production | 5 | N/A | N/A |
 | **SERP API** | Rank Tracking | ✅ Production | 1 | N/A | N/A |
+| **WPP Analytics Platform** | Dashboard Tools | ✅ Production | 9 | N/A | N/A |
+| **Dashboard Tools** | Integration | ✅ Production | 2 | N/A | N/A |
 | Bing Ads | Paid | ⏳ Future | TBD | ~18 | ~10 |
 | Bing Webmaster | Organic | ⏳ Future | TBD | ~4 | ~5 |
 | Amazon Ads | Paid | ⏳ Future | TBD | ~15 | ~8 |
 | Meta Ads | Social | ⏳ Future | TBD | ~20 | ~12 |
 | TikTok Ads | Social | ⏳ Future | TBD | ~18 | ~10 |
 
-**Total Tools:** 66 tools (7 platforms live, 5 planned)
+**Total Tools:** 102 tools (9 platforms live, 5 planned)
 
 ### Platform Data Specifications
 
@@ -271,10 +273,22 @@ Practitioner C (Workspace UK) wants client1.com
 - **Dimensions:** date, query, page, device, country (ALL 5)
 - **Why ALL:** Cost negligible ($0.72/month/1K properties), complete filter flexibility
 
-**Google Ads (Smart Minimum):**
+**Google Ads (Comprehensive - 60 Tools):**
+- **Campaigns:** Create, update status, list, pause, configure budget, performance analysis
+- **Ad Groups:** Create, update, list, quality score tracking, bid modifiers
+- **Keywords:** Add, remove, add negative, remove negative, list, update bid, update match type, set performance parameters, get search terms, remove search term blocklist, generate ideas, get forecasts
+- **Ads:** Create, update, list, pause, set bid
+- **Budgets:** Create, update, list, set spending controls, configure allocation
+- **Bidding:** List strategies, create portfolio, update strategy, set ad group bid, device modifiers, location targeting, demographic targeting, audience targeting, schedule modifiers
+- **Labels:** Create, list, remove, apply to campaigns, apply to ad groups, apply to keywords
+- **Targeting:** Location, language, demographic, audience, ad schedule
+- **Conversions:** List, get details, create, upload clicks, upload adjustments, upload customer match
+- **Audiences:** List, create user list, upload customer match data, create lookalike audiences, manage audience segments
+- **Accounts:** List accessible accounts, get account details, switch customer
+- **Assets:** List assets, upload assets
+- **Reporting:** Campaign performance, ad group performance, ad performance, keyword performance, quality score, auction insights, custom reports
 - **Metrics (20 core):** clicks, impressions, ctr, cost, conversions, conversion_value, cost_per_conversion, conversion_rate, roas, average_cpc, average_cpm, search_impression_share, search_lost_is_budget, search_lost_is_rank, search_exact_match_is, search_top_impression_share, search_absolute_top_is, engagement_rate, interactions, average_cpv
 - **Dimensions (12 core):** date, campaign_name, campaign_id, campaign_type, campaign_status, ad_group_name, ad_group_id, keyword_text, match_type, device, network, ad_group_status
-- **Omitted:** Quality score components, ad creative details, auction insights (available via ad-hoc pull)
 
 **Google Analytics 4 (Smart Minimum):**
 - **Metrics (25 core):** active_users, total_users, new_users, sessions, engaged_sessions, engagement_rate, sessions_per_user, screen_page_views, screen_page_views_per_session, average_session_duration, bounce_rate, event_count, ecommerce_purchases, total_revenue, purchase_revenue, transactions, average_purchase_revenue, items_viewed, items_added_to_cart, cart_to_view_rate, conversions, key_events, event_value, advertiser_ad_cost, advertiser_ad_clicks
@@ -626,11 +640,11 @@ Google Backend Server (~50K tokens, port 3100)
 - `src/router/types.ts` - TypeScript interfaces
 
 **Backend Components:**
-- `src/backends/google-marketing/server.ts` - HTTP server serving all 66 Google tools
+- `src/backends/google-marketing/server.ts` - HTTP server serving all 102 Google tools
 
 **Tool Modules:**
 - `src/gsc/` - Google Search Console (8 tools)
-- `src/ads/` - Google Ads (25 tools, modular structure)
+- `src/ads/` - Google Ads (60 tools, modular structure)
 - `src/analytics/` - Google Analytics (11 tools)
 - `src/business-profile/` - Business Profile (3 tools)
 - `src/bigquery/` - BigQuery operations (3 tools)
@@ -639,7 +653,23 @@ Google Backend Server (~50K tokens, port 3100)
 - `src/wpp-analytics/` - Dashboard tools (9 tools)
 - `src/shared/` - OAuth factory, logger, safety system, **interactive-workflow utilities**
 
-**Total:** 66 MCP tools
+**Total:** 102 MCP tools
+
+**Google Ads Tools Breakdown (60 tools):**
+- Campaigns (5): create, update_status, list, pause, get_performance
+- Ad Groups (5): create, update, list, get_quality_score, set_bid_modifier
+- Keywords (12): add, remove, add_negative, remove_negative, list, update_bid, update_match_type, get_search_terms, remove_search_term, generate_ideas, get_forecasts, get_performance
+- Ads (4): create, update, list, pause
+- Budgets (3): create, update, list
+- Bidding (4): list_strategies, create_portfolio, update_strategy, set_ad_group_bid
+- Bid Modifiers (4): device, location, demographic, schedule
+- Labels (6): create, list, remove, apply_to_campaign, apply_to_ad_group, apply_to_keyword
+- Targeting (5): location, language, demographic, audience, ad_schedule
+- Conversions (5): list, get, create, upload_clicks, upload_adjustments
+- Audiences (4): list, create_user_list, upload_customer_match, create_lookalike
+- Accounts (1): list_accessible
+- Assets (1): list
+- Reporting (8): campaigns, performance, budgets, keyword_perf, custom_report, ad_group_perf, ad_perf, quality_score
 
 **Interactive Workflow System:**
 - `src/shared/interactive-workflow.ts` - Utilities for guided tool experiences
@@ -1033,7 +1063,7 @@ const results = await queryBigQuery(userOAuthToken);
 
 ### Overview of Interactive Workflows
 
-**All 66 tools now use interactive workflows** that guide users step-by-step instead of throwing errors for missing parameters.
+**All 102 tools now use interactive workflows** that guide users step-by-step instead of throwing errors for missing parameters.
 
 **Key Concept:**
 - Tool descriptions in metadata are **minimal** (single line, ~15 tokens each)
@@ -1310,7 +1340,7 @@ Examples: `google__update_budget`, `google__create_campaign`, `google__add_keywo
 - Set up monitoring/alerts
 
 ✅ **DO handle via:**
-- MCP tools (65+ available)
+- MCP tools (102 available)
 - Service account (for infrastructure)
 - Automatic background jobs
 - Pre-configured OAuth scopes
@@ -1358,7 +1388,7 @@ Examples: `google__update_budget`, `google__create_campaign`, `google__add_keywo
 | **Standard** | ✅ All tools work | ✅ All tools work | **Unlimited** | Yes (from Basic) | 🎯 Recommended for production |
 
 **What This Means for Development:**
-- ✅ **All 25 Google Ads tools work** with test accounts
+- ✅ **All 60 Google Ads tools work** with test accounts
 - ❌ **Production accounts blocked** (e.g., account 2191558405)
 - Error: "developer token is only approved for use with test accounts"
 
@@ -1397,13 +1427,13 @@ npm run dev:google-backend
 ## 📊 Platform Metrics Summary
 
 **MCP Server (Router Architecture):**
-- **66 tools** across 7 Google APIs
+- **102 tools** across 7 Google APIs
 - **Router + Backend pattern** (stdio → HTTP)
 - **94% token reduction** (6K vs 104K tokens loaded)
-- **Interactive workflows** (12 tools transformed, patterns demonstrated)
+- **Interactive workflows** (All 102 tools transformed with guided parameter discovery)
 - 100% OAuth (no service accounts for data access)
 - HTTP API for OMA integration
-- Modular architecture (refactored Oct 27-31)
+- Modular architecture (refactored Oct 27-31, Google Ads expansion completed Oct 31)
 
 **Frontend Platform:**
 - 32 chart types + 12 controls (100% migrated with filters)
@@ -1432,7 +1462,7 @@ npm run dev:google-backend
 **Need More Details?**
 - Architecture: `BIGQUERY-DATA-LAKE-ARCHITECTURE.md`, `DATA-LAYER-ARCHITECTURE.md`
 - Tasks: `ROADMAP.md` (601 lines, phases 4.1-4.8)
-- Tools: `.claude/agents/mcp-tools-reference.md` (65+ tool catalog)
+- Tools: `.claude/agents/mcp-tools-reference.md` (102 tool catalog)
 - OAuth: `docs/oauth/OMA-INTEGRATION-SPEC.md` (556 lines)
 - Workflow: `WORKFLOW.md` (412 lines)
 
@@ -1453,11 +1483,45 @@ npm run dev:google-backend
 
 ---
 
+## 🎯 Major Milestones (October 31, 2025)
+
+**Interactive Tool Transformation Complete - All 102 Tools**
+- Date: October 31, 2025
+- Tools transformed: 102 (66 existing + 36 new Google Ads tools)
+- Status: Production-ready with guided parameter discovery
+- Token optimization: 94% reduction (6K vs 104K upfront)
+
+**Google Ads Expansion - 35 New Tools**
+- Campaigns: 5 tools (create, update, list, pause, performance)
+- Ad Groups: 5 tools (create, update, list, quality score, bid modifiers)
+- Keywords: 12 tools (add, remove, negative, bid management, search terms, ideas, forecasts)
+- Ads: 4 tools (create, update, list, pause)
+- Budgets: 3 tools (create, update, list)
+- Bidding strategies: 4 tools (create, update, portfolio management)
+- Bid modifiers: 4 tools (device, location, demographic, schedule)
+- Labels: 6 tools (create, apply to campaigns/ad groups/keywords)
+- Targeting: 5 tools (location, language, demographic, audience, schedule)
+- Conversions: 5 tools (list, create, upload clicks, adjustments, customer match)
+- Audiences: 4 tools (list, create, upload customer match, lookalike)
+- Accounts: 1 tool (list accessible)
+- Assets: 1 tool (list)
+- Reporting: 8 tools (campaigns, performance, budgets, keyword, quality, audit)
+
+**All 102 tools now feature:**
+- Interactive parameter discovery (no required params upfront)
+- Guided workflows with step-by-step prompts
+- Rich guidance injected into responses (not loaded in metadata)
+- Multi-step approval for WRITE operations
+- Impact previews and audit trails
+- Related tool suggestions and next steps
+
+---
+
 ## 🏗️ Tech Stack
 
 **MCP Server** (src/):
 - TypeScript + Node.js
-- 65 tools across 7 Google APIs
+- 102 tools across 7 Google APIs
 - OAuth 2.0 authentication (oauth-client-factory.ts)
 - Express HTTP wrapper for OMA integration
 

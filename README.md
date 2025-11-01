@@ -4,15 +4,16 @@ Enterprise-grade Model Context Protocol servers with **Router + Backend architec
 
 ## 🎯 What This Is
 
-A production-ready MCP server system providing **66 interactive tools** across:
+A production-ready MCP server system providing **102 interactive tools** across:
 - **Google Search Console** (8 tools) - Organic search analytics
-- **Google Ads** (25 tools) - Campaign management and reporting
+- **Google Ads** (60 tools) - Comprehensive campaign management and reporting
 - **Google Analytics 4** (11 tools) - User behavior tracking
 - **BigQuery** (3 tools) - Data warehouse queries
 - **Business Profile** (3 tools) - Local SEO management
 - **CrUX/Core Web Vitals** (5 tools) - Performance monitoring
 - **WPP Analytics Platform** (9 tools) - Dashboard creation
 - **SERP API** (1 tool) - Search results tracking
+- **Dashboard Tools** (2 tools) - Integration and data management
 
 ## 🚀 NEW: Router Architecture (v2.1)
 
@@ -106,7 +107,7 @@ All documentation is organized in `/docs`:
 ✅ **Router + Backend Architecture** - Modular, scalable multi-platform design
 ✅ **94% Token Reduction** - 6K tokens loaded (vs 104K monolithic)
 ✅ **Interactive Workflows** - Tools guide users step-by-step through parameters
-✅ **66 Production Tools** - Ready to use across 7 Google APIs
+✅ **102 Production Tools** - Ready to use across 7 Google APIs (60 for Google Ads)
 ✅ **OAuth 2.0 Only** - No API keys or service accounts, per-request auth
 ✅ **Multi-Tenant Ready** - Automatic client isolation via user credentials
 ✅ **Multi-Step Approval** - WRITE operations require confirmation with impact preview
@@ -221,13 +222,13 @@ BigQuery Data Lake + Dashboard Platform
 
 ## 📈 Current Status (v2.1 - October 31, 2025)
 
-- ✅ **66 Interactive Tools**: All production-ready with guided workflows
+- ✅ **102 Interactive Tools**: All production-ready with guided workflows (66 existing + 36 new Google Ads tools)
 - ✅ **Router Architecture**: 94% token reduction (6K vs 104K)
-- ✅ **12 Tools Transformed**: Patterns demonstrated for all categories
-  - Simple READ: 5 tools (list_properties, list_accounts, etc.)
-  - Complex READ: 6 tools (query_search_analytics, list_campaigns, etc.)
-  - WRITE with approval: 1 tool (update_budget with discovery)
-- ✅ **Interactive Workflows**: Parameter discovery, rich guidance, next-step suggestions
+- ✅ **All 102 Tools Transformed**: Patterns demonstrated and implemented across all categories
+  - Simple READ: 28 tools (list_properties, list_accounts, list_campaigns, etc.)
+  - Complex READ: 62 tools (query_search_analytics, get_performance, etc.)
+  - WRITE with approval: 12 tools (budget updates, keyword creation, campaign management, etc.)
+- ✅ **Interactive Workflows**: Parameter discovery, rich guidance, multi-step approval, next-step suggestions
 - ✅ **HTTP Server**: External server for multi-agent connections (legacy/OMA mode)
 - ✅ **OAuth**: 100% implemented (per-request auth, no service accounts)
 - ✅ **Dashboard Platform**: Full-featured with 32 chart types + 12 controls
@@ -344,10 +345,11 @@ A: Via HTTP endpoint `http://localhost:3000/mcp` - see the [WPP MCP HTTP Skill](
 
 **Status**: ✅ Production Ready - Router + Backend Architecture
 **Version**: 2.1
-**Tools**: 66 across 7 Google APIs (12 with interactive workflows, patterns demonstrated)
+**Tools**: 102 across 7 Google APIs (all with interactive workflows, October 31, 2025)
 **Architecture**: Router (stdio) + HTTP Backends
 **Transport**: STDIO (router) / HTTP (backends) / HTTP (legacy OMA mode)
 **Auth**: OAuth 2.0 per-request (100%)
 **Token Usage**: ~6k tokens router mode (94% reduction), ~5k tokens HTTP mode
-**Interactive Workflows**: ✅ Parameter discovery, rich guidance, multi-step approval
+**Interactive Workflows**: ✅ Parameter discovery, rich guidance, multi-step approval (all 102 tools)
+**Google Ads Tools**: 60 comprehensive tools (campaigns, keywords, budgets, bidding, targeting, reporting, audiences, labels, conversions)
 **Last Updated**: October 31, 2025
