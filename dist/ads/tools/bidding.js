@@ -1054,9 +1054,8 @@ Call this tool again with confirmationToken to execute.`;
             }
             // ═══ STEP 6: EXECUTE ═══
             logger.info('Setting ad group CPC bid', { customerId, adGroupId, maxCpcDollars });
-            // @ts-expect-error - Result variable used in subsequent logging
             const cpcMicros = maxCpcDollars * 1000000;
-            const result = await client.setAdGroupCpcBid(customerId, adGroupId, cpcMicros);
+            await client.setAdGroupCpcBid(customerId, adGroupId, cpcMicros);
             const customer = client.getCustomer(customerId);
             const query = `
         SELECT

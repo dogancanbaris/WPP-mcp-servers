@@ -15,22 +15,23 @@ A production-ready MCP server system providing **102 interactive tools** across:
 - **SERP API** (1 tool) - Search results tracking
 - **Dashboard Tools** (2 tools) - Integration and data management
 
-## 🚀 NEW: Router Architecture (v2.1)
+## 🚀 BREAKTHROUGH: Meta-Tools Architecture (v2.2)
 
 **Architecture:**
 ```
 Client (Claude Code CLI)
     ↓ stdio
-MCP Router (~6K tokens)
-    ↓ HTTP (localhost:3100)
-Google Backend Server (66 tools)
+MCP Router (~2K tokens - 3 meta-tools only!)
+    ↓ On-demand HTTP (localhost:3100)
+Google Backend Server (98 tools, never loaded)
 ```
 
-**Why Router:**
-- **94% token reduction**: 6K tokens loaded (vs 104K monolithic)
-- **Scalable**: Add new platform backends without increasing router token usage
-- **Interactive workflows**: Tools guide users through parameter discovery
-- **On-demand loading**: Detailed guidance loaded only when tools are called
+**Why Meta-Tools:**
+- **97% token reduction**: 2K tokens loaded (vs 65K traditional)
+- **On-demand discovery**: Tools found via search_tools, not listed upfront
+- **Infinite scalability**: Can support 500+ tools with same 2K token budget
+- **Interactive workflows**: Full guided parameter discovery preserved
+- **Proven**: Tool schemas verified to NOT enter context via /context measurements
 
 **Server Modes:**
 - **Router (stdio)**: `npm run dev:router` - For Claude Code CLI (minimal tokens)
@@ -38,9 +39,10 @@ Google Backend Server (66 tools)
 - **Legacy HTTP**: `npm run dev:http` - Port 3001 (OMA integration, monolithic)
 
 **Token Usage:**
-- Router mode: ~6,000 tokens (94% reduction)
-- HTTP mode (legacy): ~5,000 tokens (still optimized)
-- Monolithic mode (old): ~104,000 tokens
+- **Meta-tools mode (v2.2)**: ~2,000 tokens (97% reduction) ← **Current!**
+- Router mode (v2.1): ~6,000 tokens (94% reduction)
+- HTTP mode (legacy): ~5,000 tokens
+- Monolithic mode (v2.0): ~104,000 tokens
 
 **📘 [Production Guide](./MCP_PRODUCTION_GUIDE.md)** - Complete reference for MCP tool usage
 

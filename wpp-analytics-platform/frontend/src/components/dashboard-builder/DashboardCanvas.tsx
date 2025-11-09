@@ -53,12 +53,14 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
     bringToFront,
     sendToBack,
     moveGroup,
+    duplicateComponent,
   } = useDashboardStore();
 
   const currentPage = useCurrentPage();
 
   // Track active component for alignment guides
-  const [activeCanvasComponent, setActiveCanvasComponent] = useState<CanvasComponentType | null>(null);
+  // Track active components for alignment guides (supports multi-select)
+  const [activeCanvasComponents, setActiveCanvasComponents] = useState<CanvasComponentType[]>([]);
 
   const canvasRef = useRef<HTMLDivElement>(null);
   const selectoRef = useRef<Selecto>(null);
@@ -124,7 +126,7 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
 
   const handlePositionChange = (id: string, x: number, y: number) => {
     moveComponentAbsolute(id, x, y);
-    setActiveCanvasComponent(null); // Clear guides after drag
+    setActiveCanvasComponents([]); // Clear guides after drag
   };
 
   const handleSizeChange = (
@@ -139,20 +141,27 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
     // Update active component for live guides during resize
     const updatedComp = canvasComponents.find(c => c.id === id);
     if (updatedComp) {
-      setActiveCanvasComponent({
+      setActiveCanvasComponents([{
         ...updatedComp,
         x,
         y,
         width,
         height,
-      });
+      }]);
     }
   };
 
   const handleDragStart = (id: string) => {
-    const comp = canvasComponents.find(c => c.id === id);
-    if (comp) {
-      setActiveCanvasComponent(comp);
+    // If multi-select, show guides for ALL selected components
+    if (selectedComponentIds.size > 1 && selectedComponentIds.has(id)) {
+      const activeComps = canvasComponents.filter(c => selectedComponentIds.has(c.id));
+      setActiveCanvasComponents(activeComps);
+    } else {
+      // Single component drag
+      const comp = canvasComponents.find(c => c.id === id);
+      if (comp) {
+        setActiveCanvasComponents([comp]);
+      }
     }
   };
 
@@ -169,8 +178,9 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
     if (canvasComp) {
       // Shift+click: Add/remove from selection
       const addToSelection = event?.shiftKey || false;
-      selectComponent(canvasComp.component.id, addToSelection);
-      onSelectComponent(canvasComp.component.id);
+      // FIX: Use canvas ID, not component ID (store expects canvas IDs)
+      selectComponent(canvasComp.id, addToSelection);
+      onSelectComponent(canvasComp.component.id); // Still notify with component ID for sidebar
     }
   };
 
@@ -191,8 +201,21 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
 
   const isEditing = viewMode === 'edit';
 
+  // Handle clicks on empty canvas to deselect all
+  const handleCanvasClick = (e: React.MouseEvent) => {
+    // Only deselect if clicking canvas background (not a component)
+    const target = e.target as HTMLElement;
+    const isCanvasBackground = target.hasAttribute('data-canvas') ||
+                                target.classList.contains('canvas-grid') ||
+                                target.closest('[data-canvas]') === target;
+
+    if (isCanvasBackground && selectedComponentIds.size > 0) {
+      deselectAll();
+    }
+  };
+
   return (
-    <div className="relative w-full h-full flex flex-col dashboard-canvas">
+    <div className="relative w-full h-full flex flex-col dashboard-canvas" onClick={handleCanvasClick}>
       {/* Canvas Container */}
       <CanvasContainer
         ref={canvasRef}
@@ -220,60 +243,39 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
             toggleContinueSelect={['shift']} // Shift key for multi-select
             keyContainer={window}
             onDragStart={(e) => {
-              console.log('🟦 [Selecto] onDragStart triggered');
-              console.log('  - Input event target:', e.inputEvent.target);
-              console.log('  - Target tagName:', (e.inputEvent.target as HTMLElement).tagName);
-              console.log('  - Target className:', (e.inputEvent.target as HTMLElement).className);
-
-              // CRITICAL: If clicking a component, stop Selecto and let react-rnd handle it!
+              // Only stop Selecto for interactive elements (buttons, inputs, etc)
               const target = e.inputEvent.target as HTMLElement;
-              const componentEl = target.closest('.canvas-component');
-              console.log('  - Closest .canvas-component:', componentEl);
+              const isInteractiveEl = target.closest('button, input, select, textarea, .settings-button, .lock-button, .remove-button, .dropdown-trigger');
 
-              if (componentEl) {
-                console.log('  - ❌ STOPPED - Let react-rnd handle drag');
-                e.stop(); // Let react-rnd handle the drag
+              if (isInteractiveEl) {
+                e.stop(); // Stop Selecto for interactive elements
                 return;
               }
-              console.log('  - ✅ PROCEEDING - Selecto will handle selection');
+
+              // For everything else (components, canvas), let click handlers work
+              // Don't stop propagation - allows onClick to fire for selection
             }}
             onSelectStart={(e) => {
               console.log('🟦 [Selecto] onSelectStart');
               console.log('  - Input event:', e.inputEvent.type);
 
               // Clear alignment guides when starting selection
-              setActiveCanvasComponent(null);
+              setActiveCanvasComponents([]);
             }}
             onSelect={(e) => {
-              console.log('🟦 [Selecto] onSelect event');
-              console.log('  - Selected DOM elements:', e.selected.length);
-              console.log('  - Added:', e.added.length);
-              console.log('  - Removed:', e.removed.length);
-
-              // Get canvas IDs from selected DOM elements
               const selectedCanvasIds: string[] = [];
 
-              e.selected.forEach((el, index) => {
+              e.selected.forEach((el) => {
                 const canvasId = el.getAttribute('data-canvas-id');
-                console.log(`  - Element ${index}:`, {
-                  tagName: el.tagName,
-                  className: el.className,
-                  dataCanvasId: canvasId,
-                  hasAttribute: el.hasAttribute('data-canvas-id')
-                });
 
                 if (canvasId) {
                   selectedCanvasIds.push(canvasId);
                 }
               });
 
-              console.log('  - Canvas IDs extracted:', selectedCanvasIds);
-              console.log('  - Calling selectMultiple with', selectedCanvasIds.length, 'IDs');
-
               if (selectedCanvasIds.length > 0) {
                 selectMultiple(selectedCanvasIds);
               } else if (e.selected.length === 0 && !e.inputEvent.shiftKey) {
-                console.log('  - No elements selected, calling deselectAll');
                 deselectAll();
               }
             }}
@@ -289,7 +291,7 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
         {/* Alignment Guides */}
         {isEditing && (
           <AlignmentGuides
-            activeComponent={activeCanvasComponent}
+            activeComponents={activeCanvasComponents}
             allComponents={canvasComponents}
             canvasWidth={pageCanvasWidth}
             tolerance={2}
@@ -299,15 +301,6 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
         {/* Render Canvas Components */}
         {canvasComponents.map((canvasComp) => {
           const isSelected = selectedComponentIds.has(canvasComp.id);
-          console.log(`🎨 [Render] Component ${canvasComp.component.title || canvasComp.id}:`, {
-            canvasId: canvasComp.id,
-            position: { x: canvasComp.x, y: canvasComp.y },
-            size: { w: canvasComp.width, h: canvasComp.height },
-            zIndex: canvasComp.zIndex || 0,
-            isSelected,
-            selectedIdsSize: selectedComponentIds.size,
-            allSelectedIds: Array.from(selectedComponentIds)
-          });
 
           return (
             <CanvasComponent
@@ -332,6 +325,7 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
               onSelect={handleSelect}
               onToggleLock={handleToggleLock}
               onBringToFront={bringToFront}
+              onDuplicate={duplicateComponent}
               onSendToBack={sendToBack}
               onDragStart={handleDragStart}
             />

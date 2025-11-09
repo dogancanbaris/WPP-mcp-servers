@@ -45,6 +45,8 @@ interface CanvasComponentProps {
   onToggleLock?: (id: string) => void;
   /** Callback when z-index changes */
   onBringToFront?: (id: string) => void;
+  /** Callback to duplicate the component */
+  onDuplicate?: (componentId: string) => void;
   onSendToBack?: (id: string) => void;
   /** Callback when drag starts (for alignment guides) */
   onDragStart?: (id: string) => void;
@@ -109,6 +111,20 @@ const CanvasComponentInner: React.FC<CanvasComponentProps> = ({
   onSendToBack,
   onDragStart,
 }) => {
+  const [contextMenuPosition, setContextMenuPosition] = React.useState<{ x: number; y: number } | null>(null);
+  const contextMenuRef = React.useRef<HTMLDivElement>(null);
+
+  const closeContextMenu = React.useCallback(() => {
+    setContextMenuPosition(null);
+  }, []);
+
+  const handleContextMenu = React.useCallback((event: React.MouseEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    onSelect(id, event);
+    setContextMenuPosition({ x: event.clientX, y: event.clientY });
+  }, [id, onSelect]);
+
   // Track initial position for group drag delta calculation
   const dragStartPos = React.useRef({ x: position.x, y: position.y });
   const isLocked = component.locked || false;
@@ -137,11 +153,13 @@ const CanvasComponentInner: React.FC<CanvasComponentProps> = ({
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      border: isSelected
-        ? '2px solid hsl(var(--primary))'
-        : isEditing
+      border: isEditing && !isSelected
         ? '1px dashed rgba(200, 200, 200, 0.3)' // Subtle dashed border in edit mode
-        : 'none', // No border in view mode
+        : 'none',
+      outline: isSelected
+        ? '2px solid hsl(var(--primary))' // Use outline for selection (no layout shift)
+        : 'none',
+      outlineOffset: '-2px', // Inside the component bounds
       borderRadius: '4px',
       backgroundColor: 'transparent', // Transparent - canvas background shows through
       boxShadow: isSelected
@@ -152,6 +170,66 @@ const CanvasComponentInner: React.FC<CanvasComponentProps> = ({
     }),
     [isSelected, isEditing]
   );
+  React.useEffect(() => {
+    const handleGlobalMouseDown = (event: MouseEvent) => {
+      if (!contextMenuPosition) return;
+      if (contextMenuRef.current && contextMenuRef.current.contains(event.target as Node)) {
+        return;
+      }
+      closeContextMenu();
+    };
+
+    window.addEventListener('mousedown', handleGlobalMouseDown);
+    return () => {
+      window.removeEventListener('mousedown', handleGlobalMouseDown);
+    };
+  }, [contextMenuPosition, closeContextMenu]);
+
+  const contextMenuTitle = component.title ? `${component.title} options` : 'Component options';
+
+  const contextMenuItems = React.useMemo(() => ([
+    {
+      label: isLocked ? 'Unlock component' : 'Lock component',
+      action: () => onToggleLock?.(component.id),
+      disabled: !onToggleLock
+    },
+    {
+      label: 'Duplicate component',
+      action: () => onDuplicate?.(component.id),
+      disabled: !onDuplicate
+    },
+    {
+      label: 'Bring to front',
+      action: () => onBringToFront?.(id),
+      disabled: !onBringToFront
+    },
+    {
+      label: 'Send to back',
+      action: () => onSendToBack?.(id),
+      disabled: !onSendToBack
+    },
+    {
+      label: 'Remove component',
+      action: () => onRemove(id),
+      disabled: false
+    }
+  ]), [
+    component.id,
+    id,
+    isLocked,
+    onBringToFront,
+    onDuplicate,
+    onRemove,
+    onSendToBack,
+    onToggleLock
+  ]);
+
+  const handleContextMenuAction = React.useCallback((action?: () => void) => {
+    if (action) {
+      action();
+    }
+    closeContextMenu();
+  }, [closeContextMenu]);
 
   const handleDragStart = useCallback(() => {
     // Store initial position for delta calculation
@@ -161,6 +239,20 @@ const CanvasComponentInner: React.FC<CanvasComponentProps> = ({
       onDragStart(id);
     }
   }, [id, position.x, position.y, onDragStart]);
+
+  // Live group drag - update all selected components in real-time during drag
+  const handleDrag = useCallback((_e: any, d: { x: number; y: number }) => {
+    // Check if this is part of a multi-select group
+    if (isMultiSelect && selectedComponentIds && selectedComponentIds.has(id) && selectedComponentIds.size > 1 && onGroupMove) {
+      // Calculate delta from start position
+      const deltaX = d.x - dragStartPos.current.x;
+      const deltaY = d.y - dragStartPos.current.y;
+
+      // Move entire group in real-time (throttled by react-rnd internally)
+      onGroupMove(selectedComponentIds, deltaX, deltaY);
+    }
+    // Single component drag handled automatically by Rnd position prop updates
+  }, [id, isMultiSelect, selectedComponentIds, onGroupMove]);
 
   const handleDragStop = useCallback((_e: any, d: { x: number; y: number }) => {
     console.log('🔄 [Drag] handleDragStop');
@@ -230,7 +322,9 @@ const CanvasComponentInner: React.FC<CanvasComponentProps> = ({
       size={{ width: position.width, height: position.height }}
       position={{ x: position.x, y: position.y }}
       onDragStart={handleDragStart}
+      onDrag={handleDrag} // Live group drag - moves all selected in real-time
       onDragStop={handleDragStop}
+      onContextMenu={handleContextMenu}
       onResize={handleResize} // Live resize preview
       onResizeStop={handleResizeStop}
       bounds="parent"
@@ -259,10 +353,11 @@ const CanvasComponentInner: React.FC<CanvasComponentProps> = ({
         right: { cursor: 'ew-resize', zIndex: 100 },
         bottom: { cursor: 'ns-resize', zIndex: 100 },
         left: { cursor: 'ew-resize', zIndex: 100 },
-        topRight: { cursor: 'nesw-resize', zIndex: 100 },
-        topLeft: { cursor: 'nwse-resize', zIndex: 100 },
-        bottomRight: { cursor: 'nwse-resize', zIndex: 100 },
-        bottomLeft: { cursor: 'nesw-resize', zIndex: 100 },
+        // FIX: Position corner handles exactly on corner intersections
+        topRight: { cursor: 'nesw-resize', zIndex: 100, right: '-5px', top: '-5px' },
+        topLeft: { cursor: 'nwse-resize', zIndex: 100, left: '-5px', top: '-5px' },
+        bottomRight: { cursor: 'nwse-resize', zIndex: 100, right: '-5px', bottom: '-5px' },
+        bottomLeft: { cursor: 'nesw-resize', zIndex: 100, left: '-5px', bottom: '-5px' },
       }}
       resizeHandleClasses={{
         top: 'resize-handle-edge',
@@ -469,6 +564,46 @@ const CanvasComponentInner: React.FC<CanvasComponentProps> = ({
       {isMultiSelect && isSelected && selectedComponentIds && selectedComponentIds.size > 1 && (
         <div className="absolute top-2 left-2 px-2 py-1 rounded bg-blue-500 text-white text-xs font-medium shadow-md">
           {selectedComponentIds.size} selected
+        </div>
+      )}
+      {contextMenuPosition && (
+        <div
+          ref={contextMenuRef}
+          role="menu"
+          aria-label={`${contextMenuTitle}`}
+          className="bg-white dark:bg-gray-900"
+          style={{
+            position: 'fixed',
+            top: contextMenuPosition.y,
+            left: contextMenuPosition.x,
+            padding: 0,
+            border: '1px solid rgba(148, 163, 184, 0.4)',
+            borderRadius: '12px',
+            boxShadow: '0 15px 35px rgba(15, 23, 42, 0.25)',
+            minWidth: '200px',
+            zIndex: 9999,
+            overflow: 'hidden'
+          }}
+        >
+          <div className="px-3 py-2 text-xs font-medium uppercase tracking-widest text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-gray-800">
+            {contextMenuTitle}
+          </div>
+          {contextMenuItems.map((item) => (
+            <button
+              type="button"
+              key={item.label}
+              onClick={() => handleContextMenuAction(item.action)}
+              disabled={item.disabled}
+              className={cn(
+                'w-full text-left px-4 py-2 text-sm transition-colors',
+                item.disabled
+                  ? 'text-gray-400 cursor-not-allowed bg-transparent'
+                  : 'text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800'
+              )}
+            >
+              {item.label}
+            </button>
+          ))}
         </div>
       )}
     </Rnd>

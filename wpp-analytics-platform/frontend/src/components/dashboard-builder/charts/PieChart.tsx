@@ -46,8 +46,9 @@ function calculateDynamicGrid(
     ? Math.min(Math.max(50, width * 0.08), width * 0.15)
     : Math.min(Math.max(30, width * 0.05), width * 0.10);
   const topPx = Math.min(Math.max(30, height * 0.08), height * 0.12);
+  // FIX: Increase bottom padding for legends (more space for scrollable legend)
   const bottomPx = showLegend
-    ? Math.min(Math.max(60, height * 0.15), height * 0.25)
+    ? Math.min(Math.max(80, height * 0.20), height * 0.30) // Increased from 60/0.15
     : Math.min(Math.max(30, height * 0.08), height * 0.12);
 
   return {
@@ -222,7 +223,8 @@ export const PieChart: React.FC<PieChartProps> = (props) => {
       show: showLegend,
       type: 'scroll',  // Enable scrolling for many items
       orient: 'horizontal',
-      bottom: 0,
+      bottom: 10, // FIX: Space from bottom edge (was 0)
+      height: 60, // FIX: Explicit height for scroll area
       formatter: (name: string) => formatChartLabel(name),
       textStyle: {
         color: '#374151',  // Darker for better readability
@@ -239,7 +241,7 @@ export const PieChart: React.FC<PieChartProps> = (props) => {
       {
         type: 'pie',
         radius: typeof pieRadius === 'string' ? pieRadius : pieRadius[1],
-        center: ['30%', '50%'],
+        center: ['30%', showLegend ? '42%' : '50%'], // FIX: Move up when legend at bottom
         data: pieData,
         label: {
           show: showLabel,
@@ -260,7 +262,7 @@ export const PieChart: React.FC<PieChartProps> = (props) => {
       {
         type: 'pie',
         radius: typeof pieRadius === 'string' ? pieRadius : pieRadius[1],
-        center: ['70%', '50%'],
+        center: ['70%', showLegend ? '42%' : '50%'], // FIX: Move up when legend at bottom
         data: comparisonPieData,
         label: {
           show: showLabel,
@@ -282,7 +284,7 @@ export const PieChart: React.FC<PieChartProps> = (props) => {
       {
         type: 'pie',
         radius: pieRadius,
-        center: pieCenter,
+        center: showLegend ? ['50%', '42%'] : pieCenter, // FIX: Move pie up when legend at bottom
         data: pieData,
         label: {
           show: showLabel,

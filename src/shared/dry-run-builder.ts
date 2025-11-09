@@ -23,9 +23,8 @@ import { randomBytes } from 'crypto';
  * ```
  */
 export class DryRunBuilder {
-    // @ts-expect-error - operation extracted for this.operation assignment
   private title: string;
-  private operation: string;
+  private operation: string; // Used for documentation, kept for future use
   private changes: string[] = [];
   private risks: string[] = [];
   private recommendations: string[] = [];
@@ -39,8 +38,9 @@ export class DryRunBuilder {
    */
   constructor(title: string, operation: string) {
     this.title = title;
-    this.operation = operation;
+    this.operation = operation; // Reserved for future enhancement
     this.confirmationToken = this.generateConfirmationToken();
+    void this.operation; // Suppress unused warning
   }
 
   /**

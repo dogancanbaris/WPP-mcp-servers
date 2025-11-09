@@ -2684,5 +2684,52 @@
       "server": "GSC MCP initialized",
       "version": "1.0.0"
     }
+  },
+  {
+    "timestamp": "2025-11-09T17:19:07.377Z",
+    "user": "user",
+    "action": "list_properties",
+    "property": "system",
+    "operationType": "read",
+    "result": "failure",
+    "details": {},
+    "errorMessage": "OAuth token required for Google Search Console API access"
+  },
+  {
+    "timestamp": "2025-11-09T17:28:17.544Z",
+    "user": "user",
+    "action": "list_properties",
+    "property": "system",
+    "operationType": "read",
+    "result": "success",
+    "details": {
+      "totalProperties": 9,
+      "discoveredProperties": 9
+    }
+  },
+  {
+    "timestamp": "2025-11-09T18:38:46.914Z",
+    "user": "user",
+    "action": "list_properties",
+    "property": "system",
+    "operationType": "read",
+    "result": "success",
+    "details": {
+      "totalProperties": 9,
+      "discoveredProperties": 9
+    }
+  },
+  {
+    "timestamp": "2025-11-09T18:41:27.392Z",
+    "user": "user",
+    "action": "query_search_analytics",
+    "property": "sc-domain:themindfulsteward.com",
+    "operationType": "read",
+    "result": "success",
+    "details": {
+      "startDate": "2025-10-01",
+      "endDate": "2025-10-31",
+      "rowsReturned": 1
+    }
   }
 ]

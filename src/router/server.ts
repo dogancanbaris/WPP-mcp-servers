@@ -24,6 +24,7 @@ import express from 'express';
 import { getLogger } from '../shared/logger.js';
 import { BackendRegistry } from './backend-registry.js';
 import { loadBackendConfigs, loadRouterConfig, validateBackendConfig } from './config.js';
+import { getMetaTools } from './meta-tools.js';
 
 const logger = getLogger('router.server');
 
@@ -90,35 +91,49 @@ async function initializeRouter() {
 
   logger.info('MCP Server created', { name: 'wpp-marketing-router' });
 
-  // Handle tools/list - return aggregated tools from all backends
+  // Get meta-tools (3 tools for discovery and execution)
+  const metaTools = getMetaTools(registry);
+
+  // Handle tools/list - return ONLY meta-tools (on-demand loading pattern)
   server.setRequestHandler(ListToolsRequestSchema, async (_request) => {
     logger.debug('Handling tools/list request');
 
-    const tools = registry.getAllTools();
+    // OLD APPROACH: Return all 98 tools (65K tokens)
+    // const tools = registry.getAllTools();
 
-    // Remove internal metadata and annotations (with verbose descriptions) before returning
-    const cleanTools = tools.map((tool) => {
-      const { _originalName, _backend, _prefix, annotations, ...cleanTool } = tool;
-      // Don't send annotations to client - keeps full descriptions out of context
-      return cleanTool;
-    });
+    // NEW APPROACH: Return only 3 meta-tools (~2K tokens)
+    // Real tools discovered via search_tools and loaded via get_tool_schema
+    const backendToolCount = registry.getAllTools().length;
 
-    logger.info(`Returning ${cleanTools.length} tools to client`, {
-      toolsByBackend: registry.getStats(startTime).toolsByBackend,
+    logger.info(`Returning ${metaTools.length} meta-tools to client (hiding ${backendToolCount} real tools for on-demand loading)`, {
+      metaTools: metaTools.map(t => t.name),
+      hiddenTools: backendToolCount
     });
 
     return {
-      tools: cleanTools,
+      tools: metaTools,
     };
   });
 
-  // Handle tools/call - route to appropriate backend
+  // Handle tools/call - route to meta-tools or backend tools
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name, arguments: args } = request.params;
 
     logger.info(`Handling tools/call request`, { toolName: name });
 
     try {
+      // Check if this is a meta-tool
+      const metaTool = metaTools.find(t => t.name === name);
+
+      if (metaTool) {
+        // Execute meta-tool directly
+        logger.debug(`Executing meta-tool: ${name}`);
+        const result = await metaTool.handler(args);
+        logger.info(`Meta-tool call successful`, { toolName: name });
+        return result;
+      }
+
+      // Otherwise, route to backend (for backward compatibility)
       const result = await registry.callTool(name, args);
 
       logger.info(`Tool call successful`, { toolName: name });

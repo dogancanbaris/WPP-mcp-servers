@@ -15,16 +15,35 @@
  * This backend is HTTP-only and designed to be called by the MCP router.
  */
 // Load environment variables FIRST
-import dotenv from 'dotenv';
-dotenv.config();
+import { config } from 'dotenv';
+config();
+// Add top-level error handler to catch import errors
+process.on('uncaughtException', (error) => {
+    console.error('UNCAUGHT EXCEPTION:', error);
+    console.error('Stack:', error.stack);
+    process.exit(1);
+});
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('UNHANDLED REJECTION at:', promise);
+    console.error('Reason:', reason);
+    process.exit(1);
+});
+console.log('Loading MCP SDK...');
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { ListToolsRequestSchema, CallToolRequestSchema, } from '@modelcontextprotocol/sdk/types.js';
+console.log('MCP SDK loaded successfully');
+console.log('Loading Express...');
 import express from 'express';
+console.log('Express loaded successfully');
+console.log('Loading logger...');
 import { getLogger } from '../../shared/logger.js';
-// Import all Google tools from existing structure
-import { allTools as gscTools } from '../../gsc/tools/index.js';
 const logger = getLogger('backend.google-marketing');
+console.log('Logger loaded successfully');
+// Import all Google tools from existing structure
+console.log('Loading tools from gsc/tools/index.js...');
+import { allTools as gscTools } from '../../gsc/tools/index.js';
+console.log(`Tools loaded successfully: ${gscTools.length} tools`);
 /**
  * Initialize Google Marketing MCP Server
  */

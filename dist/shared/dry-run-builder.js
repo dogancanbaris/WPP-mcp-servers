@@ -32,8 +32,9 @@ export class DryRunBuilder {
         this.risks = [];
         this.recommendations = [];
         this.title = title;
-        this.operation = operation;
+        this.operation = operation; // Reserved for future enhancement
         this.confirmationToken = this.generateConfirmationToken();
+        void this.operation; // Suppress unused warning
     }
     /**
      * Add a change to the preview
