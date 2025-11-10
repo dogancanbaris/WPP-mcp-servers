@@ -165,6 +165,19 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
     }
   };
 
+  const handleDragPreview = (id: string, preview: { x: number; y: number; width: number; height: number }) => {
+    const baseComponent = canvasComponents.find(c => c.id === id);
+    if (!baseComponent) return;
+
+    setActiveCanvasComponents([{
+      ...baseComponent,
+      x: preview.x,
+      y: preview.y,
+      width: preview.width,
+      height: preview.height,
+    }]);
+  };
+
   const handleRemove = (id: string) => {
     // Find component by canvas ID
     const canvasComp = canvasComponents.find((c) => c.id === id);
@@ -328,6 +341,7 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
               onDuplicate={duplicateComponent}
               onSendToBack={sendToBack}
               onDragStart={handleDragStart}
+              onDragPreview={handleDragPreview}
             />
           );
         })}

@@ -128,7 +128,7 @@ export const CHART_DEFAULTS: Record<string, ChartDefaults> = {
     sortDirection: 'DESC',
     limit: 100,
     showPagination: true,
-    pageSize: 10  // Default 10 rows per page
+    pageSize: 20  // Default 20 rows per page for professional tables
   },
 
   // ========================================

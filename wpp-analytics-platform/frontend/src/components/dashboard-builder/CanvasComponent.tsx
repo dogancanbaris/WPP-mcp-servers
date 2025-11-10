@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useMemo, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { Rnd } from 'react-rnd';
 import { cn } from '@/lib/utils';
 import { ChartWrapper } from './ChartWrapper';
@@ -50,6 +51,8 @@ interface CanvasComponentProps {
   onSendToBack?: (id: string) => void;
   /** Callback when drag starts (for alignment guides) */
   onDragStart?: (id: string) => void;
+  /** Callback fired during drag to preview live position */
+  onDragPreview?: (id: string, preview: { x: number; y: number; width: number; height: number }) => void;
 }
 
 /**
@@ -108,11 +111,18 @@ const CanvasComponentInner: React.FC<CanvasComponentProps> = ({
   onSelect,
   onToggleLock,
   onBringToFront,
+  onDuplicate,
   onSendToBack,
   onDragStart,
+  onDragPreview,
 }) => {
   const [contextMenuPosition, setContextMenuPosition] = React.useState<{ x: number; y: number } | null>(null);
   const contextMenuRef = React.useRef<HTMLDivElement>(null);
+  const [isMounted, setIsMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const closeContextMenu = React.useCallback(() => {
     setContextMenuPosition(null);
@@ -250,9 +260,16 @@ const CanvasComponentInner: React.FC<CanvasComponentProps> = ({
 
       // Move entire group in real-time (throttled by react-rnd internally)
       onGroupMove(selectedComponentIds, deltaX, deltaY);
+    } else if (onDragPreview) {
+      onDragPreview(id, {
+        x: d.x,
+        y: d.y,
+        width: position.width,
+        height: position.height
+      });
     }
     // Single component drag handled automatically by Rnd position prop updates
-  }, [id, isMultiSelect, selectedComponentIds, onGroupMove]);
+  }, [id, isMultiSelect, selectedComponentIds, onGroupMove, onDragPreview, position.height, position.width]);
 
   const handleDragStop = useCallback((_e: any, d: { x: number; y: number }) => {
     console.log('🔄 [Drag] handleDragStop');
@@ -566,11 +583,11 @@ const CanvasComponentInner: React.FC<CanvasComponentProps> = ({
           {selectedComponentIds.size} selected
         </div>
       )}
-      {contextMenuPosition && (
+      {contextMenuPosition && isMounted && createPortal(
         <div
           ref={contextMenuRef}
           role="menu"
-          aria-label={`${contextMenuTitle}`}
+          aria-label={contextMenuTitle}
           className="bg-white dark:bg-gray-900"
           style={{
             position: 'fixed',
@@ -580,7 +597,9 @@ const CanvasComponentInner: React.FC<CanvasComponentProps> = ({
             border: '1px solid rgba(148, 163, 184, 0.4)',
             borderRadius: '12px',
             boxShadow: '0 15px 35px rgba(15, 23, 42, 0.25)',
-            minWidth: '200px',
+            minWidth: '0px',
+            width: 'max-content',
+            maxWidth: '220px',
             zIndex: 9999,
             overflow: 'hidden'
           }}
@@ -595,7 +614,7 @@ const CanvasComponentInner: React.FC<CanvasComponentProps> = ({
               onClick={() => handleContextMenuAction(item.action)}
               disabled={item.disabled}
               className={cn(
-                'w-full text-left px-4 py-2 text-sm transition-colors',
+                'w-full text-left px-4 py-2 text-sm transition-colors whitespace-normal',
                 item.disabled
                   ? 'text-gray-400 cursor-not-allowed bg-transparent'
                   : 'text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800'
@@ -604,7 +623,8 @@ const CanvasComponentInner: React.FC<CanvasComponentProps> = ({
               {item.label}
             </button>
           ))}
-        </div>
+        </div>,
+        document.body
       )}
     </Rnd>
   );

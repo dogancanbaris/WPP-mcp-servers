@@ -1,3 +1,5 @@
+import { formatChartLabel } from '@/lib/utils/label-formatter';
+
 /**
  * Data Formatting Utilities
  *
@@ -118,4 +120,36 @@ export function standardizeDataRows(
     ...row,
     [dimensionField]: standardizeDimensionValue(row[dimensionField], dimensionField)
   }));
+}
+
+const CASE_SENSITIVE_DIMENSIONS = [
+  'page',
+  'page_path',
+  'landing_page',
+  'final_url',
+  'destination_url',
+  'url',
+  'full_url',
+  'link',
+  'path',
+  'query',
+  'search_query',
+  'keyword',
+  'keyword_text'
+];
+
+export function shouldPreserveDimensionCase(dimensionType?: string | null): boolean {
+  if (!dimensionType) return false;
+  const lower = dimensionType.toLowerCase();
+  return CASE_SENSITIVE_DIMENSIONS.some((key) => lower.includes(key));
+}
+
+export function formatDimensionLabel(
+  value: string | number | null | undefined,
+  dimensionType?: string | null,
+  options?: { maxLength?: number }
+): string {
+  const standardized = standardizeDimensionValue(value, dimensionType || '');
+  const preserveCase = shouldPreserveDimensionCase(dimensionType);
+  return formatChartLabel(standardized, options?.maxLength, { preserveCase });
 }

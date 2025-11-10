@@ -20,7 +20,12 @@
  * - "totalRevenue" → "Total Revenue"
  * - "meditation tools for beginners" → "Meditation Tools For..."
  */
-export function formatChartLabel(label: string, maxLength?: number): string {
+interface FormatLabelOptions {
+  preserveCase?: boolean;
+  detectWebLike?: boolean;
+}
+
+export function formatChartLabel(label: string, maxLength?: number, options?: FormatLabelOptions): string {
   if (!label) return '';
 
   // Known acronyms - keep uppercase
@@ -31,6 +36,28 @@ export function formatChartLabel(label: string, maxLength?: number): string {
   ];
 
   const lowerLabel = label.toLowerCase();
+
+  if (options?.preserveCase) {
+    if (maxLength && label.length > maxLength) {
+      return label.substring(0, maxLength - 3) + '...';
+    }
+    return label;
+  }
+
+  const shouldDetectWebLike = options?.detectWebLike !== false;
+  if (shouldDetectWebLike) {
+    const hasUrlMarkers =
+      lowerLabel.startsWith('http://') ||
+      lowerLabel.startsWith('https://') ||
+      lowerLabel.startsWith('www.');
+    const hasDomainPattern = /\.[a-z]{2,}(\/|$)/i.test(label);
+    if (hasUrlMarkers || hasDomainPattern) {
+      if (maxLength && label.length > maxLength) {
+        return label.substring(0, maxLength - 3) + '...';
+      }
+      return label;
+    }
+  }
 
   // Check if entire label is an acronym
   if (acronyms.includes(lowerLabel)) {

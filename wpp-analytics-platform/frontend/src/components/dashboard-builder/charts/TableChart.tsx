@@ -12,7 +12,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Loader2, ChevronUp, ChevronDown, ChevronsUpDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { ComponentConfig } from '@/types/dashboard-builder';
 import { formatMetricValue } from '@/lib/utils/metric-formatter';
-import { standardizeDimensionValue } from '@/lib/utils/data-formatter';
+import { formatDimensionLabel } from '@/lib/utils/data-formatter';
 import { formatColumnHeader, formatChartLabel } from '@/lib/utils/label-formatter';
 import { useState, useMemo, useEffect } from 'react';
 import { useCascadedFilters } from '@/hooks/useCascadedFilters';
@@ -28,6 +28,8 @@ export interface TableChartProps extends Partial<ComponentConfig> {
    * Can be overridden per component
    */
   rowsPerPage?: number;
+  containerSize?: { width: number; height: number };
+  pageSizeOptions?: number[];
 }
 
 type SortDirection = 'asc' | 'desc' | null;
@@ -71,14 +73,18 @@ export const TableChart: React.FC<TableChartProps> = (props) => {
     tableBodyStyle = {
       evenRowColor: '#ffffff',
       oddRowColor: '#f9fafb'
-    }
+    },
+    containerSize
   } = props;
 
   // Apply professional defaults
   const defaults = getChartDefaults('table');
-  // Support both rowsPerPage (new) and pageSize (legacy) prop names
-  const pageSize = props.rowsPerPage || props.pageSize || defaults.pageSize || 10;
-  const showPagination = props.showPagination !== false; // Default true
+  const defaultPageSize = props.rowsPerPage ?? props.pageSize ?? defaults.pageSize ?? 20;
+  const queryLimit = props.limit ?? defaults.limit ?? 500; // Fetch all rows once, paginate client-side
+  const showPagination = props.showPagination !== false; // Default true (pagination always visible unless explicitly disabled)
+  const pageSizeOptions = props.pageSizeOptions || [10, 20, 50, 100, 500];
+
+  const [pageSize, setPageSize] = useState(defaultPageSize);
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(0);
@@ -101,7 +107,7 @@ export const TableChart: React.FC<TableChartProps> = (props) => {
 
   // Fetch from dataset API with backend sorting and pagination
   const { data, isLoading, error } = useQuery({
-    queryKey: ['table', dataset_id, dimension, metrics, cascadedFilters, sortConfig, currentPage, pageSize],
+    queryKey: ['table', dataset_id, dimension, metrics, cascadedFilters, sortConfig, queryLimit],
     queryFn: async () => {
       const params = new URLSearchParams({
         ...(dimension && { dimensions: dimension }),
@@ -109,8 +115,8 @@ export const TableChart: React.FC<TableChartProps> = (props) => {
         ...(cascadedFilters.length > 0 && { filters: JSON.stringify(cascadedFilters) }),
         sortBy: sortConfig.column,
         sortDirection: sortConfig.direction,
-        limit: pageSize.toString(),
-        offset: (currentPage * pageSize).toString(),
+        limit: queryLimit.toString(),
+        offset: '0',
         includeTotalCount: 'true',
         chartType: 'table'
       });
@@ -173,18 +179,40 @@ export const TableChart: React.FC<TableChartProps> = (props) => {
     setCurrentPage(0);
   }, [cascadedFilters]);
 
-  // Pagination calculations
-  const totalCount = data?.metadata?.totalCount || 0;
-  const totalPages = totalCount > 0 ? Math.ceil(totalCount / pageSize) : 0;
-  const startRow = currentPage * pageSize + 1;
-  const endRow = Math.min((currentPage + 1) * pageSize, totalCount);
+  useEffect(() => {
+    setCurrentPage(0);
+  }, [pageSize]);
+
+  // Pagination calculations (client-side)
+  const totalCount = data?.metadata?.totalCount ?? sortedData.length;
+  const totalPages = totalCount > 0 ? Math.max(1, Math.ceil(totalCount / pageSize)) : 1;
+  const safePage = Math.max(0, Math.min(currentPage, totalPages - 1));
+
+  useEffect(() => {
+    if (currentPage !== safePage) {
+      setCurrentPage(safePage);
+    }
+  }, [safePage, currentPage]);
+
+  const startRow = totalCount === 0 ? 0 : safePage * pageSize + 1;
+  const endRow = totalCount === 0 ? 0 : Math.min((safePage + 1) * pageSize, totalCount);
+  const paginatedRows = sortedData.slice(safePage * pageSize, safePage * pageSize + pageSize);
+
+  const handlePageSizeChange = (value: number) => {
+    setPageSize(value);
+    setCurrentPage(0);
+  };
 
   const containerStyle: React.CSSProperties = {
     backgroundColor,
     border: showBorder ? `${borderWidth}px solid ${borderColor}` : 'none',
     borderRadius: `${borderRadius}px`,
     padding: `${padding}px`,
-    boxShadow: showBorder ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+    boxSizing: 'border-box',
+    boxShadow: showBorder ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+    display: 'flex',
+    flexDirection: 'column',
+    height: containerSize?.height ? `${containerSize.height}px` : 'auto'
   };
 
   const titleStyle: React.CSSProperties = {
@@ -199,7 +227,7 @@ export const TableChart: React.FC<TableChartProps> = (props) => {
 
   if (isLoading) {
     return (
-      <div style={containerStyle} className="flex items-center justify-center min-h-[300px]">
+      <div style={containerStyle} className="flex h-full items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
       </div>
     );
@@ -207,7 +235,7 @@ export const TableChart: React.FC<TableChartProps> = (props) => {
 
   if (error) {
     return (
-      <div style={containerStyle} className="flex flex-col items-center justify-center min-h-[300px] gap-2">
+      <div style={containerStyle} className="flex h-full flex-col items-center justify-center gap-2">
         <p className="text-sm text-red-600">Failed to load table data</p>
         <p className="text-xs text-muted-foreground">{error.message}</p>
       </div>
@@ -216,7 +244,7 @@ export const TableChart: React.FC<TableChartProps> = (props) => {
 
   if (sortedData.length === 0) {
     return (
-      <div style={containerStyle} className="flex items-center justify-center min-h-[300px]">
+      <div style={containerStyle} className="flex h-full items-center justify-center">
         <p className="text-sm text-muted-foreground">No data available</p>
       </div>
     );
@@ -257,10 +285,10 @@ export const TableChart: React.FC<TableChartProps> = (props) => {
   const columns = buildColumns();
 
   return (
-    <div style={containerStyle}>
+    <div style={containerStyle} className="flex h-full flex-col">
       {showTitle && <div style={titleStyle}>{title}</div>}
 
-      <div className="overflow-auto max-h-[500px]">
+      <div className="flex-1 overflow-auto">
         <table className="w-full border-collapse">
           <thead style={{ backgroundColor: tableHeaderStyle.backgroundColor }}>
             <tr>
@@ -290,9 +318,9 @@ export const TableChart: React.FC<TableChartProps> = (props) => {
             </tr>
           </thead>
           <tbody>
-            {sortedData.map((row: any, index: number) => (
+            {paginatedRows.map((row: any, index: number) => (
               <tr
-                key={index}
+                key={index + safePage * pageSize}
                 style={{
                   backgroundColor: index % 2 === 0 ? tableBodyStyle.evenRowColor : tableBodyStyle.oddRowColor
                 }}
@@ -303,7 +331,7 @@ export const TableChart: React.FC<TableChartProps> = (props) => {
                     {col.isDimension ? (
                       // Dimension value
                       <span title={row[col.key]}>
-                        {formatChartLabel(standardizeDimensionValue(row[col.key], dimension || ''))}
+                        {formatDimensionLabel(row[col.key], col.key)}
                       </span>
                     ) : col.isChange ? (
                       // Change badge
@@ -326,42 +354,61 @@ export const TableChart: React.FC<TableChartProps> = (props) => {
       </div>
 
       {/* Pagination Controls */}
-      {showPagination && totalCount > 0 && (
-        <div className="flex items-center justify-between px-4 py-3 border-t-2 border-gray-200 bg-gray-50">
-          <div className="text-sm font-medium text-gray-700">
-            Showing <span className="font-semibold text-gray-900">{startRow.toLocaleString()}-{endRow.toLocaleString()}</span> of{' '}
-            <span className="font-semibold text-gray-900">{totalCount.toLocaleString()}</span> rows
+      {showPagination && (
+        <div className="flex shrink-0 flex-wrap items-center justify-end gap-4 px-4 py-3 border-t-2 border-gray-200 bg-gray-50">
+          <div className="flex items-center gap-2 text-sm text-gray-700">
+            <label htmlFor={`page-size-${componentId}`} className="font-medium">
+              Rows per page
+            </label>
+            <select
+              id={`page-size-${componentId}`}
+              className="h-9 rounded-md border border-gray-300 bg-white px-2 text-sm font-semibold text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
+              value={pageSize}
+              onChange={(e) => handlePageSizeChange(Number(e.target.value))}
+            >
+              {pageSizeOptions.map((size) => (
+                <option key={size} value={size}>
+                  {size}
+                </option>
+              ))}
+            </select>
           </div>
-          {totalPages > 1 && (
-            <div className="flex items-center gap-3">
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-1 font-medium"
-                disabled={currentPage === 0}
-                onClick={() => setCurrentPage(p => Math.max(0, p - 1))}
-                title="Go to previous page"
-              >
-                <ChevronLeft className="w-4 h-4" />
-                Previous
-              </Button>
-              <span className="text-sm font-medium text-gray-700 px-2 min-w-[80px] text-center">
-                Page <span className="font-semibold text-gray-900">{currentPage + 1}</span> of{' '}
-                <span className="font-semibold text-gray-900">{totalPages}</span>
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-1 font-medium"
-                disabled={currentPage >= totalPages - 1 || !data?.metadata?.hasMore}
-                onClick={() => setCurrentPage(p => p + 1)}
-                title="Go to next page"
-              >
-                Next
-                <ChevronRight className="w-4 h-4" />
-              </Button>
-            </div>
-          )}
+          <span className="text-sm font-medium text-gray-700">
+            Rows{' '}
+            <span className="font-semibold text-gray-900">
+              {startRow.toLocaleString()}-{endRow.toLocaleString()}
+            </span>{' '}
+            of{' '}
+            <span className="font-semibold text-gray-900">{totalCount.toLocaleString()}</span>
+          </span>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1 font-medium"
+              disabled={safePage === 0}
+              onClick={() => setCurrentPage(p => Math.max(0, p - 1))}
+              title="Go to previous page"
+            >
+              <ChevronLeft className="w-4 h-4" />
+              Previous
+            </Button>
+            <span className="text-sm font-medium text-gray-700 px-2 min-w-[80px] text-center">
+              Page <span className="font-semibold text-gray-900">{safePage + 1}</span> of{' '}
+              <span className="font-semibold text-gray-900">{totalPages}</span>
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1 font-medium"
+              disabled={safePage >= totalPages - 1 || totalCount === 0}
+              onClick={() => setCurrentPage(p => Math.min(totalPages - 1, p + 1))}
+              title="Go to next page"
+            >
+              Next
+              <ChevronRight className="w-4 h-4" />
+            </Button>
+          </div>
         </div>
       )}
     </div>

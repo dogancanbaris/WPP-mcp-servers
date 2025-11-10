@@ -1,3 +1,5 @@
+ 'use client';
+
 import React from 'react';
 import { ComponentConfig } from '@/types/dashboard-builder';
 
