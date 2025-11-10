@@ -90,6 +90,32 @@ export const createAdGroupTool = {
                 enum: ['PAUSED', 'ENABLED'],
                 description: 'Initial status (default: PAUSED - recommended)',
             },
+            // NEW Phase 1: Essential parameters
+            type: {
+                type: 'string',
+                enum: ['SEARCH_STANDARD', 'SEARCH_DYNAMIC_ADS', 'DISPLAY_STANDARD', 'SHOPPING_PRODUCT_ADS', 'VIDEO_TRUE_VIEW_IN_STREAM', 'HOTEL_ADS'],
+                description: 'Ad group type (auto-detected from campaign if not provided)',
+            },
+            trackingUrlTemplate: {
+                type: 'string',
+                description: 'Tracking URL template with {lpurl} placeholder for analytics integration (optional)',
+            },
+            urlCustomParameters: {
+                type: 'array',
+                items: {
+                    type: 'object',
+                    properties: {
+                        key: { type: 'string' },
+                        value: { type: 'string' },
+                    },
+                },
+                description: 'Custom URL parameters for tracking (optional, e.g., [{key: "_source", value: "google_ads"}])',
+            },
+            adRotationMode: {
+                type: 'string',
+                enum: ['OPTIMIZE', 'ROTATE_INDEFINITELY', 'OPTIMIZE_FOR_CONVERSIONS'],
+                description: 'How to rotate ads within the ad group (default: OPTIMIZE)',
+            },
             confirmationToken: {
                 type: 'string',
                 description: 'Confirmation token from dry-run preview (optional - if not provided, will show preview)',
@@ -99,7 +125,7 @@ export const createAdGroupTool = {
     },
     async handler(input) {
         try {
-            const { customerId, campaignId, name, cpcBidMicros, status, confirmationToken } = input;
+            const { customerId, campaignId, name, cpcBidMicros, status, type, trackingUrlTemplate, urlCustomParameters, adRotationMode, confirmationToken } = input;
             // Extract OAuth tokens from request
             const refreshToken = extractRefreshToken(input);
             if (!refreshToken) {
@@ -273,7 +299,50 @@ Would you like to set a CPC bid? (Optional - leave empty to skip)`;
                     newValue: `${cpcAmount} per click`,
                     changeType: 'create',
                 });
-                // CPC bid information shown in changes above
+            }
+            // NEW Phase 1: Add type if provided
+            if (type) {
+                dryRunBuilder.addChange({
+                    resource: 'Ad Group',
+                    resourceId: 'new',
+                    field: 'type',
+                    currentValue: 'N/A',
+                    newValue: type,
+                    changeType: 'create',
+                });
+            }
+            // NEW Phase 1: Add tracking template if provided
+            if (trackingUrlTemplate) {
+                dryRunBuilder.addChange({
+                    resource: 'Ad Group',
+                    resourceId: 'new',
+                    field: 'tracking_url_template',
+                    currentValue: 'N/A',
+                    newValue: trackingUrlTemplate,
+                    changeType: 'create',
+                });
+            }
+            // NEW Phase 1: Add custom parameters if provided
+            if (urlCustomParameters && urlCustomParameters.length > 0) {
+                dryRunBuilder.addChange({
+                    resource: 'Ad Group',
+                    resourceId: 'new',
+                    field: 'url_custom_parameters',
+                    currentValue: 'N/A',
+                    newValue: urlCustomParameters.map((p) => `${p.key}=${p.value}`).join(', '),
+                    changeType: 'create',
+                });
+            }
+            // NEW Phase 1: Add ad rotation mode if provided
+            if (adRotationMode) {
+                dryRunBuilder.addChange({
+                    resource: 'Ad Group',
+                    resourceId: 'new',
+                    field: 'ad_rotation_mode',
+                    currentValue: 'N/A',
+                    newValue: adRotationMode,
+                    changeType: 'create',
+                });
             }
             // Add recommendations
             if (status === 'ENABLED') {
@@ -286,7 +355,7 @@ Would you like to set a CPC bid? (Optional - leave empty to skip)`;
             const dryRun = dryRunBuilder.build();
             // If no confirmation token, return preview
             if (!confirmationToken) {
-                const { confirmationToken: token } = await approvalEnforcer.createDryRun('create_ad_group', 'Google Ads', customerId, { campaignId, name, cpcBidMicros, status });
+                const { confirmationToken: token } = await approvalEnforcer.createDryRun('create_ad_group', 'Google Ads', customerId, { campaignId, name, cpcBidMicros, status, type, trackingUrlTemplate, urlCustomParameters, adRotationMode });
                 const preview = approvalEnforcer.formatDryRunForDisplay(dryRun);
                 return {
                     success: true,
@@ -305,8 +374,28 @@ Would you like to set a CPC bid? (Optional - leave empty to skip)`;
                     campaign: `customers/${customerId}/campaigns/${campaignId}`,
                     status: status || 'PAUSED',
                 };
+                // CPC bid (optional)
                 if (cpcBidMicros) {
                     adGroupOperation.cpc_bid_micros = cpcBidMicros;
+                }
+                // NEW Phase 1: Ad group type (optional - defaults to campaign type)
+                if (type) {
+                    adGroupOperation.type = type;
+                }
+                // NEW Phase 1: Tracking URL template (optional)
+                if (trackingUrlTemplate) {
+                    adGroupOperation.tracking_url_template = trackingUrlTemplate;
+                }
+                // NEW Phase 1: Custom URL parameters (optional)
+                if (urlCustomParameters && urlCustomParameters.length > 0) {
+                    adGroupOperation.url_custom_parameters = urlCustomParameters.map((param) => ({
+                        key: param.key,
+                        value: param.value,
+                    }));
+                }
+                // NEW Phase 1: Ad rotation mode (optional)
+                if (adRotationMode) {
+                    adGroupOperation.ad_rotation_mode = adRotationMode;
                 }
                 const createResult = await customer.adGroups.create([adGroupOperation]);
                 return createResult;
@@ -318,6 +407,10 @@ Would you like to set a CPC bid? (Optional - leave empty to skip)`;
                 campaignId,
                 cpcBidMicros,
                 initialStatus: status || 'PAUSED',
+                type,
+                trackingUrlTemplate,
+                urlCustomParameters,
+                adRotationMode,
             });
             return {
                 success: true,

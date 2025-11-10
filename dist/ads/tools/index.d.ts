@@ -508,6 +508,35 @@ export declare const googleAdsTools: ({
                 enum: string[];
                 description: string;
             };
+            type: {
+                type: string;
+                enum: string[];
+                description: string;
+            };
+            trackingUrlTemplate: {
+                type: string;
+                description: string;
+            };
+            urlCustomParameters: {
+                type: string;
+                items: {
+                    type: string;
+                    properties: {
+                        key: {
+                            type: string;
+                        };
+                        value: {
+                            type: string;
+                        };
+                    };
+                };
+                description: string;
+            };
+            adRotationMode: {
+                type: string;
+                enum: string[];
+                description: string;
+            };
             confirmationToken: {
                 type: string;
                 description: string;
@@ -1253,6 +1282,35 @@ export declare const writeAdsTools: ({
                 description: string;
             };
             status: {
+                type: string;
+                enum: string[];
+                description: string;
+            };
+            type: {
+                type: string;
+                enum: string[];
+                description: string;
+            };
+            trackingUrlTemplate: {
+                type: string;
+                description: string;
+            };
+            urlCustomParameters: {
+                type: string;
+                items: {
+                    type: string;
+                    properties: {
+                        key: {
+                            type: string;
+                        };
+                        value: {
+                            type: string;
+                        };
+                    };
+                };
+                description: string;
+            };
+            adRotationMode: {
                 type: string;
                 enum: string[];
                 description: string;
