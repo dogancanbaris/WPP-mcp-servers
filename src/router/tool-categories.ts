@@ -62,7 +62,7 @@ export const toolCategories: Record<string, ToolCategory> = {
   },
 
   // ============================================================================
-  // GOOGLE ADS (60 tools)
+  // GOOGLE ADS (59 tools)
   // ============================================================================
 
   'ads.accounts': {
@@ -70,7 +70,8 @@ export const toolCategories: Record<string, ToolCategory> = {
     description: 'Account access and management',
     platform: 'Google Ads',
     tools: [
-      'list_accessible_accounts'
+      'list_accessible_accounts',
+      'get_account_info'
     ]
   },
 

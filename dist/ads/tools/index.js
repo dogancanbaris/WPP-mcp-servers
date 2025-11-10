@@ -2,7 +2,7 @@
  * Export all Google Ads MCP tools
  */
 // Account management
-export { listAccessibleAccountsTool } from './accounts.js';
+export { listAccessibleAccountsTool, getAccountInfoTool } from './accounts.js';
 // Performance reporting
 export { listCampaignsTool, getCampaignPerformanceTool, getSearchTermsReportTool, getKeywordPerformanceTool, listBudgetsTool, runCustomReportTool, getAdGroupPerformanceTool, getAdPerformanceTool, } from './reporting/index.js';
 // Campaign write operations
@@ -33,7 +33,7 @@ export { targetingTools } from './targeting/index.js';
 // Bid modifiers
 export { bidModifierTools } from './bid-modifiers/index.js';
 // Re-export as collection
-import { listAccessibleAccountsTool } from './accounts.js';
+import { listAccessibleAccountsTool, getAccountInfoTool } from './accounts.js';
 import { listCampaignsTool, getCampaignPerformanceTool, getSearchTermsReportTool, getKeywordPerformanceTool, listBudgetsTool, runCustomReportTool, getAdGroupPerformanceTool, getAdPerformanceTool, } from './reporting/index.js';
 import { updateCampaignStatusTool, createCampaignTool } from './campaigns/index.js';
 import { createAdGroupTool, updateAdGroupTool, listAdGroupsTool, updateAdGroupBidModifierTool, getAdGroupQualityScoreTool } from './ad-groups/index.js';
@@ -55,6 +55,7 @@ import { bidModifierTools } from './bid-modifiers/index.js';
 export const googleAdsTools = [
     // Read-only tools (safe, immediate value)
     listAccessibleAccountsTool,
+    getAccountInfoTool,
     listCampaignsTool,
     getCampaignPerformanceTool,
     getSearchTermsReportTool,

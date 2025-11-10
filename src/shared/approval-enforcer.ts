@@ -109,6 +109,43 @@ export class ApprovalEnforcer {
   }
 
   /**
+   * Create confirmation token for an existing dry-run result
+   * Use this when the tool has already built the full dry-run
+   */
+  createConfirmationToken(dryRun: DryRunResult): string {
+    logger.info('Creating confirmation token for dry-run', {
+      operation: dryRun.operation,
+      api: dryRun.api,
+      accountId: dryRun.accountId,
+      changes: dryRun.changes.length,
+    });
+
+    // Generate confirmation token
+    const token = this.generateConfirmationToken();
+    const dryRunHash = this.hashDryRun(dryRun);
+
+    const confirmation: ConfirmationToken = {
+      token,
+      operation: dryRun.operation,
+      dryRunHash,
+      createdAt: new Date(),
+      expiresAt: new Date(Date.now() + this.CONFIRMATION_TIMEOUT),
+    };
+
+    this.pendingApprovals.set(token, confirmation);
+
+    // Schedule cleanup
+    setTimeout(() => {
+      if (this.pendingApprovals.has(token)) {
+        logger.info('Confirmation token expired', { token, operation: dryRun.operation });
+        this.pendingApprovals.delete(token);
+      }
+    }, this.CONFIRMATION_TIMEOUT);
+
+    return token;
+  }
+
+  /**
    * Validate confirmation token and execute operation
    */
   async validateAndExecute(
@@ -199,7 +236,7 @@ export class ApprovalEnforcer {
   /**
    * Format dry-run result for display to user
    */
-  formatDryRunForDisplay(dryRun: DryRunResult): string {
+  formatDryRunForDisplay(dryRun: DryRunResult, confirmationToken?: string): string {
     let output = `\n📋 PREVIEW: ${dryRun.operation}\n`;
     output += `API: ${dryRun.api}\n`;
     output += `Account: ${dryRun.accountId}\n\n`;
@@ -262,7 +299,16 @@ export class ApprovalEnforcer {
     }
 
     output += `⏱️  You have 60 seconds to confirm this operation.\n`;
-    output += `✅ To proceed, call the tool again with the confirmation token.\n`;
+
+    // Include confirmation token if provided
+    if (confirmationToken) {
+      output += `\n🔑 CONFIRMATION TOKEN:\n`;
+      output += `   ${confirmationToken}\n\n`;
+      output += `✅ To proceed, call the tool again with: confirmationToken: "${confirmationToken}"\n`;
+    } else {
+      output += `✅ To proceed, call the tool again with the confirmation token.\n`;
+    }
+
     output += `❌ To cancel, simply don't confirm within 60 seconds.\n`;
 
     return output;

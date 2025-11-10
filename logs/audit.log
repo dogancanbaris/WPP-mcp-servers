@@ -2731,5 +2731,142 @@
       "endDate": "2025-10-31",
       "rowsReturned": 1
     }
+  },
+  {
+    "timestamp": "2025-11-09T19:24:17.251Z",
+    "user": "user",
+    "action": "list_properties",
+    "property": "system",
+    "operationType": "read",
+    "result": "success",
+    "details": {
+      "totalProperties": 9,
+      "discoveredProperties": 9
+    }
+  },
+  {
+    "timestamp": "2025-11-10T00:43:01.689Z",
+    "user": "user",
+    "action": "create_budget",
+    "property": "6625745756",
+    "operationType": "read",
+    "result": "failure",
+    "details": {
+      "budgetName": "Dell Brand Budget With Logging",
+      "attemptedAmount": 250
+    },
+    "errorMessage": "Invalid or expired confirmation token. Please generate a new preview and confirm within 60 seconds."
+  },
+  {
+    "timestamp": "2025-11-10T00:46:47.218Z",
+    "user": "user",
+    "action": "create_budget",
+    "property": "6625745756",
+    "operationType": "read",
+    "result": "failure",
+    "details": {
+      "budgetName": "Dell Brand Budget With Token Display",
+      "attemptedAmount": 250
+    },
+    "errorMessage": "Dry-run result has changed since preview was generated. Please generate a fresh preview."
+  },
+  {
+    "timestamp": "2025-11-10T00:47:18.726Z",
+    "user": "user",
+    "action": "create_budget",
+    "property": "6625745756",
+    "operationType": "read",
+    "result": "failure",
+    "details": {
+      "budgetName": "Dell Brand Budget",
+      "attemptedAmount": 250
+    },
+    "errorMessage": "Dry-run result has changed since preview was generated. Please generate a fresh preview."
+  },
+  {
+    "timestamp": "2025-11-10T00:49:03.929Z",
+    "user": "user",
+    "action": "create_budget",
+    "property": "6625745756",
+    "operationType": "write",
+    "result": "success",
+    "details": {
+      "budgetId": {
+        "results": [
+          {
+            "resource_name": "customers/6625745756/campaignBudgets/15124166331",
+            "campaign_budget": null
+          }
+        ],
+        "partial_failure_error": null
+      },
+      "budgetName": "Dell Brand Budget",
+      "dailyAmount": 250,
+      "monthlyEstimate": 7600
+    }
+  },
+  {
+    "timestamp": "2025-11-10T00:52:30.098Z",
+    "user": "user",
+    "action": "create_budget",
+    "property": "6625745756",
+    "operationType": "write",
+    "result": "success",
+    "details": {
+      "budgetId": {
+        "results": [
+          {
+            "resource_name": "customers/6625745756/campaignBudgets/15118636532",
+            "campaign_budget": null
+          }
+        ],
+        "partial_failure_error": null
+      },
+      "budgetName": "Dell Performance Budget",
+      "dailyAmount": 150,
+      "monthlyEstimate": 4560
+    }
+  },
+  {
+    "timestamp": "2025-11-10T01:02:55.829Z",
+    "user": "user",
+    "action": "create_campaign",
+    "property": "6625745756",
+    "operationType": "read",
+    "result": "failure",
+    "details": {
+      "campaignName": "Dell Brand Protection",
+      "campaignType": "SEARCH",
+      "budgetId": "15124166331"
+    },
+    "errorMessage": "Failed to create campaign: undefined"
+  },
+  {
+    "timestamp": "2025-11-10T01:09:55.177Z",
+    "user": "user",
+    "action": "create_campaign",
+    "property": "6625745756",
+    "operationType": "read",
+    "result": "failure",
+    "details": {
+      "campaignName": "Dell Brand Protection",
+      "campaignType": "SEARCH",
+      "budgetId": "15124166331"
+    },
+    "errorMessage": "Failed to create campaign: undefined"
+  },
+  {
+    "timestamp": "2025-11-10T01:15:44.024Z",
+    "user": "user",
+    "action": "create_campaign",
+    "property": "6625745756",
+    "operationType": "read",
+    "result": "failure",
+    "details": {
+      "campaignName": "Dell Brand Protection",
+      "campaignType": "SEARCH",
+      "budgetId": "15124166331"
+    },
+    "errorMessage": "Failed to create campaign: undefined"
   }
 ]

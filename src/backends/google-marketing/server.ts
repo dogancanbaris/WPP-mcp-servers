@@ -97,6 +97,65 @@ async function initializeServer() {
     };
   });
 
+  /**
+   * Transform tool responses to MCP protocol format
+   * Ensures all responses have the correct content structure
+   */
+  function transformToMCPFormat(result: any): any {
+    // If already in MCP format (has content array), return as-is
+    if (result.content && Array.isArray(result.content)) {
+      return result;
+    }
+
+    // Handle dry-run/approval responses
+    if (result.requiresApproval && result.preview) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: result.preview
+          }
+        ],
+        _meta: {
+          requiresApproval: true,
+          confirmationToken: result.confirmationToken,
+          message: result.message
+        }
+      };
+    }
+
+    // Handle string responses (simple text output)
+    if (typeof result === 'string') {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: result
+          }
+        ]
+      };
+    }
+
+    // Handle success responses with data.message
+    if (result.success && result.data && result.data.message) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: result.data.message
+          }
+        ],
+        _meta: {
+          success: true,
+          data: result.data
+        }
+      };
+    }
+
+    // Fallback: return as-is (tools that already return correct format)
+    return result;
+  }
+
   // Handle tools/call - route to appropriate tool handler
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name, arguments: args } = request.params;
@@ -114,10 +173,23 @@ async function initializeServer() {
       // Call the tool handler
       const result = await tool.handler(args);
 
-      logger.info(`Tool call successful: ${name}`);
+      logger.info(`Tool call successful: ${name}`, {
+        hasRequiresApproval: !!(result as any).requiresApproval,
+        hasPreview: !!(result as any).preview,
+        hasContent: !!(result as any).content,
+        resultKeys: Object.keys(result || {}).slice(0, 10)
+      });
 
-      // Return as MCP-compatible result (type assertion for flexibility)
-      return result as any;
+      // Transform to MCP format before returning
+      const transformed = transformToMCPFormat(result);
+
+      logger.info(`Transformed result`, {
+        hasContent: !!(transformed as any).content,
+        hasMeta: !!(transformed as any)._meta,
+        transformedKeys: Object.keys(transformed || {})
+      });
+
+      return transformed;
     } catch (error) {
       logger.error(`Tool call failed: ${name}`, error);
       throw error;

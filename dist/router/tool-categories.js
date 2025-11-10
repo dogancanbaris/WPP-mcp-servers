@@ -49,14 +49,15 @@ export const toolCategories = {
         ]
     },
     // ============================================================================
-    // GOOGLE ADS (60 tools)
+    // GOOGLE ADS (59 tools)
     // ============================================================================
     'ads.accounts': {
         name: 'Google Ads Accounts',
         description: 'Account access and management',
         platform: 'Google Ads',
         tools: [
-            'list_accessible_accounts'
+            'list_accessible_accounts',
+            'get_account_info'
         ]
     },
     'ads.campaigns': {

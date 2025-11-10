@@ -309,7 +309,7 @@ Use search_tools to find available tools:
                 // Execute via registry (routes to backend)
                 // Use prefixed name for registry call
                 const result = await registry.callTool(prefixedToolName, enrichedParams);
-                logger.info('Tool executed successfully via meta-tool', { toolName });
+                logger.info('Tool executed successfully via meta-tool', { toolName, resultKeys: Object.keys(result), hasContent: !!result.content });
                 // Result already contains interactive workflow guidance!
                 return result;
             }

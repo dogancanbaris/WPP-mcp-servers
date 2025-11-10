@@ -92,4 +92,113 @@ Which account would you like to work with?`;
         }
     },
 };
+/**
+ * Get account information including test account flag
+ */
+export const getAccountInfoTool = {
+    name: 'get_account_info',
+    description: 'Get detailed account information including test account flag for diagnostic purposes.',
+    inputSchema: {
+        type: 'object',
+        properties: {
+            customerId: {
+                type: 'string',
+                description: 'Google Ads customer ID (e.g., "1234567890")',
+            },
+        },
+        required: ['customerId'],
+    },
+    async handler(input) {
+        try {
+            const { customerId } = input;
+            // Extract OAuth tokens from request
+            const refreshToken = extractRefreshToken(input);
+            if (!refreshToken) {
+                throw new Error('Refresh token required for Google Ads API. OMA must provide X-Google-Refresh-Token header.');
+            }
+            const developerToken = process.env.GOOGLE_ADS_DEVELOPER_TOKEN;
+            if (!developerToken) {
+                throw new Error('GOOGLE_ADS_DEVELOPER_TOKEN not configured');
+            }
+            // Create Google Ads client with user's refresh token
+            const client = createGoogleAdsClientFromRefreshToken(refreshToken, developerToken);
+            logger.info('Querying account info', { customerId });
+            // Query account details including test_account flag
+            const customer = client.getCustomer(customerId);
+            const results = await customer.query(`
+        SELECT
+          customer.id,
+          customer.descriptive_name,
+          customer.currency_code,
+          customer.time_zone,
+          customer.test_account,
+          customer.manager,
+          customer.status
+        FROM customer
+        WHERE customer.id = ${customerId}
+      `);
+            if (!results || results.length === 0) {
+                throw new Error(`No account found with customer ID: ${customerId}`);
+            }
+            const accountInfo = results[0];
+            // Inject rich guidance into response
+            const isTestAccount = accountInfo.customer?.test_account || false;
+            const guidanceText = `🔍 ACCOUNT INFORMATION - Customer ID: ${customerId}
+
+**Account Details:**
+- Name: ${accountInfo.customer?.descriptive_name || 'N/A'}
+- Currency: ${accountInfo.customer?.currency_code || 'N/A'}
+- Time Zone: ${accountInfo.customer?.time_zone || 'N/A'}
+- Status: ${accountInfo.customer?.status || 'N/A'}
+- Manager Account: ${accountInfo.customer?.manager ? 'Yes' : 'No'}
+
+**🎯 TEST ACCOUNT FLAG: ${isTestAccount ? '✅ TRUE (Test Account)' : '❌ FALSE (Production Account)'}**
+
+${isTestAccount
+                ? `
+✅ **This IS an official Google Ads test account**
+
+This account can be accessed with a TEST-level developer token.
+- Test accounts can create campaigns without spending real money
+- Test accounts are safe for development and testing
+- API operations will work with your current TEST developer token
+
+💡 You can proceed with testing all 60 Google Ads tools using this account!`
+                : `
+❌ **This is a PRODUCTION account (NOT a test account)**
+
+This account CANNOT be accessed with a TEST-level developer token.
+- Production accounts require BASIC or STANDARD access level
+- Your current developer token: TEST access (blocks production accounts)
+- Error: "DEVELOPER_TOKEN_NOT_APPROVED" is expected for production accounts
+
+**TO ACCESS THIS ACCOUNT:**
+1. Apply for BASIC access: https://ads.google.com/aw/apicenter
+2. OR get a BASIC/STANDARD token from your organization
+3. OR create an official test account for development
+
+**TO CREATE A TEST ACCOUNT:**
+1. Go to: https://ads.google.com/home/tools/manager-accounts/
+2. Create a new Manager Account (MCC)
+3. Create test account under MCC
+4. Look for red "Test account" label in UI`}
+
+${formatNextSteps([
+                isTestAccount
+                    ? 'Proceed with testing: call list_campaigns with this customerId'
+                    : 'Apply for BASIC access or create a proper test account',
+                'Check other accounts: call list_accessible_accounts',
+            ])}`;
+            return injectGuidance({
+                customerId,
+                accountInfo: accountInfo.customer,
+                isTestAccount,
+            }, guidanceText);
+        }
+        catch (error) {
+            logger.error('Failed to get account info', error);
+            throw error;
+        }
+    },
+};
 //# sourceMappingURL=accounts.js.map

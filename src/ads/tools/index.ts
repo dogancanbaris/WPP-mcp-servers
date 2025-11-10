@@ -3,7 +3,7 @@
  */
 
 // Account management
-export { listAccessibleAccountsTool } from './accounts.js';
+export { listAccessibleAccountsTool, getAccountInfoTool } from './accounts.js';
 
 // Performance reporting
 export {
@@ -66,7 +66,7 @@ export { targetingTools } from './targeting/index.js';
 export { bidModifierTools } from './bid-modifiers/index.js';
 
 // Re-export as collection
-import { listAccessibleAccountsTool } from './accounts.js';
+import { listAccessibleAccountsTool, getAccountInfoTool } from './accounts.js';
 import {
   listCampaignsTool,
   getCampaignPerformanceTool,
@@ -106,6 +106,7 @@ import { bidModifierTools } from './bid-modifiers/index.js';
 export const googleAdsTools = [
   // Read-only tools (safe, immediate value)
   listAccessibleAccountsTool,
+  getAccountInfoTool,
   listCampaignsTool,
   getCampaignPerformanceTool,
   getSearchTermsReportTool,

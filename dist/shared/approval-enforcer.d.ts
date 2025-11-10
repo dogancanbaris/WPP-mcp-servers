@@ -59,6 +59,11 @@ export declare class ApprovalEnforcer {
         confirmationToken: string;
     }>;
     /**
+     * Create confirmation token for an existing dry-run result
+     * Use this when the tool has already built the full dry-run
+     */
+    createConfirmationToken(dryRun: DryRunResult): string;
+    /**
      * Validate confirmation token and execute operation
      */
     validateAndExecute(confirmationToken: string, dryRun: DryRunResult, executeCallback: () => Promise<any>): Promise<any>;
@@ -77,7 +82,7 @@ export declare class ApprovalEnforcer {
     /**
      * Format dry-run result for display to user
      */
-    formatDryRunForDisplay(dryRun: DryRunResult): string;
+    formatDryRunForDisplay(dryRun: DryRunResult, confirmationToken?: string): string;
     /**
      * Generate confirmation token
      */

@@ -1,7 +1,7 @@
 /**
  * Export all Google Ads MCP tools
  */
-export { listAccessibleAccountsTool } from './accounts.js';
+export { listAccessibleAccountsTool, getAccountInfoTool } from './accounts.js';
 export { listCampaignsTool, getCampaignPerformanceTool, getSearchTermsReportTool, getKeywordPerformanceTool, listBudgetsTool, runCustomReportTool, getAdGroupPerformanceTool, getAdPerformanceTool, } from './reporting/index.js';
 export { updateCampaignStatusTool, createCampaignTool } from './campaigns/index.js';
 export { createAdGroupTool, updateAdGroupTool, listAdGroupsTool, updateAdGroupBidModifierTool, getAdGroupQualityScoreTool } from './ad-groups/index.js';
@@ -27,6 +27,20 @@ export declare const googleAdsTools: ({
         type: "object";
         properties: {};
         required: never[];
+    };
+    handler(input: any): Promise<import("../../shared/interactive-workflow.js").McpResponse>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        type: "object";
+        properties: {
+            customerId: {
+                type: string;
+                description: string;
+            };
+        };
+        required: string[];
     };
     handler(input: any): Promise<import("../../shared/interactive-workflow.js").McpResponse>;
 } | {

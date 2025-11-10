@@ -373,7 +373,19 @@ export class GoogleAdsClient {
                 status,
                 campaign_budget: `customers/${customerId}/campaignBudgets/${budgetId}`,
                 advertising_channel_type: campaignType,
-                bidding_strategy_type: 'MANUAL_CPC',
+                // EU Political Advertising declaration (required as of Sept 3, 2025)
+                contains_eu_political_advertising: 'DOES_NOT_CONTAIN_EU_POLITICAL_ADVERTISING',
+                // Manual CPC bidding strategy (default)
+                manual_cpc: {
+                    enhanced_cpc_enabled: false
+                },
+                // Network settings for search campaigns
+                network_settings: {
+                    target_google_search: true,
+                    target_search_network: true,
+                    target_content_network: false,
+                    target_partner_search_network: false
+                }
             };
             const result = await customer.campaigns.create([campaign]);
             logger.info('Campaign created', { customerId, campaignId: result });

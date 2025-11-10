@@ -196,14 +196,10 @@ What should the daily budget be (in dollars)?`;
 
       // If no confirmation token, return preview
       if (!confirmationToken) {
-        const { confirmationToken: token } = await approvalEnforcer.createDryRun(
-          'create_budget',
-          'Google Ads',
-          customerId,
-          { name, dailyAmountDollars }
-        );
+        // Generate confirmation token for the full dry-run
+        const token = approvalEnforcer.createConfirmationToken(dryRun);
 
-        const preview = approvalEnforcer.formatDryRunForDisplay(dryRun);
+        const preview = approvalEnforcer.formatDryRunForDisplay(dryRun, token);
 
         return {
           success: true,
