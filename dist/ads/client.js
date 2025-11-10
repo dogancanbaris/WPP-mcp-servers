@@ -671,6 +671,16 @@ export class GoogleAdsClient {
             if (updates.cpcBidMicros !== undefined) {
                 operation.cpc_bid_micros = updates.cpcBidMicros;
             }
+            // NEW: Add missing params from add_keywords
+            if (updates.finalUrls && updates.finalUrls.length > 0) {
+                operation.final_urls = updates.finalUrls;
+            }
+            if (updates.trackingUrlTemplate) {
+                operation.tracking_url_template = updates.trackingUrlTemplate;
+            }
+            if (updates.urlCustomParameters && updates.urlCustomParameters.length > 0) {
+                operation.url_custom_parameters = updates.urlCustomParameters;
+            }
             const result = await customer.adGroupCriteria.update([operation]);
             logger.info('Keyword updated', { customerId, keywordResourceName });
             return result;

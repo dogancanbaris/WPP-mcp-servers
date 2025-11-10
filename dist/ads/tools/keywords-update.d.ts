@@ -42,6 +42,32 @@ export declare const updateKeywordTool: {
                 type: string;
                 description: string;
             };
+            finalUrls: {
+                type: string;
+                items: {
+                    type: string;
+                };
+                description: string;
+            };
+            trackingUrlTemplate: {
+                type: string;
+                description: string;
+            };
+            urlCustomParameters: {
+                type: string;
+                items: {
+                    type: string;
+                    properties: {
+                        key: {
+                            type: string;
+                        };
+                        value: {
+                            type: string;
+                        };
+                    };
+                };
+                description: string;
+            };
             confirmationToken: {
                 type: string;
                 description: string;

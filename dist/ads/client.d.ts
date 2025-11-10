@@ -150,6 +150,12 @@ export declare class GoogleAdsClient {
         matchType?: string;
         status?: string;
         cpcBidMicros?: number;
+        finalUrls?: string[];
+        trackingUrlTemplate?: string;
+        urlCustomParameters?: Array<{
+            key: string;
+            value: string;
+        }>;
     }): Promise<any>;
     /**
      * List keywords with details (for selection in update operations)

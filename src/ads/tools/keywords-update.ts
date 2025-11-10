@@ -53,6 +53,27 @@ export const updateKeywordTool = {
         type: 'number',
         description: 'New max CPC bid in dollars (optional)',
       },
+      // NEW: Match add_keywords parameters
+      finalUrls: {
+        type: 'array',
+        items: { type: 'string' },
+        description: 'Keyword-specific landing page URLs (optional)',
+      },
+      trackingUrlTemplate: {
+        type: 'string',
+        description: 'Keyword-specific tracking template (optional)',
+      },
+      urlCustomParameters: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            key: { type: 'string' },
+            value: { type: 'string' },
+          },
+        },
+        description: 'Keyword-specific custom URL parameters (optional)',
+      },
       confirmationToken: {
         type: 'string',
         description: 'Confirmation token from dry-run preview',
@@ -70,6 +91,9 @@ export const updateKeywordTool = {
         matchType,
         status,
         maxCpcDollars,
+        finalUrls,
+        trackingUrlTemplate,
+        urlCustomParameters,
         confirmationToken,
       } = input;
 
@@ -394,6 +418,10 @@ What changes would you like to make?`;
       if (matchType) updates.matchType = matchType;
       if (status) updates.status = status;
       if (maxCpcDollars !== undefined) updates.cpcBidMicros = amountToMicros(maxCpcDollars);
+      // NEW: Add missing params from add_keywords
+      if (finalUrls) updates.finalUrls = finalUrls;
+      if (trackingUrlTemplate) updates.trackingUrlTemplate = trackingUrlTemplate;
+      if (urlCustomParameters) updates.urlCustomParameters = urlCustomParameters;
 
       const result = await approvalEnforcer.validateAndExecute(confirmationToken, dryRun, async () => {
         return await client.updateKeyword(customerId, keywordResourceName, updates);

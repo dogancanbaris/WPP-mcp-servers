@@ -867,6 +867,9 @@ export class GoogleAdsClient {
       matchType?: string;
       status?: string;
       cpcBidMicros?: number;
+      finalUrls?: string[];
+      trackingUrlTemplate?: string;
+      urlCustomParameters?: Array<{ key: string; value: string }>;
     }
   ): Promise<any> {
     try {
@@ -890,6 +893,19 @@ export class GoogleAdsClient {
 
       if (updates.cpcBidMicros !== undefined) {
         operation.cpc_bid_micros = updates.cpcBidMicros;
+      }
+
+      // NEW: Add missing params from add_keywords
+      if (updates.finalUrls && updates.finalUrls.length > 0) {
+        operation.final_urls = updates.finalUrls;
+      }
+
+      if (updates.trackingUrlTemplate) {
+        operation.tracking_url_template = updates.trackingUrlTemplate;
+      }
+
+      if (updates.urlCustomParameters && updates.urlCustomParameters.length > 0) {
+        operation.url_custom_parameters = updates.urlCustomParameters;
       }
 
       const result = await customer.adGroupCriteria.update([operation]);
