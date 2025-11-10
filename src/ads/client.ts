@@ -11,6 +11,23 @@ dotenv.config();
 const logger = getLogger('ads.client');
 
 /**
+ * Format Google Ads API error for user-friendly display
+ * Google Ads errors have structure: { errors: [{ error_code: {...}, message: "..." }] }
+ */
+function formatGoogleAdsError(error: any): string {
+  // If it's a Google Ads API error with the errors array
+  if (error.errors && Array.isArray(error.errors) && error.errors.length > 0) {
+    const firstError = error.errors[0];
+    const errorCode = firstError.error_code ? Object.values(firstError.error_code)[0] : 'UNKNOWN';
+    const message = firstError.message || 'Unknown error';
+    return `${errorCode}: ${message}`;
+  }
+
+  // Fallback to standard error message
+  return error.message || String(error);
+}
+
+/**
  * Google Ads API Client
  */
 export class GoogleAdsClient {
@@ -66,26 +83,37 @@ export class GoogleAdsClient {
       return customerResourceNames;
     } catch (error) {
       logger.error('Failed to list accessible accounts', error as Error);
-      throw new Error(`Failed to list Google Ads accounts: ${(error as Error).message}`);
+      throw new Error(`Failed to list Google Ads accounts: ${formatGoogleAdsError(error)}`);
     }
   }
 
   /**
    * Get customer instance for a specific account
+   * @param customerId The customer ID to access
+   * @param loginCustomerId Optional manager account ID (required when accessing client accounts)
    */
-  getCustomer(customerId: string): Customer {
-    return this.client.Customer({
+  getCustomer(customerId: string, loginCustomerId?: string): Customer {
+    const config: any = {
       customer_id: customerId,
       refresh_token: this.refreshToken,
-    });
+    };
+
+    // When accessing client accounts under a manager, set login_customer_id
+    // Default to manager account 6625745756 for testing
+    const effectiveLoginCustomerId = loginCustomerId || '6625745756';
+
+    // Always set login_customer_id to support client account access
+    config.login_customer_id = effectiveLoginCustomerId;
+
+    return this.client.Customer(config);
   }
 
   /**
    * List campaigns for a customer
    */
-  async listCampaigns(customerId: string): Promise<any[]> {
+  async listCampaigns(customerId: string, loginCustomerId?: string): Promise<any[]> {
     try {
-      const customer = this.getCustomer(customerId);
+      const customer = this.getCustomer(customerId, loginCustomerId);
 
       logger.debug('Listing campaigns', { customerId });
 
@@ -109,7 +137,7 @@ export class GoogleAdsClient {
       return campaigns;
     } catch (error) {
       logger.error('Failed to list campaigns', error as Error);
-      throw new Error(`Failed to list campaigns: ${(error as Error).message}`);
+      throw new Error(`Failed to list campaigns: ${formatGoogleAdsError(error)}`);
     }
   }
 
@@ -161,7 +189,7 @@ export class GoogleAdsClient {
       return results;
     } catch (error) {
       logger.error('Failed to get campaign performance', error as Error);
-      throw new Error(`Failed to get campaign performance: ${(error as Error).message}`);
+      throw new Error(`Failed to get campaign performance: ${formatGoogleAdsError(error)}`);
     }
   }
 
@@ -216,7 +244,7 @@ export class GoogleAdsClient {
       return results;
     } catch (error) {
       logger.error('Failed to get search terms report', error as Error);
-      throw new Error(`Failed to get search terms: ${(error as Error).message}`);
+      throw new Error(`Failed to get search terms: ${formatGoogleAdsError(error)}`);
     }
   }
 
@@ -246,7 +274,7 @@ export class GoogleAdsClient {
       return budgets;
     } catch (error) {
       logger.error('Failed to list budgets', error as Error);
-      throw new Error(`Failed to list budgets: ${(error as Error).message}`);
+      throw new Error(`Failed to list budgets: ${formatGoogleAdsError(error)}`);
     }
   }
 
@@ -303,7 +331,7 @@ export class GoogleAdsClient {
       return results;
     } catch (error) {
       logger.error('Failed to get keyword performance', error as Error);
-      throw new Error(`Failed to get keyword performance: ${(error as Error).message}`);
+      throw new Error(`Failed to get keyword performance: ${formatGoogleAdsError(error)}`);
     }
   }
 
@@ -335,7 +363,7 @@ export class GoogleAdsClient {
       return result;
     } catch (error) {
       logger.error('Failed to update campaign status', error as Error);
-      throw new Error(`Failed to update campaign status: ${(error as Error).message}`);
+      throw new Error(`Failed to update campaign status: ${formatGoogleAdsError(error)}`);
     }
   }
 
@@ -361,7 +389,7 @@ export class GoogleAdsClient {
       return result;
     } catch (error) {
       logger.error('Failed to create budget', error as Error);
-      throw new Error(`Failed to create budget: ${(error as Error).message}`);
+      throw new Error(`Failed to create budget: ${formatGoogleAdsError(error)}`);
     }
   }
 
@@ -386,7 +414,7 @@ export class GoogleAdsClient {
       return result;
     } catch (error) {
       logger.error('Failed to update budget', error as Error);
-      throw new Error(`Failed to update budget: ${(error as Error).message}`);
+      throw new Error(`Failed to update budget: ${formatGoogleAdsError(error)}`);
     }
   }
 
@@ -420,7 +448,7 @@ export class GoogleAdsClient {
       return result;
     } catch (error) {
       logger.error('Failed to add keywords', error as Error);
-      throw new Error(`Failed to add keywords: ${(error as Error).message}`);
+      throw new Error(`Failed to add keywords: ${formatGoogleAdsError(error)}`);
     }
   }
 
@@ -453,24 +481,34 @@ export class GoogleAdsClient {
       return result;
     } catch (error) {
       logger.error('Failed to add negative keywords', error as Error);
-      throw new Error(`Failed to add negative keywords: ${(error as Error).message}`);
+      throw new Error(`Failed to add negative keywords: ${formatGoogleAdsError(error)}`);
     }
   }
 
   /**
-   * Create campaign
+   * Create campaign with full configuration
    */
   async createCampaign(
     customerId: string,
     name: string,
     budgetId: string,
     campaignType: string,
-    status: string = 'PAUSED'
+    status: string = 'PAUSED',
+    options?: {
+      targetGoogleSearch?: boolean;
+      targetSearchNetwork?: boolean;
+      targetContentNetwork?: boolean;
+      targetPartnerSearchNetwork?: boolean;
+      startDate?: string;
+      endDate?: string;
+      trackingTemplate?: string;
+      finalUrlSuffix?: string;
+    }
   ): Promise<any> {
     try {
       const customer = this.getCustomer(customerId);
 
-      logger.info('Creating campaign', { customerId, name, campaignType });
+      logger.info('Creating campaign', { customerId, name, campaignType, options });
 
       const campaign: any = {
         name,
@@ -483,14 +521,31 @@ export class GoogleAdsClient {
         manual_cpc: {
           enhanced_cpc_enabled: false
         },
-        // Network settings for search campaigns
+        // Network settings - use provided values or smart defaults
         network_settings: {
-          target_google_search: true,
-          target_search_network: true,
-          target_content_network: false,
-          target_partner_search_network: false
+          target_google_search: options?.targetGoogleSearch ?? true,
+          target_search_network: options?.targetSearchNetwork ?? false,
+          target_content_network: options?.targetContentNetwork ?? (campaignType === 'DISPLAY'),
+          target_partner_search_network: options?.targetPartnerSearchNetwork ?? false
         }
       };
+
+      // Add dates if provided
+      if (options?.startDate) {
+        // Convert YYYY-MM-DD to YYYYMMDD
+        campaign.start_date = options.startDate.replace(/-/g, '');
+      }
+      if (options?.endDate) {
+        campaign.end_date = options.endDate.replace(/-/g, '');
+      }
+
+      // Add tracking if provided
+      if (options?.trackingTemplate) {
+        campaign.tracking_url_template = options.trackingTemplate;
+      }
+      if (options?.finalUrlSuffix) {
+        campaign.final_url_suffix = options.finalUrlSuffix;
+      }
 
       const result = await customer.campaigns.create([campaign]);
 
@@ -499,7 +554,7 @@ export class GoogleAdsClient {
       return result;
     } catch (error) {
       logger.error('Failed to create campaign', error as Error);
-      throw new Error(`Failed to create campaign: ${(error as Error).message}`);
+      throw new Error(`Failed to create campaign: ${formatGoogleAdsError(error)}`);
     }
   }
 
@@ -541,7 +596,7 @@ export class GoogleAdsClient {
       return result;
     } catch (error) {
       logger.error('Failed to create bidding strategy', error as Error);
-      throw new Error(`Failed to create bidding strategy: ${(error as Error).message}`);
+      throw new Error(`Failed to create bidding strategy: ${formatGoogleAdsError(error)}`);
     }
   }
 
@@ -596,7 +651,7 @@ export class GoogleAdsClient {
       return result;
     } catch (error) {
       logger.error('Failed to update bidding strategy', error as Error);
-      throw new Error(`Failed to update bidding strategy: ${(error as Error).message}`);
+      throw new Error(`Failed to update bidding strategy: ${formatGoogleAdsError(error)}`);
     }
   }
 
@@ -625,7 +680,7 @@ export class GoogleAdsClient {
       return result;
     } catch (error) {
       logger.error('Failed to set ad group CPC bid', error as Error);
-      throw new Error(`Failed to set ad group CPC bid: ${(error as Error).message}`);
+      throw new Error(`Failed to set ad group CPC bid: ${formatGoogleAdsError(error)}`);
     }
   }
 
@@ -663,7 +718,7 @@ export class GoogleAdsClient {
       return result;
     } catch (error) {
       logger.error('Failed to create sitelink extensions', error as Error);
-      throw new Error(`Failed to create sitelink extensions: ${(error as Error).message}`);
+      throw new Error(`Failed to create sitelink extensions: ${formatGoogleAdsError(error)}`);
     }
   }
 
@@ -707,7 +762,7 @@ export class GoogleAdsClient {
       return result;
     } catch (error) {
       logger.error('Failed to update sitelink extension', error as Error);
-      throw new Error(`Failed to update sitelink extension: ${(error as Error).message}`);
+      throw new Error(`Failed to update sitelink extension: ${formatGoogleAdsError(error)}`);
     }
   }
 
@@ -737,7 +792,7 @@ export class GoogleAdsClient {
       return result;
     } catch (error) {
       logger.error('Failed to create callout extensions', error as Error);
-      throw new Error(`Failed to create callout extensions: ${(error as Error).message}`);
+      throw new Error(`Failed to create callout extensions: ${formatGoogleAdsError(error)}`);
     }
   }
 
@@ -768,7 +823,7 @@ export class GoogleAdsClient {
       return result;
     } catch (error) {
       logger.error('Failed to update callout extension', error as Error);
-      throw new Error(`Failed to update callout extension: ${(error as Error).message}`);
+      throw new Error(`Failed to update callout extension: ${formatGoogleAdsError(error)}`);
     }
   }
 
@@ -814,7 +869,7 @@ export class GoogleAdsClient {
       return result;
     } catch (error) {
       logger.error('Failed to update keyword', error as Error);
-      throw new Error(`Failed to update keyword: ${(error as Error).message}`);
+      throw new Error(`Failed to update keyword: ${formatGoogleAdsError(error)}`);
     }
   }
 
@@ -864,7 +919,7 @@ export class GoogleAdsClient {
       return results;
     } catch (error) {
       logger.error('Failed to list keywords', error as Error);
-      throw new Error(`Failed to list keywords: ${(error as Error).message}`);
+      throw new Error(`Failed to list keywords: ${formatGoogleAdsError(error)}`);
     }
   }
 
@@ -892,7 +947,7 @@ export class GoogleAdsClient {
       return labels;
     } catch (error) {
       logger.error('Failed to list labels', error as Error);
-      throw new Error(`Failed to list labels: ${(error as Error).message}`);
+      throw new Error(`Failed to list labels: ${formatGoogleAdsError(error)}`);
     }
   }
 
@@ -918,7 +973,7 @@ export class GoogleAdsClient {
       return result;
     } catch (error) {
       logger.error('Failed to create label', error as Error);
-      throw new Error(`Failed to create label: ${(error as Error).message}`);
+      throw new Error(`Failed to create label: ${formatGoogleAdsError(error)}`);
     }
   }
 
@@ -939,7 +994,7 @@ export class GoogleAdsClient {
       return result;
     } catch (error) {
       logger.error('Failed to remove label', error as Error);
-      throw new Error(`Failed to remove label: ${(error as Error).message}`);
+      throw new Error(`Failed to remove label: ${formatGoogleAdsError(error)}`);
     }
   }
 
@@ -964,7 +1019,7 @@ export class GoogleAdsClient {
       return result;
     } catch (error) {
       logger.error('Failed to apply label to campaign', error as Error);
-      throw new Error(`Failed to apply label to campaign: ${(error as Error).message}`);
+      throw new Error(`Failed to apply label to campaign: ${formatGoogleAdsError(error)}`);
     }
   }
 
@@ -989,7 +1044,7 @@ export class GoogleAdsClient {
       return result;
     } catch (error) {
       logger.error('Failed to apply label to ad group', error as Error);
-      throw new Error(`Failed to apply label to ad group: ${(error as Error).message}`);
+      throw new Error(`Failed to apply label to ad group: ${formatGoogleAdsError(error)}`);
     }
   }
 
@@ -1014,7 +1069,7 @@ export class GoogleAdsClient {
       return result;
     } catch (error) {
       logger.error('Failed to apply label to keyword', error as Error);
-      throw new Error(`Failed to apply label to keyword: ${(error as Error).message}`);
+      throw new Error(`Failed to apply label to keyword: ${formatGoogleAdsError(error)}`);
     }
   }
 }

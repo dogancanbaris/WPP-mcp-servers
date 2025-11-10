@@ -20,12 +20,14 @@ export declare class GoogleAdsClient {
     listAccessibleAccounts(): Promise<string[]>;
     /**
      * Get customer instance for a specific account
+     * @param customerId The customer ID to access
+     * @param loginCustomerId Optional manager account ID (required when accessing client accounts)
      */
-    getCustomer(customerId: string): Customer;
+    getCustomer(customerId: string, loginCustomerId?: string): Customer;
     /**
      * List campaigns for a customer
      */
-    listCampaigns(customerId: string): Promise<any[]>;
+    listCampaigns(customerId: string, loginCustomerId?: string): Promise<any[]>;
     /**
      * Get campaign performance metrics
      */
@@ -83,9 +85,18 @@ export declare class GoogleAdsClient {
         matchType: string;
     }>): Promise<any>;
     /**
-     * Create campaign
+     * Create campaign with full configuration
      */
-    createCampaign(customerId: string, name: string, budgetId: string, campaignType: string, status?: string): Promise<any>;
+    createCampaign(customerId: string, name: string, budgetId: string, campaignType: string, status?: string, options?: {
+        targetGoogleSearch?: boolean;
+        targetSearchNetwork?: boolean;
+        targetContentNetwork?: boolean;
+        targetPartnerSearchNetwork?: boolean;
+        startDate?: string;
+        endDate?: string;
+        trackingTemplate?: string;
+        finalUrlSuffix?: string;
+    }): Promise<any>;
     /**
      * Create portfolio bidding strategy
      */

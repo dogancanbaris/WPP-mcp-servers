@@ -22,12 +22,16 @@ export const listCampaignsTool = {
                 type: 'string',
                 description: 'Customer ID (10 digits, e.g., "2191558405")',
             },
+            loginCustomerId: {
+                type: 'string',
+                description: 'Manager account ID for accessing client accounts (optional, e.g., "6625745756")',
+            },
         },
         required: [], // Make optional for discovery
     },
     async handler(input) {
         try {
-            const { customerId } = input;
+            const { customerId, loginCustomerId } = input;
             // Extract OAuth tokens from request
             const refreshToken = extractRefreshToken(input);
             if (!refreshToken) {
@@ -58,8 +62,8 @@ export const listCampaignsTool = {
                 });
             }
             // ═══ STEP 2: EXECUTE WITH ANALYSIS ═══
-            logger.info('Listing campaigns', { customerId });
-            const campaigns = await client.listCampaigns(customerId);
+            logger.info('Listing campaigns', { customerId, loginCustomerId });
+            const campaigns = await client.listCampaigns(customerId, loginCustomerId);
             // Analyze campaigns
             const statusCounts = campaigns.reduce((acc, c) => {
                 const status = c.campaign?.status || 'UNKNOWN';

@@ -16,6 +16,10 @@ export declare const listCampaignsTool: {
                 type: string;
                 description: string;
             };
+            loginCustomerId: {
+                type: string;
+                description: string;
+            };
         };
         required: never[];
     };

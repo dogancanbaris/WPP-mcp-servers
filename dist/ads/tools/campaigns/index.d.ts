@@ -69,6 +69,38 @@ export declare const campaignTools: ({
                 enum: string[];
                 description: string;
             };
+            targetGoogleSearch: {
+                type: string;
+                description: string;
+            };
+            targetSearchNetwork: {
+                type: string;
+                description: string;
+            };
+            targetContentNetwork: {
+                type: string;
+                description: string;
+            };
+            targetPartnerSearchNetwork: {
+                type: string;
+                description: string;
+            };
+            startDate: {
+                type: string;
+                description: string;
+            };
+            endDate: {
+                type: string;
+                description: string;
+            };
+            trackingTemplate: {
+                type: string;
+                description: string;
+            };
+            finalUrlSuffix: {
+                type: string;
+                description: string;
+            };
         };
         required: never[];
     };

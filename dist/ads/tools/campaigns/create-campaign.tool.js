@@ -86,12 +86,47 @@ export const createCampaignTool = {
                 enum: ['PAUSED', 'ENABLED'],
                 description: 'Initial status (default: PAUSED - recommended)',
             },
+            // Network settings
+            targetGoogleSearch: {
+                type: 'boolean',
+                description: 'Target Google Search (default: true for SEARCH campaigns)',
+            },
+            targetSearchNetwork: {
+                type: 'boolean',
+                description: 'Target Search Network partners (default: false)',
+            },
+            targetContentNetwork: {
+                type: 'boolean',
+                description: 'Target Display Network / Content Network (default: false for SEARCH)',
+            },
+            targetPartnerSearchNetwork: {
+                type: 'boolean',
+                description: 'Target partner search networks (default: false)',
+            },
+            // Date settings
+            startDate: {
+                type: 'string',
+                description: 'Campaign start date in YYYY-MM-DD format (default: tomorrow)',
+            },
+            endDate: {
+                type: 'string',
+                description: 'Campaign end date in YYYY-MM-DD format (optional, default: no end date)',
+            },
+            // Tracking settings
+            trackingTemplate: {
+                type: 'string',
+                description: 'URL tracking template for conversion tracking (optional)',
+            },
+            finalUrlSuffix: {
+                type: 'string',
+                description: 'Final URL suffix for UTM parameters (optional, e.g., "utm_campaign=name")',
+            },
         },
         required: [], // Make optional for discovery
     },
     async handler(input) {
         try {
-            const { customerId, name, budgetId, campaignType, status } = input;
+            const { customerId, name, budgetId, campaignType, status, targetGoogleSearch, targetSearchNetwork, targetContentNetwork, targetPartnerSearchNetwork, startDate, endDate, trackingTemplate, finalUrlSuffix } = input;
             // Extract OAuth tokens from request
             const refreshToken = extractRefreshToken(input);
             if (!refreshToken) {
@@ -197,7 +232,7 @@ Which campaign type do you want?`;
             }
             // ═══ STEP 4: CAMPAIGN NAME GUIDANCE ═══
             if (!name) {
-                const guidanceText = `📝 CAMPAIGN NAME (Step 4/5)
+                const guidanceText = `📝 CAMPAIGN NAME (Step 4/6)
 
 Enter a descriptive campaign name:
 
@@ -206,7 +241,7 @@ Enter a descriptive campaign name:
 - Examples:
   • "ACME Inc - Search - Brand Terms - 2025 Q1"
   • "Product Launch - PMax - November 2025"
-  • "Holiday Sale - Display - Remarketing"
+  • "Holiday Sale - Remarketing"
 
 **Keep it:**
 - Descriptive (know what it is at a glance)
@@ -216,9 +251,64 @@ Enter a descriptive campaign name:
 What should the campaign be named?`;
                 return injectGuidance({ customerId, budgetId, campaignType }, guidanceText);
             }
-            // ═══ STEP 5: EXECUTE CAMPAIGN CREATION ═══
+            // ═══ STEP 5: SETTINGS & TRACKING FORM ═══
+            // Check if ANY of the optional settings are missing - if so, show the form
+            const hasNetworkSettings = targetGoogleSearch !== undefined || targetSearchNetwork !== undefined ||
+                targetContentNetwork !== undefined || targetPartnerSearchNetwork !== undefined;
+            const hasDateSettings = startDate !== undefined || endDate !== undefined;
+            const hasTrackingSettings = trackingTemplate !== undefined || finalUrlSuffix !== undefined;
+            if (!hasNetworkSettings && !hasDateSettings && !hasTrackingSettings) {
+                const guidanceText = `⚙️ CAMPAIGN SETTINGS & TRACKING (Step 5/6)
+
+**Campaign So Far:**
+✅ Account: ${customerId}
+✅ Budget: ${budgetId}
+✅ Type: ${campaignType}
+✅ Name: ${name}
+✅ Status: ${status || 'PAUSED'}
+
+Now configure campaign settings and tracking (all optional - smart defaults will be used):
+
+📡 **NETWORK SETTINGS** (Where should ads appear?):
+  targetGoogleSearch: true/false (default: true)
+  targetSearchNetwork: true/false (default: false)
+  targetContentNetwork: true/false (default: false for SEARCH, true for DISPLAY)
+  targetPartnerSearchNetwork: true/false (default: false)
+
+📅 **CAMPAIGN SCHEDULE** (When should campaign run?):
+  startDate: "YYYY-MM-DD" (default: tomorrow)
+  endDate: "YYYY-MM-DD" (optional, default: no end date - runs indefinitely)
+
+📊 **TRACKING & URLs** (For analytics and conversion tracking):
+  trackingTemplate: "https://tracker.com?src={lpurl}" (optional)
+  finalUrlSuffix: "utm_campaign=${name.replace(/ /g, '_')}" (optional)
+
+💡 **RECOMMENDATIONS:**
+- For SEARCH campaigns: Keep targetGoogleSearch=true, others false
+- For test campaigns: Set endDate to limit spend
+- For conversion tracking: Add trackingTemplate and finalUrlSuffix
+
+**To proceed:**
+1. Provide any settings you want to customize (or none for smart defaults)
+2. Example: { targetGoogleSearch: true, startDate: "2025-01-01", endDate: "2025-03-31" }
+
+**Or skip all optional settings** by calling with just the parameters you've already provided.`;
+                return injectGuidance({ customerId, budgetId, campaignType, name }, guidanceText);
+            }
+            // ═══ STEP 6: EXECUTE CAMPAIGN CREATION ═══
             logger.info('Creating campaign', { customerId, name, campaignType });
-            const result = await client.createCampaign(customerId, name, budgetId, campaignType, status || 'PAUSED');
+            // Build options object for additional settings
+            const campaignOptions = {
+                targetGoogleSearch,
+                targetSearchNetwork,
+                targetContentNetwork,
+                targetPartnerSearchNetwork,
+                startDate,
+                endDate,
+                trackingTemplate,
+                finalUrlSuffix
+            };
+            const result = await client.createCampaign(customerId, name, budgetId, campaignType, status || 'PAUSED', campaignOptions);
             // AUDIT: Log successful campaign creation
             await audit.logWriteOperation('user', 'create_campaign', customerId, {
                 campaignId: result,
