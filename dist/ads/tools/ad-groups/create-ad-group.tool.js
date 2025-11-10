@@ -9,7 +9,6 @@ import { createGoogleAdsClientFromRefreshToken } from '../../client.js';
 import { getAuditLogger } from '../../../gsc/audit.js';
 import { formatDiscoveryResponse, injectGuidance } from '../../../shared/interactive-workflow.js';
 import { extractCustomerId, microsToAmount } from '../../validation.js';
-import { getApprovalEnforcer, DryRunResultBuilder } from '../../../shared/approval-enforcer.js';
 const logger = getLogger('ads.tools.ad-groups.create');
 const audit = getAuditLogger();
 /**
@@ -116,16 +115,12 @@ export const createAdGroupTool = {
                 enum: ['OPTIMIZE', 'ROTATE_INDEFINITELY', 'OPTIMIZE_FOR_CONVERSIONS'],
                 description: 'How to rotate ads within the ad group (default: OPTIMIZE)',
             },
-            confirmationToken: {
-                type: 'string',
-                description: 'Confirmation token from dry-run preview (optional - if not provided, will show preview)',
-            },
         },
         required: [], // Make optional for discovery
     },
     async handler(input) {
         try {
-            const { customerId, campaignId, name, cpcBidMicros, status, type, trackingUrlTemplate, urlCustomParameters, adRotationMode, confirmationToken } = input;
+            const { customerId, campaignId, name, cpcBidMicros, status, type, trackingUrlTemplate, urlCustomParameters, adRotationMode } = input;
             // Extract OAuth tokens from request
             const refreshToken = extractRefreshToken(input);
             if (!refreshToken) {
@@ -262,144 +257,40 @@ Set a default CPC bid for this ad group (optional).
 Would you like to set a CPC bid? (Optional - leave empty to skip)`;
                 return injectGuidance({ customerId, campaignId, name, skipCpcBid: true }, guidanceText);
             }
-            // ═══ STEP 5: DRY-RUN PREVIEW ═══
-            const approvalEnforcer = getApprovalEnforcer();
-            const dryRunBuilder = new DryRunResultBuilder('create_ad_group', 'Google Ads', customerId);
-            dryRunBuilder.addChange({
-                resource: 'Ad Group',
-                resourceId: 'new',
-                field: 'name',
-                currentValue: 'N/A (new ad group)',
-                newValue: name,
-                changeType: 'create',
-            });
-            dryRunBuilder.addChange({
-                resource: 'Ad Group',
-                resourceId: 'new',
-                field: 'campaign',
-                currentValue: 'N/A',
-                newValue: `Campaign ID: ${campaignId}`,
-                changeType: 'create',
-            });
-            dryRunBuilder.addChange({
-                resource: 'Ad Group',
-                resourceId: 'new',
-                field: 'status',
-                currentValue: 'N/A',
-                newValue: status || 'PAUSED',
-                changeType: 'create',
-            });
+            // ═══ STEP 5: EXECUTE AD GROUP CREATION ═══
+            // Note: CREATE operations don't need approval (like create_campaign)
+            // Starting in PAUSED status is safe - practitioner adds keywords/ads before enabling
+            logger.info('Creating ad group', { customerId, campaignId, name });
+            const customer = client.getCustomer(customerId);
+            const adGroupOperation = {
+                name,
+                campaign: `customers/${customerId}/campaigns/${campaignId}`,
+                status: status || 'PAUSED',
+            };
+            // CPC bid (optional)
             if (cpcBidMicros) {
-                const cpcAmount = microsToAmount(cpcBidMicros);
-                dryRunBuilder.addChange({
-                    resource: 'Ad Group',
-                    resourceId: 'new',
-                    field: 'cpc_bid_micros',
-                    currentValue: 'N/A',
-                    newValue: `${cpcAmount} per click`,
-                    changeType: 'create',
-                });
+                adGroupOperation.cpc_bid_micros = cpcBidMicros;
             }
-            // NEW Phase 1: Add type if provided
+            // NEW Phase 1: Ad group type (optional - defaults to campaign type)
             if (type) {
-                dryRunBuilder.addChange({
-                    resource: 'Ad Group',
-                    resourceId: 'new',
-                    field: 'type',
-                    currentValue: 'N/A',
-                    newValue: type,
-                    changeType: 'create',
-                });
+                adGroupOperation.type = type;
             }
-            // NEW Phase 1: Add tracking template if provided
+            // NEW Phase 1: Tracking URL template (optional)
             if (trackingUrlTemplate) {
-                dryRunBuilder.addChange({
-                    resource: 'Ad Group',
-                    resourceId: 'new',
-                    field: 'tracking_url_template',
-                    currentValue: 'N/A',
-                    newValue: trackingUrlTemplate,
-                    changeType: 'create',
-                });
+                adGroupOperation.tracking_url_template = trackingUrlTemplate;
             }
-            // NEW Phase 1: Add custom parameters if provided
+            // NEW Phase 1: Custom URL parameters (optional)
             if (urlCustomParameters && urlCustomParameters.length > 0) {
-                dryRunBuilder.addChange({
-                    resource: 'Ad Group',
-                    resourceId: 'new',
-                    field: 'url_custom_parameters',
-                    currentValue: 'N/A',
-                    newValue: urlCustomParameters.map((p) => `${p.key}=${p.value}`).join(', '),
-                    changeType: 'create',
-                });
+                adGroupOperation.url_custom_parameters = urlCustomParameters.map((param) => ({
+                    key: param.key,
+                    value: param.value,
+                }));
             }
-            // NEW Phase 1: Add ad rotation mode if provided
+            // NEW Phase 1: Ad rotation mode (optional)
             if (adRotationMode) {
-                dryRunBuilder.addChange({
-                    resource: 'Ad Group',
-                    resourceId: 'new',
-                    field: 'ad_rotation_mode',
-                    currentValue: 'N/A',
-                    newValue: adRotationMode,
-                    changeType: 'create',
-                });
+                adGroupOperation.ad_rotation_mode = adRotationMode;
             }
-            // Add recommendations
-            if (status === 'ENABLED') {
-                dryRunBuilder.addRecommendation('⚠️ Ad group will be created in ENABLED status. Ensure you have keywords and ads ready to add.');
-            }
-            else {
-                dryRunBuilder.addRecommendation('✅ Ad group will be created in PAUSED status. Add keywords and ads before enabling.');
-            }
-            dryRunBuilder.addRecommendation('Next steps: Add 5-20 keywords to this ad group, then create 2-3 ads for A/B testing');
-            const dryRun = dryRunBuilder.build();
-            // If no confirmation token, return preview
-            if (!confirmationToken) {
-                const { confirmationToken: token } = await approvalEnforcer.createDryRun('create_ad_group', 'Google Ads', customerId, { campaignId, name, cpcBidMicros, status, type, trackingUrlTemplate, urlCustomParameters, adRotationMode });
-                const preview = approvalEnforcer.formatDryRunForDisplay(dryRun);
-                return {
-                    success: true,
-                    requiresApproval: true,
-                    preview,
-                    confirmationToken: token,
-                    message: 'Ad group creation requires approval. Review the preview above and call this tool again with the confirmationToken to proceed.',
-                };
-            }
-            // ═══ STEP 6: EXECUTE AD GROUP CREATION ═══
-            logger.info('Creating ad group with confirmation', { customerId, campaignId, name });
-            const result = await approvalEnforcer.validateAndExecute(confirmationToken, dryRun, async () => {
-                const customer = client.getCustomer(customerId);
-                const adGroupOperation = {
-                    name,
-                    campaign: `customers/${customerId}/campaigns/${campaignId}`,
-                    status: status || 'PAUSED',
-                };
-                // CPC bid (optional)
-                if (cpcBidMicros) {
-                    adGroupOperation.cpc_bid_micros = cpcBidMicros;
-                }
-                // NEW Phase 1: Ad group type (optional - defaults to campaign type)
-                if (type) {
-                    adGroupOperation.type = type;
-                }
-                // NEW Phase 1: Tracking URL template (optional)
-                if (trackingUrlTemplate) {
-                    adGroupOperation.tracking_url_template = trackingUrlTemplate;
-                }
-                // NEW Phase 1: Custom URL parameters (optional)
-                if (urlCustomParameters && urlCustomParameters.length > 0) {
-                    adGroupOperation.url_custom_parameters = urlCustomParameters.map((param) => ({
-                        key: param.key,
-                        value: param.value,
-                    }));
-                }
-                // NEW Phase 1: Ad rotation mode (optional)
-                if (adRotationMode) {
-                    adGroupOperation.ad_rotation_mode = adRotationMode;
-                }
-                const createResult = await customer.adGroups.create([adGroupOperation]);
-                return createResult;
-            });
+            const result = await customer.adGroups.create([adGroupOperation]);
             // AUDIT: Log successful ad group creation
             await audit.logWriteOperation('user', 'create_ad_group', customerId, {
                 adGroupId: result,
@@ -412,23 +303,57 @@ Would you like to set a CPC bid? (Optional - leave empty to skip)`;
                 urlCustomParameters,
                 adRotationMode,
             });
-            return {
-                success: true,
-                data: {
-                    customerId,
-                    campaignId,
-                    adGroupId: result,
-                    name,
-                    status: status || 'PAUSED',
-                    cpcBid: cpcBidMicros ? microsToAmount(cpcBidMicros) : 'Campaign default',
-                    message: `✅ Ad group "${name}" created successfully in ${status || 'PAUSED'} status`,
-                },
-                nextSteps: [
-                    `Add keywords: use add_keywords with adGroupId="${result}"`,
-                    `Create ads: use create_ad with adGroupId="${result}"`,
-                    status === 'PAUSED' ? `Enable ad group when ready: use update_ad_group` : null,
-                ].filter(Boolean),
-            };
+            // Extract ad group ID from result
+            const adGroupId = result.results?.[0]?.resource_name?.split('/')?.pop() || result;
+            const guidanceText = `✅ AD GROUP CREATED SUCCESSFULLY
+
+**Ad Group Details:**
+- Name: ${name}
+- ID: ${adGroupId}
+- Campaign: ${campaignId}
+- Status: ${status || 'PAUSED'}
+- CPC Bid: ${cpcBidMicros ? microsToAmount(cpcBidMicros) : 'Campaign default'}
+${type ? `- Type: ${type}` : ''}
+${trackingUrlTemplate ? `- Tracking Template: ${trackingUrlTemplate}` : ''}
+${urlCustomParameters && urlCustomParameters.length > 0 ? `- Custom Parameters: ${urlCustomParameters.map((p) => `${p.key}=${p.value}`).join(', ')}` : ''}
+${adRotationMode ? `- Ad Rotation: ${adRotationMode}` : ''}
+
+🎯 **NEXT STEPS - Complete Ad Group Setup:**
+
+**1. Add Keywords (5-20 keywords recommended):**
+   • use add_keywords
+     Example: add_keywords(customerId: "${customerId}", adGroupId: "${adGroupId}", keywords: [
+       {text: "dell xps 15", matchType: "EXACT"},
+       {text: "dell xps 15 laptop", matchType: "PHRASE"},
+       {text: "premium business laptop", matchType: "BROAD"}
+     ])
+
+**2. Create Ads (2-3 ads for A/B testing):**
+   • use create_ad with agent assistance
+     → Agent can help generate headlines and descriptions!
+
+**3. Add Negative Keywords (optional but recommended):**
+   • use add_negative_keywords
+     Example: ["cheap", "used", "refurbished"]
+
+**4. Enable Ad Group When Ready:**
+   • use update_ad_group to set status to ENABLED
+
+⚠️ **IMPORTANT:** Ad group is in PAUSED status. Add keywords and ads before enabling!
+
+💡 **TIP:** Use agent-assisted ad creation (create_ad) - agent will generate professional headlines and descriptions based on your product details!`;
+            return injectGuidance({
+                customerId,
+                campaignId,
+                adGroupId,
+                name,
+                status: status || 'PAUSED',
+                cpcBid: cpcBidMicros ? microsToAmount(cpcBidMicros) : 'Campaign default',
+                type,
+                trackingUrlTemplate,
+                urlCustomParameters,
+                adRotationMode,
+            }, guidanceText);
         }
         catch (error) {
             logger.error('Failed to create ad group', error);

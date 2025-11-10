@@ -62,37 +62,9 @@ export declare const createAdGroupTool: {
                 enum: string[];
                 description: string;
             };
-            confirmationToken: {
-                type: string;
-                description: string;
-            };
         };
         required: never[];
     };
-    handler(input: any): Promise<import("../../../shared/interactive-workflow.js").McpResponse | {
-        success: boolean;
-        requiresApproval: boolean;
-        preview: string;
-        confirmationToken: string;
-        message: string;
-        data?: undefined;
-        nextSteps?: undefined;
-    } | {
-        success: boolean;
-        data: {
-            customerId: any;
-            campaignId: any;
-            adGroupId: any;
-            name: any;
-            status: any;
-            cpcBid: string;
-            message: string;
-        };
-        nextSteps: (string | null)[];
-        requiresApproval?: undefined;
-        preview?: undefined;
-        confirmationToken?: undefined;
-        message?: undefined;
-    }>;
+    handler(input: any): Promise<import("../../../shared/interactive-workflow.js").McpResponse>;
 };
 //# sourceMappingURL=create-ad-group.tool.d.ts.map

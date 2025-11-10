@@ -3206,5 +3206,125 @@
       "campaignId": "23249734522"
     },
     "errorMessage": "Invalid or expired confirmation token. Please generate a new preview and confirm within 60 seconds."
+  },
+  {
+    "timestamp": "2025-11-10T16:59:31.452Z",
+    "user": "user",
+    "action": "create_ad_group",
+    "property": "2041738707",
+    "operationType": "read",
+    "result": "failure",
+    "details": {
+      "adGroupName": "Dell XPS 15 - Premium Business",
+      "campaignId": "23249734522"
+    }
+  },
+  {
+    "timestamp": "2025-11-10T17:00:07.443Z",
+    "user": "user",
+    "action": "create_ad_group",
+    "property": "2041738707",
+    "operationType": "write",
+    "result": "success",
+    "details": {
+      "adGroupId": {
+        "results": [
+          {
+            "resource_name": "customers/2041738707/adGroups/186247065497",
+            "ad_group": null
+          }
+        ],
+        "partial_failure_error": null
+      },
+      "adGroupName": "Dell XPS 15 - Premium Business",
+      "campaignId": "23249734522",
+      "cpcBidMicros": 2500000,
+      "initialStatus": "PAUSED",
+      "type": "SEARCH_STANDARD",
+      "trackingUrlTemplate": "http://tracking.example.com/?campaign={campaignid}&adgroup={adgroupid}&keyword={keyword}&u={lpurl}",
+      "urlCustomParameters": [
+        {
+          "key": "source",
+          "value": "google_ads"
+        },
+        {
+          "key": "product",
+          "value": "xps15"
+        }
+      ],
+      "adRotationMode": "OPTIMIZE"
+    }
+  },
+  {
+    "timestamp": "2025-11-10T17:00:31.111Z",
+    "user": "user",
+    "action": "create_ad_group",
+    "property": "2041738707",
+    "operationType": "write",
+    "result": "success",
+    "details": {
+      "adGroupId": {
+        "results": [
+          {
+            "resource_name": "customers/2041738707/adGroups/183686769050",
+            "ad_group": null
+          }
+        ],
+        "partial_failure_error": null
+      },
+      "adGroupName": "Dell XPS 13 - Portable",
+      "campaignId": "23249734522",
+      "cpcBidMicros": 2200000,
+      "initialStatus": "PAUSED",
+      "type": "SEARCH_STANDARD",
+      "trackingUrlTemplate": "http://tracking.example.com/?campaign={campaignid}&adgroup={adgroupid}&u={lpurl}",
+      "urlCustomParameters": [
+        {
+          "key": "source",
+          "value": "google_ads"
+        },
+        {
+          "key": "product",
+          "value": "xps13"
+        }
+      ],
+      "adRotationMode": "OPTIMIZE"
+    }
+  },
+  {
+    "timestamp": "2025-11-10T17:00:38.991Z",
+    "user": "user",
+    "action": "create_ad_group",
+    "property": "2041738707",
+    "operationType": "write",
+    "result": "success",
+    "details": {
+      "adGroupId": {
+        "results": [
+          {
+            "resource_name": "customers/2041738707/adGroups/183686790210",
+            "ad_group": null
+          }
+        ],
+        "partial_failure_error": null
+      },
+      "adGroupName": "Dell Inspiron - Budget Friendly",
+      "campaignId": "23249734522",
+      "cpcBidMicros": 1500000,
+      "initialStatus": "PAUSED",
+      "type": "SEARCH_STANDARD",
+      "trackingUrlTemplate": "http://tracking.example.com/?campaign={campaignid}&adgroup={adgroupid}&u={lpurl}",
+      "urlCustomParameters": [
+        {
+          "key": "source",
+          "value": "google_ads"
+        },
+        {
+          "key": "product",
+          "value": "inspiron"
+        }
+      ],
+      "adRotationMode": "OPTIMIZE"
+    }
   }
 ]
