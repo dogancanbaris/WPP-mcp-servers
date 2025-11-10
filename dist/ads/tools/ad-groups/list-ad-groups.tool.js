@@ -106,8 +106,7 @@ This account has no campaigns. Create a campaign first.
           metrics.ctr,
           metrics.average_cpc,
           metrics.cost_micros,
-          metrics.conversions,
-          metrics.conversion_rate
+          metrics.conversions
         FROM ad_group
         WHERE campaign.id = ${campaignId}
           AND segments.date DURING LAST_30_DAYS
