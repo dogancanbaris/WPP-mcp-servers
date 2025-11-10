@@ -181,38 +181,38 @@ export const ChartStyle: React.FC<ChartStyleProps> = ({ config, onUpdate }) => {
 
   /**
    * Sync local config changes back to parent component
+   * Note: onUpdate is intentionally excluded from dependencies to prevent infinite loop
    */
-  const syncToConfig = () => {
-    onUpdate({
-      title: titleConfig.text,
-      style: {
-        ...config.style,
-        backgroundColor: backgroundBorderConfig.backgroundColor,
-        borderColor: backgroundBorderConfig.borderColor,
-        borderWidth: backgroundBorderConfig.borderWidth,
-        borderRadius: backgroundBorderConfig.borderRadius,
-        padding: backgroundBorderConfig.padding,
-      },
-      customCSS,
-      // Store all style configs in a custom property
-      styleConfigs: {
-        title: titleConfig,
-        table: tableConfig,
-        tableHeader: tableHeaderConfig,
-        tableBody: tableBodyConfig,
-        conditionalFormatting: conditionalFormattingConfig,
-        dimensions: dimensionStyleConfig,
-        metrics: metricStyleConfig,
-        backgroundBorder: backgroundBorderConfig,
-        headerFooter: headerFooterConfig,
-        theme: currentTheme,
-      },
-    });
-  };
-
-  // Sync whenever any config changes
-  React.useEffect(() => {
-    syncToConfig();
+  const syncToConfig = React.useCallback(() => {
+    try {
+      onUpdate({
+        title: titleConfig.text,
+        style: {
+          ...config.style,
+          backgroundColor: backgroundBorderConfig.backgroundColor,
+          borderColor: backgroundBorderConfig.borderColor,
+          borderWidth: backgroundBorderConfig.borderWidth,
+          borderRadius: backgroundBorderConfig.borderRadius,
+          padding: backgroundBorderConfig.padding,
+        },
+        customCSS,
+        // Store all style configs in a custom property
+        styleConfigs: {
+          title: titleConfig,
+          table: tableConfig,
+          tableHeader: tableHeaderConfig,
+          tableBody: tableBodyConfig,
+          conditionalFormatting: conditionalFormattingConfig,
+          dimensions: dimensionStyleConfig,
+          metrics: metricStyleConfig,
+          backgroundBorder: backgroundBorderConfig,
+          headerFooter: headerFooterConfig,
+          theme: currentTheme,
+        },
+      });
+    } catch (error) {
+      console.error('[ChartStyle] Failed to sync config:', error);
+    }
   }, [
     titleConfig,
     tableConfig,
@@ -225,6 +225,30 @@ export const ChartStyle: React.FC<ChartStyleProps> = ({ config, onUpdate }) => {
     headerFooterConfig,
     customCSS,
     currentTheme,
+    config.style,
+    // Note: onUpdate intentionally excluded to prevent infinite loop
+  ]);
+
+  // Debounced sync to prevent too many updates
+  // Only sync when style configs actually change
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      syncToConfig();
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [
+    titleConfig,
+    tableConfig,
+    tableHeaderConfig,
+    tableBodyConfig,
+    conditionalFormattingConfig,
+    dimensionStyleConfig,
+    metricStyleConfig,
+    backgroundBorderConfig,
+    headerFooterConfig,
+    customCSS,
+    currentTheme,
+    // Note: syncToConfig excluded since it's stable via useCallback
   ]);
 
   /**

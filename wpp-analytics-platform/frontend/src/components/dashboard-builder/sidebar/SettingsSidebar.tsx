@@ -3,7 +3,6 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { ChartSetup } from './setup/ChartSetup';
 import { ChartStyle } from './style/ChartStyle';
-import { ComponentFilterAccordion } from '@/components/dashboard-builder/ComponentFilterAccordion';
 import { ComponentConfig } from '@/types/dashboard-builder';
 import { PagePanel } from './page/PagePanel';
 import { useCurrentPageId, usePages, useDashboardStore } from '@/store/dashboardStore';
@@ -24,7 +23,6 @@ export const SettingsSidebar: React.FC<SettingsSidebarProps> = ({
     () => pages?.find((p) => p.id === currentPageId),
     [pages, currentPageId]
   );
-  const sidebarScope = useDashboardStore((s) => s.sidebarScope);
   const sidebarActiveTab = useDashboardStore((s) => s.sidebarActiveTab);
   const selectedCanvasSet = useDashboardStore((s) => s.selectedCanvasIds);
 
@@ -40,34 +38,14 @@ export const SettingsSidebar: React.FC<SettingsSidebarProps> = ({
     selectedComponent || selectedCanvasComponents[0]?.component || undefined;
   const isMultiSelect = selectedCanvasComponents.length > 1;
 
-  const [scope, setScope] = useState<'page' | 'component'>(
-    effectiveSelectedComponent ? 'component' : 'page'
-  );
   const [activeTab, setActiveTab] = useState<'setup' | 'style'>('setup');
 
+  // Sync active tab from store if provided
   useEffect(() => {
-    setScope(effectiveSelectedComponent ? 'component' : 'page');
-  }, [effectiveSelectedComponent]);
-
-  useEffect(() => {
-    if (!effectiveSelectedComponent && scope !== 'page') {
-      setScope('page');
-    }
-  }, [currentPageId, scope, effectiveSelectedComponent]);
-
-  useEffect(() => {
-    if (sidebarScope === 'page') {
-      setScope('page');
-    } else if (sidebarScope === 'component' && effectiveSelectedComponent) {
-      setScope('component');
-    }
-  }, [sidebarScope, effectiveSelectedComponent]);
-
-  useEffect(() => {
-    if (scope === 'component' && sidebarActiveTab) {
+    if (sidebarActiveTab) {
       setActiveTab(sidebarActiveTab);
     }
-  }, [sidebarActiveTab, scope]);
+  }, [sidebarActiveTab]);
 
   const formattedType = effectiveSelectedComponent?.type
     ? effectiveSelectedComponent.type
@@ -78,97 +56,69 @@ export const SettingsSidebar: React.FC<SettingsSidebarProps> = ({
 
   return (
     <aside className="w-80 border-l bg-surface dashboard-sidebar h-full fade-in flex flex-col">
-      <div className="p-3 border-b bg-background space-y-2">
-        <p className="text-[11px] uppercase tracking-wide text-muted-foreground font-semibold">
-          Settings
-        </p>
-        <div className="grid grid-cols-2 gap-1 text-xs">
-          <Button
-            variant={scope === 'page' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setScope('page')}
-          >
-            Page{currentPage ? `: ${currentPage.name}` : ''}
-          </Button>
-          <Button
-            variant={scope === 'component' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => effectiveSelectedComponent && setScope('component')}
-            disabled={!effectiveSelectedComponent && !isMultiSelect}
-          >
-            Component
-            {isMultiSelect
-              ? `: ${selectedCanvasComponents.length} selected`
-              : effectiveSelectedComponent
-              ? `: ${effectiveSelectedComponent.title || formattedType}`
-              : ''}
-          </Button>
-        </div>
+      {/* Simple Header - Looker Studio Style */}
+      <div className="px-4 py-3 border-b bg-background">
+        <h3 className="text-sm font-semibold text-foreground">
+          {isMultiSelect
+            ? `${selectedCanvasComponents.length} components selected`
+            : effectiveSelectedComponent
+            ? effectiveSelectedComponent.title || formattedType || 'Untitled Component'
+            : currentPage?.name || 'Page Settings'}
+        </h3>
+        {effectiveSelectedComponent && (effectiveSelectedComponent.dataset_id || effectiveSelectedComponent.datasource) && (
+          <p className="text-xs text-muted-foreground mt-1">
+            {effectiveSelectedComponent.datasource || effectiveSelectedComponent.dataset_id}
+          </p>
+        )}
       </div>
 
-      {scope === 'page' && (
-        <div className="flex-1 overflow-y-auto">
-          <PagePanel />
-        </div>
-      )}
+      {/* Main Content - Always Show Setup/Style Tabs (Looker Studio Pattern) */}
+      <div className="flex-1 overflow-y-auto">
+        {isMultiSelect ? (
+          <MultiSelectPanel selectedItems={selectedCanvasComponents} />
+        ) : (
+          <Tabs
+            value={activeTab}
+            onValueChange={(v) => setActiveTab(v as 'setup' | 'style')}
+            className="w-full px-4 py-4"
+          >
+            <TabsList className="grid w-full grid-cols-2 bg-muted/40 rounded-md">
+              <TabsTrigger value="setup" className="text-xs">
+                Setup
+              </TabsTrigger>
+              <TabsTrigger value="style" className="text-xs">
+                Style
+              </TabsTrigger>
+            </TabsList>
 
-      {scope === 'component' && (
-        <div className="flex-1 overflow-y-auto">
-          {isMultiSelect ? (
-            <MultiSelectPanel selectedItems={selectedCanvasComponents} />
-          ) : effectiveSelectedComponent ? (
-            <>
-              <div className="px-4 py-3 border-b bg-background space-y-1">
-                <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Component</p>
-                <p className="text-sm font-semibold text-foreground">
-                  {effectiveSelectedComponent.title || formattedType || 'Untitled Component'}
-                </p>
-                {(effectiveSelectedComponent.dataset_id || effectiveSelectedComponent.datasource) && (
+            <TabsContent value="setup" className="mt-4 space-y-6">
+              {effectiveSelectedComponent ? (
+                <ChartSetup
+                  config={effectiveSelectedComponent}
+                  onUpdate={(updates) => onUpdateComponent(effectiveSelectedComponent.id, updates)}
+                />
+              ) : (
+                <PagePanel />
+              )}
+            </TabsContent>
+
+            <TabsContent value="style" className="mt-4 space-y-6">
+              {effectiveSelectedComponent ? (
+                <ChartStyle
+                  config={effectiveSelectedComponent}
+                  onUpdate={(updates) => onUpdateComponent(effectiveSelectedComponent.id, updates)}
+                />
+              ) : (
+                <div className="space-y-4">
                   <p className="text-xs text-muted-foreground">
-                    Source • {effectiveSelectedComponent.datasource || effectiveSelectedComponent.dataset_id}
+                    Page-level styling options will appear here.
                   </p>
-                )}
-              </div>
-              <Tabs
-                value={activeTab}
-                onValueChange={(v) => setActiveTab(v as 'setup' | 'style')}
-                className="w-full px-4 py-4"
-              >
-                <TabsList className="grid w-full grid-cols-2 bg-muted/40 rounded-md">
-                  <TabsTrigger value="setup" className="text-xs">
-                    Setup
-                  </TabsTrigger>
-                  <TabsTrigger value="style" className="text-xs">
-                    Style
-                  </TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="setup" className="mt-4 space-y-6">
-                  <ChartSetup
-                    config={effectiveSelectedComponent}
-                    onUpdate={(updates) => onUpdateComponent(effectiveSelectedComponent.id, updates)}
-                  />
-                  <ComponentFilterAccordion
-                    componentConfig={effectiveSelectedComponent}
-                    onUpdate={(updates) => onUpdateComponent(effectiveSelectedComponent.id, updates)}
-                  />
-                </TabsContent>
-
-                <TabsContent value="style" className="mt-4 space-y-6">
-                  <ChartStyle
-                    config={effectiveSelectedComponent}
-                    onUpdate={(updates) => onUpdateComponent(effectiveSelectedComponent.id, updates)}
-                  />
-                </TabsContent>
-              </Tabs>
-            </>
-          ) : (
-            <div className="p-4 text-xs text-muted-foreground">
-              Select a component to edit its settings.
-            </div>
-          )}
-        </div>
-      )}
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
+        )}
+      </div>
     </aside>
   );
 };

@@ -97,8 +97,21 @@ export const ChartSetup: React.FC<ChartSetupProps> = ({ config, onUpdate }) => {
   const blendEnabled =
     supportsBlending &&
     !!(config.blendConfig && config.blendConfig.sources?.length && config.blendConfig.sources.length > 1);
-  const selectedDimensions = ((config as unknown as Record<string, unknown>).dimensions as string[]) || [];
-  const drillDownEnabled = ((config as unknown as Record<string, unknown>).drillDownEnabled as boolean) || false;
+
+  // Read dimensions - supports both new array format and legacy singular format
+  const selectedDimensions = useMemo(() => {
+    // New format: dimensions array
+    if (config.dimensions && Array.isArray(config.dimensions)) {
+      return config.dimensions;
+    }
+    // Legacy format: dimension + breakdownDimension
+    const legacy: string[] = [];
+    if (config.dimension) legacy.push(config.dimension);
+    if (config.breakdownDimension) legacy.push(config.breakdownDimension);
+    return legacy;
+  }, [config.dimensions, config.dimension, config.breakdownDimension]);
+
+  const drillDownEnabled = config.drillDownEnabled || false;
   const [isBlendDialogOpen, setBlendDialogOpen] = useState(false);
   const blendSummary = useMemo(
     () => getBlendSummary(config.blendConfig, dataSources),
@@ -120,14 +133,15 @@ export const ChartSetup: React.FC<ChartSetupProps> = ({ config, onUpdate }) => {
   }, [config.metrics, availableFields]);
 
   const filters: ChartFilter[] = useMemo(() => {
-    return (config.filters || []).map((f, idx) => ({
+    // Read component-level filters (NOT page-level filters)
+    return (config.componentFilters || []).map((f, idx) => ({
       id: `filter-${idx}`,
       fieldId: f.field,
       fieldName: f.field,
       operator: f.operator,
       value: f.values.join(','),
     }));
-  }, [config.filters]);
+  }, [config.componentFilters]);
 
   const dateRange: DateRange = config.dateRange
     ? typeof config.dateRange === 'string'
@@ -149,15 +163,37 @@ export const ChartSetup: React.FC<ChartSetupProps> = ({ config, onUpdate }) => {
 
     const source =
       (selectedSourceId && dataSources.find((s) => s.id === selectedSourceId)) || dataSources[0];
-    setAvailableFields(source?.fields || []);
 
-    if (!config.dataset_id && source) {
-      onUpdate({
-        dataset_id: source.id,
-        datasource: source.table || source.name,
-      });
+    // Set available fields immediately
+    const fields = source?.fields || [];
+    setAvailableFields(fields);
+
+    // Build updates object to batch all changes
+    const updates: Partial<ComponentConfig> = {};
+    let hasUpdates = false;
+
+    // Auto-populate first dimension if none selected
+    if (fields.length > 0 && (!selectedDimensions || selectedDimensions.length === 0)) {
+      const firstDimension = fields.find(f => f.type === 'dimension');
+      if (firstDimension) {
+        updates.dimensions = [firstDimension.id];
+        hasUpdates = true;
+      }
     }
-  }, [dataSources, selectedSourceId, config.dataset_id, onUpdate]);
+
+    // Auto-populate dataset_id if not set
+    if (!config.dataset_id && source) {
+      updates.dataset_id = source.id;
+      updates.datasource = source.table || source.name;
+      hasUpdates = true;
+    }
+
+    // Only call onUpdate if we actually have changes
+    if (hasUpdates) {
+      onUpdate(updates);
+    }
+  }, [dataSources, selectedSourceId, config.dataset_id, selectedDimensions]);
+  // Note: onUpdate is intentionally excluded from dependencies to prevent infinite loop
 
   useEffect(() => {
     if (!blendEnabled && config.dataset_id) {

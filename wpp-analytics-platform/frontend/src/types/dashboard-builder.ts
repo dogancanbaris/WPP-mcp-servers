@@ -169,10 +169,18 @@ export interface ComponentConfig {
   dataset_id?: string;
   datasource?: string;
   blendConfig?: BlendConfig;
+
+  // Dimensions (supports multiple for charts like tables, heatmaps)
+  dimensions?: string[];
+  // Legacy properties (deprecated, kept for backwards compatibility)
   dimension?: string | null;
   breakdownDimension?: string | null;
+
+  // Drill-down capability
+  drillDownEnabled?: boolean;
+
   metrics?: string[];
-  filters?: FilterConfig[];
+  filters?: FilterConfig[];  // Page-level filters
   dateRange?: DateRangeConfig;
 
   // Filter cascade overrides (for multi-page dashboards)

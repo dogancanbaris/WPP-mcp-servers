@@ -3153,5 +3153,32 @@
       "budgetId": "15118753175",
       "initialStatus": "PAUSED"
     }
+  },
+  {
+    "timestamp": "2025-11-10T12:05:07.380Z",
+    "user": "user",
+    "action": "update_campaign",
+    "property": "2041738707",
+    "operationType": "read",
+    "result": "failure",
+    "details": {
+      "campaignId": "23242001949"
+    },
+    "errorMessage": "Invalid or expired confirmation token. Please generate a new preview and confirm within 60 seconds."
+  },
+  {
+    "timestamp": "2025-11-10T12:09:34.623Z",
+    "user": "user",
+    "action": "update_campaign",
+    "property": "2041738707",
+    "operationType": "write",
+    "result": "success",
+    "details": {
+      "campaignId": "23249734522",
+      "fieldsUpdated": 1,
+      "updates": {
+        "name": "Dell - Search - Premium Laptops - Q4 2025"
+      }
+    }
   }
 ]

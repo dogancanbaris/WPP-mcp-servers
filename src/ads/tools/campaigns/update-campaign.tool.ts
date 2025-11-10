@@ -282,7 +282,28 @@ Provide the fields you want to update.`;
 
         logger.info('Campaign updated', { customerId, campaignId, result });
 
-        return { customerId, campaignId, changes: changeCount };
+        // AUDIT: Log successful update
+        await audit.logWriteOperation('user', 'update_campaign', customerId, {
+          campaignId,
+          fieldsUpdated: changeCount,
+          updates: { name, budgetId, endDate, trackingTemplate, finalUrlSuffix }
+        });
+
+        const successText = `✅ CAMPAIGN UPDATED SUCCESSFULLY
+
+**Campaign ID:** ${campaignId}
+**Changes Applied:** ${changeCount}
+
+**Updated Fields:**
+${name ? `\n  • Name: ${name}` : ''}
+${budgetId ? `\n  • Budget: ${budgetId}` : ''}
+${endDate ? `\n  • End Date: ${endDate}` : ''}
+${trackingTemplate ? `\n  • Tracking Template: ${trackingTemplate}` : ''}
+${finalUrlSuffix ? `\n  • Final URL Suffix: ${finalUrlSuffix}` : ''}
+
+Changes are now live in the campaign.`;
+
+        return injectGuidance({ customerId, campaignId, changes: changeCount }, successText);
       };
 
       // Dry-run preview
@@ -332,6 +353,21 @@ ${finalUrlSuffix !== undefined ? `\n  • Final URL Suffix: ${finalUrlSuffix || 
         recommendations: ['Pause campaign before major changes', 'Test in paused campaign first'],
       };
 
+      // If no confirmation token, return preview
+      if (!confirmationToken) {
+        const token = approvalEnforcer.createConfirmationToken(dryRun);
+        const preview = approvalEnforcer.formatDryRunForDisplay(dryRun, token);
+
+        return {
+          success: true,
+          requiresApproval: true,
+          preview,
+          confirmationToken: token,
+          message: 'Campaign update requires approval. Review the preview above and call this tool again with the confirmationToken to proceed.',
+        };
+      }
+
+      // Execute with confirmation
       return await approvalEnforcer.validateAndExecute(
         confirmationToken,
         dryRun,

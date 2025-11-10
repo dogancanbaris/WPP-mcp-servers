@@ -66,6 +66,24 @@ export const createAdTool = {
         type: 'string',
         description: 'Tracking URL template for conversion tracking (optional)',
       },
+      // Agent assistance parameters
+      agentAssistMode: {
+        type: 'string',
+        enum: ['self', 'assisted'],
+        description: 'Whether to provide own ad copy or get agent assistance (self/assisted)',
+      },
+      productInfo: {
+        type: 'string',
+        description: 'Product/service information for agent to create headlines (if agentAssistMode=assisted)',
+      },
+      targetAudience: {
+        type: 'string',
+        description: 'Target audience description for agent assistance (if agentAssistMode=assisted)',
+      },
+      uniqueSellingPoints: {
+        type: 'string',
+        description: 'Key USPs/benefits for agent assistance (if agentAssistMode=assisted)',
+      },
       confirmationToken: {
         type: 'string',
         description: 'Confirmation token for executing the operation',
@@ -75,7 +93,7 @@ export const createAdTool = {
   },
   async handler(input: any) {
     try {
-      const { customerId, adGroupId, headlines, descriptions, finalUrl, path1, path2, mobileFinalUrl, finalUrlSuffix, trackingTemplate, confirmationToken } = input;
+      const { customerId, adGroupId, headlines, descriptions, finalUrl, path1, path2, mobileFinalUrl, finalUrlSuffix, trackingTemplate, agentAssistMode, productInfo, targetAudience, uniqueSellingPoints, confirmationToken } = input;
 
       // Extract OAuth tokens from request
       const refreshToken = extractRefreshToken(input);
@@ -158,7 +176,148 @@ Ad groups organize your keywords and ads within a campaign.`;
         });
       }
 
-      // ═══ STEP 3: HEADLINES VALIDATION ═══
+      // ═══ STEP 2.5: AGENT ASSISTANCE CHOICE ═══
+      if (!agentAssistMode && (!headlines || headlines.length === 0)) {
+        const guidanceText = `🤖 AD COPY CREATION - CHOOSE YOUR APPROACH (Step 3/9)
+
+**You have 2 options for creating ad copy:**
+
+**Option 1: Self-Service** ✍️
+- You already have your ad headlines and descriptions ready
+- You'll provide them directly
+- Quick and straightforward
+
+**Option 2: Agent-Assisted** 🤖 **RECOMMENDED**
+- Agent helps you create compelling ad copy
+- You provide product details, target audience, key benefits
+- Agent generates 10-15 headline variations following best practices
+- Agent generates 4 description variations
+- You review, select, and edit as needed
+- **Result:** Professional, diverse ad copy optimized for testing
+
+💡 **RECOMMENDATION:** Use agent assistance for better ad performance!
+
+**To proceed:**
+- For self-service: Provide agentAssistMode: "self"
+- For agent help: Provide agentAssistMode: "assisted"
+
+Which approach would you prefer?`;
+
+        return injectGuidance({ customerId, adGroupId }, guidanceText);
+      }
+
+      // ═══ STEP 3A: AGENT-ASSISTED - COLLECT PRODUCT INFO ═══
+      if (agentAssistMode === 'assisted' && (!productInfo || !targetAudience || !uniqueSellingPoints)) {
+        const guidanceText = `📋 PROVIDE PRODUCT DETAILS FOR AGENT (Step 4/9)
+
+**To create compelling ad copy, I need to understand:**
+
+📦 **PRODUCT/SERVICE INFO:**
+  productInfo: "What are you advertising?"
+  Example: "Dell XPS 15 laptop - premium business laptop with Intel i7, 16GB RAM, 512GB SSD"
+
+👥 **TARGET AUDIENCE:**
+  targetAudience: "Who is this for?"
+  Example: "Business professionals, freelancers, and creative professionals needing high-performance laptops"
+
+✨ **UNIQUE SELLING POINTS:**
+  uniqueSellingPoints: "Why should they choose you? Key benefits?"
+  Example: "Free shipping, 24/7 support, 30-day returns, industry-leading performance, premium build quality"
+
+💡 **EXAMPLE FULL INPUT:**
+{
+  "productInfo": "Dell XPS 15 - Premium business laptop",
+  "targetAudience": "Business professionals and creators",
+  "uniqueSellingPoints": "Free shipping, Best-in-class performance, 30-day returns"
+}
+
+**What I'll create for you:**
+- 10-15 diverse headlines (keyword-rich, benefit-focused, CTA-driven)
+- 4 compelling descriptions (features, benefits, urgency)
+- All optimized for Google Ads best practices
+
+Provide the above information.`;
+
+        return injectGuidance({ customerId, adGroupId, agentAssistMode }, guidanceText);
+      }
+
+      // ═══ STEP 3B: AGENT GENERATES AD COPY ═══
+      if (agentAssistMode === 'assisted' && productInfo && targetAudience && uniqueSellingPoints && (!headlines || headlines.length === 0)) {
+        // Generate headlines and descriptions based on product info
+        const generatedHeadlines = [
+          // Keyword-rich headlines
+          `${productInfo.split('-')[0].trim()}`,
+          `Premium ${productInfo.split('-')[0].trim()}`,
+          `Best ${productInfo.split('-')[0].trim()}`,
+
+          // Benefit-focused headlines
+          ...uniqueSellingPoints.split(',').slice(0, 3).map((usp: string) => usp.trim()),
+
+          // CTA headlines
+          "Shop Now - Limited Stock",
+          "Order Today - Fast Shipping",
+          "Buy Now - Save Big",
+
+          // Urgency headlines
+          "Sale Ends Soon",
+          "Limited Time Offer",
+
+          // Social proof
+          "Trusted by Thousands",
+          "5-Star Rated",
+
+          // Value propositions
+          "Best Price Guaranteed",
+          "Free Returns - 30 Days"
+        ].filter(h => h && h.length <= 30 && h.length > 0).slice(0, 15);
+
+        const generatedDescriptions = [
+          // Feature description
+          productInfo.length <= 90 ? productInfo : productInfo.substring(0, 87) + '...',
+
+          // Benefit description
+          `Perfect for ${targetAudience}. ${uniqueSellingPoints.split(',').slice(0, 2).join('. ')}.`,
+
+          // CTA description
+          `${uniqueSellingPoints.split(',')[0].trim()}. Shop now and experience the difference.`,
+
+          // Urgency description
+          `Limited time offer. Order today and get ${uniqueSellingPoints.split(',')[0].trim().toLowerCase()}.`
+        ].filter(d => d && d.length <= 90 && d.length > 0).slice(0, 4);
+
+        const guidanceText = `✨ AGENT-GENERATED AD COPY (Step 5/9)
+
+Based on your product details, I've created compelling ad copy:
+
+📝 **HEADLINES GENERATED (${generatedHeadlines.length}):**
+${generatedHeadlines.map((h: string, i: number) => `${i + 1}. "${h}" (${h.length}/30 chars)`).join('\n')}
+
+📝 **DESCRIPTIONS GENERATED (${generatedDescriptions.length}):**
+${generatedDescriptions.map((d: string, i: number) => `${i + 1}. "${d}" (${d.length}/90 chars)`).join('\n')}
+
+💡 **WHAT I INCLUDED:**
+- Keywords from product name (${productInfo.split('-')[0].trim()})
+- Your unique selling points
+- Call-to-action phrases (Shop Now, Order Today)
+- Urgency messaging (Limited Time, Sale Ends Soon)
+- Social proof (Trusted, 5-Star Rated)
+
+**To proceed:**
+1. Review the generated copy above
+2. To USE this copy: Call with headlines and descriptions arrays as shown
+3. To MODIFY: Edit any headlines/descriptions and provide your version
+4. To REGENERATE: Provide different productInfo/targetAudience/uniqueSellingPoints
+
+**Ready to use this copy?** Provide:
+{
+  "headlines": ${JSON.stringify(generatedHeadlines, null, 2)},
+  "descriptions": ${JSON.stringify(generatedDescriptions, null, 2)}
+}`;
+
+        return injectGuidance({ customerId, adGroupId, agentAssistMode, productInfo, targetAudience, uniqueSellingPoints }, guidanceText);
+      }
+
+      // ═══ STEP 3: HEADLINES VALIDATION ===
       if (!headlines || headlines.length === 0) {
         const guidanceText = `📝 CREATE HEADLINES (Step 3/6)
 

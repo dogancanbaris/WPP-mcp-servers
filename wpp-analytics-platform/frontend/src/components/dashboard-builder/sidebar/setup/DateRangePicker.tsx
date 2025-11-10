@@ -17,18 +17,22 @@ import { Calendar as CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface DateRange {
-  type: 'preset' | 'custom';
+  type: 'preset' | 'custom' | 'auto';
   preset?: string;
   startDate?: Date;
   endDate?: Date;
+  compareEnabled?: boolean;
+  compareTo?: 'previousPeriod' | 'previousYear';
 }
 
 interface DateRangePickerProps {
   value: DateRange;
   onChange: (value: DateRange) => void;
+  hasPageDateControl?: boolean;
 }
 
 const DATE_PRESETS = [
+  { value: 'auto', label: 'Auto (Follow Page)', conditional: true },
   { value: 'today', label: 'Today' },
   { value: 'yesterday', label: 'Yesterday' },
   { value: 'last7Days', label: 'Last 7 days' },
@@ -47,11 +51,13 @@ const DATE_PRESETS = [
   { value: 'custom', label: 'Custom range' },
 ];
 
-export function DateRangePicker({ value, onChange }: DateRangePickerProps) {
+export function DateRangePicker({ value, onChange, hasPageDateControl = false }: DateRangePickerProps) {
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
 
   const handlePresetChange = (preset: string) => {
-    if (preset === 'custom') {
+    if (preset === 'auto') {
+      onChange({ type: 'auto' });
+    } else if (preset === 'custom') {
       onChange({ type: 'custom', startDate: new Date(), endDate: new Date() });
     } else {
       onChange({ type: 'preset', preset });
@@ -70,6 +76,11 @@ export function DateRangePicker({ value, onChange }: DateRangePickerProps) {
   };
 
   const getDisplayValue = () => {
+    if (value.type === 'auto') {
+      return hasPageDateControl
+        ? 'Auto (Follow Page)'
+        : 'Auto (Default: Last 30 days)';
+    }
     if (value.type === 'preset' && value.preset) {
       const preset = DATE_PRESETS.find((p) => p.value === value.preset);
       return preset?.label || 'Select date range';
@@ -96,18 +107,20 @@ export function DateRangePicker({ value, onChange }: DateRangePickerProps) {
       <div className="flex gap-2">
         {/* Preset Selector */}
         <Select
-          value={value.type === 'preset' ? value.preset : 'custom'}
+          value={value.type === 'auto' ? 'auto' : value.type === 'preset' ? value.preset : 'custom'}
           onValueChange={handlePresetChange}
         >
           <SelectTrigger className="flex-1">
             <SelectValue>{getDisplayValue()}</SelectValue>
           </SelectTrigger>
           <SelectContent>
-            {DATE_PRESETS.map((preset) => (
-              <SelectItem key={preset.value} value={preset.value}>
-                {preset.label}
-              </SelectItem>
-            ))}
+            {DATE_PRESETS
+              .filter((preset) => !preset.conditional || hasPageDateControl)
+              .map((preset) => (
+                <SelectItem key={preset.value} value={preset.value}>
+                  {preset.label}
+                </SelectItem>
+              ))}
           </SelectContent>
         </Select>
 
@@ -136,21 +149,66 @@ export function DateRangePicker({ value, onChange }: DateRangePickerProps) {
         )}
       </div>
 
-      {/* Comparison Toggle (Future Enhancement) */}
-      <div className="flex items-center gap-2 pt-2 border-t">
-        <input
-          type="checkbox"
-          id="compare-date"
-          className="rounded"
-          disabled
-        />
-        <label
-          htmlFor="compare-date"
-          className="text-sm text-gray-400 cursor-not-allowed"
-        >
-          Compare to previous period (coming soon)
-        </label>
-      </div>
+      {/* Auto Mode Helper Text */}
+      {value.type === 'auto' && (
+        <div className="p-2 bg-blue-50 border border-blue-200 rounded-md">
+          <p className="text-xs text-blue-700">
+            {hasPageDateControl
+              ? '📅 This component will automatically sync with the page-level date control.'
+              : '📅 No page date control found. Using default: Last 30 days. Add a date control to the page to enable auto-sync.'}
+          </p>
+        </div>
+      )}
+
+      {/* Comparison Toggle */}
+      {value.type !== 'auto' && (
+        <div className="space-y-2 pt-2 border-t">
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="compare-date"
+              className="rounded"
+              checked={value.compareEnabled || false}
+              onChange={(e) =>
+                onChange({
+                  ...value,
+                  compareEnabled: e.target.checked,
+                  compareTo: e.target.checked ? 'previousPeriod' : undefined,
+                })
+              }
+            />
+            <label htmlFor="compare-date" className="text-sm text-gray-700 cursor-pointer">
+              Compare to previous period
+            </label>
+          </div>
+
+          {value.compareEnabled && (
+            <Select
+              value={value.compareTo || 'previousPeriod'}
+              onValueChange={(val: 'previousPeriod' | 'previousYear') =>
+                onChange({ ...value, compareTo: val })
+              }
+            >
+              <SelectTrigger className="w-full h-8 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="previousPeriod">Previous period</SelectItem>
+                <SelectItem value="previousYear">Previous year</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
+
+          {value.compareEnabled && (
+            <div className="p-2 bg-green-50 border border-green-200 rounded-md">
+              <p className="text-xs text-green-700">
+                📊 Comparison data will show changes vs. the{' '}
+                {value.compareTo === 'previousYear' ? 'same period last year' : 'previous period'}
+              </p>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

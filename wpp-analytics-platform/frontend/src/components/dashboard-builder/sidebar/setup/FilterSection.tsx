@@ -115,28 +115,36 @@ export function FilterSection({
               {/* Field Selector */}
               <div className="space-y-2">
                 <label className="text-sm font-medium">Field</label>
-                <Select
-                  value={newFilter.fieldId || ''}
-                  onValueChange={(value) =>
-                    setNewFilter({ ...newFilter, fieldId: value })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select field" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableFields.map((field) => (
-                      <SelectItem key={field.id} value={field.id}>
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline" className="text-xs">
-                            {field.type}
-                          </Badge>
-                          <span>{field.name}</span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {availableFields.length === 0 ? (
+                  <div className="p-3 border border-dashed rounded-md bg-muted/50">
+                    <p className="text-xs text-muted-foreground">
+                      No fields available. Select a data source in the Setup tab first.
+                    </p>
+                  </div>
+                ) : (
+                  <Select
+                    value={newFilter.fieldId || ''}
+                    onValueChange={(value) =>
+                      setNewFilter({ ...newFilter, fieldId: value })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select field" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableFields.map((field) => (
+                        <SelectItem key={field.id} value={field.id}>
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="text-xs">
+                              {field.type}
+                            </Badge>
+                            <span>{field.name}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
 
               {/* Operator Selector */}

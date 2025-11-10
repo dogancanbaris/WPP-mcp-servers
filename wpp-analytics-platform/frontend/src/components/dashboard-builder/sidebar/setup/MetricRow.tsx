@@ -67,25 +67,27 @@ export function MetricRow({
         <GripVertical className="h-4 w-4 text-[#80868B]" />
       </div>
 
-      {/* Metric Badge with Name */}
-      <div className="flex items-center gap-1.5 flex-1 min-w-0">
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#E8F0FE] text-[#1967D2] border border-[#AECBFA] text-[11px] font-medium">
-          <span className="font-semibold">#</span>
-          <span className="truncate" title={metric.name}>{metric.name}</span>
-        </span>
+      {/* Metric Display - Better Visual Hierarchy */}
+      <div className="flex flex-col flex-1 min-w-0 gap-0.5">
+        <div className="flex items-center gap-1.5">
+          <span className="text-xs font-medium text-[#202124] truncate" title={metric.name}>
+            {metric.name}
+          </span>
+        </div>
+        <div className="flex items-center gap-1">
+          <Sigma className="h-3 w-3 text-[#5F6368]" />
+          <span className="text-[10px] text-[#5F6368] font-medium uppercase">{metric.aggregation}</span>
+        </div>
       </div>
 
-      {/* Aggregation Selector */}
+      {/* Aggregation Selector - Compact Dropdown */}
       <Select
         value={metric.aggregation}
         onValueChange={(value) => onUpdate({ aggregation: value })}
       >
-        <SelectTrigger className="w-[100px] h-7 border-[#DADCE0] text-xs">
+        <SelectTrigger className="w-[85px] h-7 border-[#DADCE0] text-xs">
           <SelectValue>
-            <div className="flex items-center gap-1">
-              <Sigma className="h-3 w-3 text-[#5F6368]" />
-              <span className="text-[11px] text-[#202124] font-medium">{metric.aggregation.toUpperCase()}</span>
-            </div>
+            <span className="text-[11px] text-[#202124] font-medium">{metric.aggregation.toUpperCase()}</span>
           </SelectValue>
         </SelectTrigger>
         <SelectContent>

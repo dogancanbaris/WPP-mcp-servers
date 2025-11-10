@@ -58,6 +58,23 @@ export declare const createAdTool: {
                 type: string;
                 description: string;
             };
+            agentAssistMode: {
+                type: string;
+                enum: string[];
+                description: string;
+            };
+            productInfo: {
+                type: string;
+                description: string;
+            };
+            targetAudience: {
+                type: string;
+                description: string;
+            };
+            uniqueSellingPoints: {
+                type: string;
+                description: string;
+            };
             confirmationToken: {
                 type: string;
                 description: string;
