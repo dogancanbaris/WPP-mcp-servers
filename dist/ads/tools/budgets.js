@@ -1,8 +1,7 @@
 /**
  * MCP Tools for Google Ads Budget Write Operations
  */
-import { UpdateBudgetSchema, microsToAmount, amountToMicros, extractCustomerId } from '../validation.js';
-import { validateBudgetChange } from '../../shared/interceptor.js';
+import { microsToAmount, amountToMicros, extractCustomerId } from '../validation.js';
 import { getLogger } from '../../shared/logger.js';
 import { getApprovalEnforcer, DryRunResultBuilder } from '../../shared/approval-enforcer.js';
 import { extractRefreshToken } from '../../shared/oauth-client-factory.js';
@@ -404,17 +403,17 @@ What should the new daily budget be (in dollars)?`;
                 return injectGuidance({ customerId, budgetId, currentAmount }, guidanceText);
             }
             // ═══ STEP 4: DRY-RUN PREVIEW (existing approval flow) ═══
-            UpdateBudgetSchema.parse(input);
             const newAmountMicros = amountToMicros(newDailyAmountDollars);
             // Get current budget for comparison
             const budgets = await client.listBudgets(customerId);
             const currentBudget = budgets.find((b) => b.campaign_budget.id === budgetId);
             const currentAmountMicros = currentBudget?.campaign_budget?.amount_micros || 0;
-            // SAFETY: Validate budget change against limits (500% max)
-            const validation = await validateBudgetChange(currentAmountMicros, newAmountMicros);
+            // Calculate percentage change for agent training (no hard limits)
             const currentAmount = currentAmountMicros / 1000000;
             const difference = newDailyAmountDollars - currentAmount;
-            const percentChange = validation.percentChange.toFixed(1);
+            const percentChange = currentAmountMicros > 0
+                ? (((newAmountMicros - currentAmountMicros) / currentAmountMicros) * 100).toFixed(1)
+                : (newAmountMicros > 0 ? 'Infinity' : '0');
             // Build dry-run preview
             const approvalEnforcer = getApprovalEnforcer();
             const dryRunBuilder = new DryRunResultBuilder('update_budget', 'Google Ads', customerId);

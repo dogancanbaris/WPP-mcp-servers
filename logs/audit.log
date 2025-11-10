@@ -3354,5 +3354,89 @@
       "descriptionCount": 3,
       "finalUrl": "https://example.com/dell-xps-15"
     }
+  },
+  {
+    "timestamp": "2025-11-10T19:15:09.885Z",
+    "user": "user",
+    "action": "create_budget",
+    "property": "2041738707",
+    "operationType": "write",
+    "result": "success",
+    "details": {
+      "budgetId": {
+        "results": [
+          {
+            "resource_name": "customers/2041738707/campaignBudgets/15131885176",
+            "campaign_budget": null
+          }
+        ],
+        "partial_failure_error": null
+      },
+      "budgetName": "Test Budget - Low",
+      "dailyAmount": 15,
+      "monthlyEstimate": 456
+    }
+  },
+  {
+    "timestamp": "2025-11-10T19:16:46.130Z",
+    "user": "user",
+    "action": "create_campaign",
+    "property": "2041738707",
+    "operationType": "write",
+    "result": "success",
+    "details": {
+      "campaignId": {
+        "results": [
+          {
+            "resource_name": "customers/2041738707/campaigns/23253228700",
+            "campaign": null
+          }
+        ],
+        "partial_failure_error": null
+      },
+      "campaignName": "Test Campaign - Agent Training",
+      "campaignType": "SEARCH",
+      "budgetId": "15131885176",
+      "initialStatus": "PAUSED"
+    }
+  },
+  {
+    "timestamp": "2025-11-10T19:17:49.508Z",
+    "user": "user",
+    "action": "update_budget",
+    "property": "2041738707",
+    "operationType": "read",
+    "result": "failure",
+    "details": {
+      "budgetId": "15131885176",
+      "attemptedAmount": 25
+    },
+    "errorMessage": "[\n  {\n    \"code\": \"invalid_type\",\n    \"expected\": \"number\",\n    \"received\": \"undefined\",\n    \"path\": [\n      \"amountMicros\"\n    ],\n    \"message\": \"Required\"\n  }\n]"
+  },
+  {
+    "timestamp": "2025-11-10T19:25:20.891Z",
+    "user": "user",
+    "action": "update_budget",
+    "property": "2041738707",
+    "operationType": "read",
+    "result": "failure",
+    "details": {
+      "budgetId": "15131885176",
+      "attemptedAmount": 25
+    },
+    "errorMessage": "Budget change of Infinity% exceeds maximum allowed (500%). This change must be made directly in Google Ads UI for safety. Current: $0/day, Proposed: $25/day"
+  },
+  {
+    "timestamp": "2025-11-10T19:25:55.751Z",
+    "user": "user",
+    "action": "update_budget",
+    "property": "2041738707",
+    "operationType": "read",
+    "result": "failure",
+    "details": {
+      "budgetId": "15131885176",
+      "attemptedAmount": 20
+    },
+    "errorMessage": "Budget change of Infinity% exceeds maximum allowed (500%). This change must be made directly in Google Ads UI for safety. Current: $0/day, Proposed: $20/day"
   }
 ]
