@@ -195,25 +195,54 @@ create_campaign(
 
 **Campaign:** ${selectedCampaign?.campaign?.name || campaignId}
 
-Enter a descriptive ad group name:
+🎓 **AGENT TRAINING - AD GROUP STRUCTURE & NAMING:**
 
-**Naming Best Practices:**
-- Format: "[Keyword Theme] - [Match Type]" or "[Product/Service Name]"
-- Examples:
-  • "Running Shoes - Exact Match"
-  • "Women's Sneakers - Broad"
-  • "Nike Air Max - Brand Terms"
-  • "Winter Boots - Sale"
+**THE GOLDEN RULE:** One keyword theme per ad group = Higher Quality Score
 
-**Keep it:**
-- Descriptive (reflects keyword theme)
-- Specific (tight keyword focus)
-- Searchable (easy to find in reports)
+**WHAT IS AN AD GROUP?**
+Container for related keywords + ads sharing same:
+• Theme/topic
+• Landing page
+• Target audience
 
-**Organization Tips:**
-- One keyword theme per ad group
-- Group similar keywords together
-- Use match type in name if helpful
+**QUALITY AD GROUP STRUCTURE:**
+✅ **Tight theme:** All keywords relate to ONE specific product/service
+✅ **5-20 keywords:** Related variations of main theme
+✅ **2-3 ads:** Test different messaging
+✅ **Shared landing page:** All keywords → same destination
+
+❌ **Poor structure:**
+• Mixed themes: "Laptops and Printers" (split into 2 ad groups!)
+• Too broad: "All Nike Products" (split by product type!)
+• Too narrow: Single keyword (wasteful over-segmentation!)
+
+**NAMING FORMULA - AGENT HELP USER CREATE SPECIFIC NAMES:**
+
+**Format:** [Brand/Category] + [Product Type] + [Qualifier/Intent]
+
+**Examples (GOOD):**
+✅ "Dell XPS 15 - Premium Business" (specific model + audience)
+✅ "Nike Running Shoes - Men's" (brand + product + demographic)
+✅ "iPhone 15 Pro - Pre-Order" (model + intent)
+✅ "Plumber Services - Emergency" (service + urgency)
+
+**Examples (BAD) - AGENT SHOULD FLAG:**
+❌ "Products" (too vague - what products?)
+❌ "Test Ad Group" (not descriptive)
+❌ "Keywords" (tells nothing about theme)
+❌ "Nike Shoes and Apparel" (two themes - split!)
+
+**AGENT QUALITY CHECKLIST - REVIEW USER'S AD GROUP NAME:**
+□ Specific: Does name describe ONE clear theme?
+□ Keyword-aligned: Will keywords match this theme?
+□ Not too broad: Is this actually 2-3 themes that should be separate?
+□ Not too narrow: Is this just one keyword (over-segmentation)?
+□ Searchable: Can user find this in reports easily?
+
+**AGENT REVIEW EXAMPLES:**
+❌ User: "Laptops" → Agent: "Too broad! Which laptops? Try: 'Dell Business Laptops - XPS Series' or 'Gaming Laptops - Budget Friendly'"
+❌ User: "Nike Shoes and Clothing" → Agent: "Two different themes. Split into: 1) 'Nike Running Shoes', 2) 'Nike Athletic Apparel'"
+✅ User: "Dell XPS 15 - Business Professionals" → Agent: "Excellent! Specific product (XPS 15) + target audience. Expect keywords like: 'dell xps 15', 'business laptop', 'professional laptop'"
 
 What should the ad group be named?`;
                 return injectGuidance({ customerId, campaignId }, guidanceText);

@@ -197,37 +197,91 @@ create_budget(
             if (!campaignType) {
                 const guidanceText = `🎯 SELECT CAMPAIGN TYPE (Step 3/5)
 
-Choose the campaign type:
+🎓 **AGENT TRAINING - CAMPAIGN TYPE SELECTION:**
 
-**Available Types:**
+**THE DECISION TREE - HELP USER CHOOSE:**
 
-1. **SEARCH** - Text ads on Google Search
-   • Best for: Intent-based searches, high-converting keywords
-   • Example: User searches "buy running shoes" → sees your text ad
+**Q: What's the primary goal?**
+→ Direct response (sales, leads, conversions) = SEARCH or PERFORMANCE_MAX
+→ Brand awareness (reach, impressions) = DISPLAY or VIDEO
+→ E-commerce products with feed = SHOPPING
+→ New product launch = DEMAND_GEN
 
-2. **DISPLAY** - Banner/image ads on Display Network
-   • Best for: Brand awareness, remarketing, visual products
-   • Example: Image ads on news sites, YouTube, Gmail
+**Q: What content do you have?**
+→ Keywords + text ads = SEARCH
+→ Product feed (SKUs, prices, images) = SHOPPING
+→ Banner images/creatives = DISPLAY
+→ Video content = VIDEO
+→ Mix of assets = PERFORMANCE_MAX (auto-generates)
 
-3. **PERFORMANCE_MAX** - Automated cross-channel campaigns
-   • Best for: Maximizing conversions across all Google properties
-   • Google automatically optimizes placements and creatives
+**Q: How much control do you want?**
+→ Full control (keywords, bids, placements) = SEARCH or DISPLAY
+→ Automated optimization = PERFORMANCE_MAX
+→ Product-based automation = SHOPPING
 
-4. **SHOPPING** - Product listing ads (requires Merchant Center)
-   • Best for: E-commerce, product catalogs
-   • Shows product image, price, store name
+**CAMPAIGN TYPES EXPLAINED:**
 
-5. **VIDEO** - YouTube ads
-   • Best for: Video content, brand storytelling
-   • In-stream, discovery, bumper ads
+1. **SEARCH** 🔍 (Most Common - 60% of campaigns)
+   ✅ **Use when:** User searches with intent, you have keywords
+   ✅ **Best for:** Services, B2B, local businesses, branded terms
+   ✅ **Budget:** Start $20-50/day
+   ✅ **Timeline:** Results in 1-2 weeks
+   ❌ **Avoid if:** No keyword research, purely visual product
 
-6. **DEMAND_GEN** - Demand generation campaigns
-   • Best for: Building demand on YouTube, Gmail, Discover
-   • Visually rich, storytelling formats
+2. **DISPLAY** 🖼️ (Brand awareness)
+   ✅ **Use when:** Building awareness, remarketing, visual appeal
+   ✅ **Best for:** Consumer products, events, brand campaigns
+   ✅ **Budget:** Start $30-100/day (need volume for optimization)
+   ✅ **Timeline:** Results in 2-4 weeks
+   ❌ **Avoid if:** Direct response only, no creatives
 
-**Provide:** campaignType (one of: SEARCH, DISPLAY, PERFORMANCE_MAX, SHOPPING, VIDEO, DEMAND_GEN)
+3. **PERFORMANCE_MAX** 🚀 (Automated, growing)
+   ✅ **Use when:** You want Google to optimize everything
+   ✅ **Best for:** E-commerce with conversion data, accounts with 50+ conversions/month
+   ✅ **Budget:** Start $50-200/day
+   ✅ **Timeline:** Needs 6 weeks learning period
+   ❌ **Avoid if:** Need control, new account (<15 conversions), specific targeting needed
 
-Which campaign type do you want?`;
+4. **SHOPPING** 🛒 (E-commerce only)
+   ✅ **Use when:** You have product feed in Merchant Center
+   ✅ **Best for:** Retailers, product catalogs
+   ✅ **Budget:** Start $50-150/day
+   ⚠️ **Requires:** Merchant Center account, product feed approved
+   ❌ **Avoid if:** Services (no products), no Merchant Center
+
+5. **VIDEO** 📹 (YouTube)
+   ✅ **Use when:** You have video content
+   ✅ **Best for:** Brand storytelling, product demos, entertainment
+   ✅ **Budget:** Start $20-100/day
+   ⚠️ **Requires:** Video uploaded to YouTube
+   ❌ **Avoid if:** No video assets
+
+6. **DEMAND_GEN** 📢 (New, specialized)
+   ✅ **Use when:** Launching new product, building awareness
+   ✅ **Best for:** Visually-driven products, aspirational brands
+   ✅ **Placements:** YouTube, Gmail, Discover feed
+   ⚠️ **Requires:** High-quality images/videos
+   ❌ **Avoid if:** Direct response only, limited creative assets
+
+**AGENT RECOMMENDATION FRAMEWORK:**
+
+Ask user:
+1. "What's your primary goal?" (sales/leads/awareness)
+2. "What content do you have?" (keywords/products/images/videos)
+3. "What's your experience level?" (beginner/advanced)
+
+**Then recommend:**
+• Beginner + Direct response → **SEARCH** (easiest to start, most control)
+• E-commerce + Product feed → **SHOPPING** (automatic product ads)
+• Advanced + Optimization → **PERFORMANCE_MAX** (best results but needs data)
+• Brand building + Visuals → **DISPLAY** (awareness + remarketing)
+
+**COMMON MISTAKES TO FLAG:**
+❌ "PERFORMANCE_MAX needs 50+ conversions/month to optimize. You have 5. Recommend SEARCH instead?"
+❌ "SHOPPING requires Merchant Center. Is your product feed approved? If not, use SEARCH with product keywords"
+❌ "VIDEO requires video content. Do you have YouTube videos uploaded? If not, choose SEARCH or DISPLAY"
+
+Which campaign type matches your goals?`;
                 return injectGuidance({ customerId, budgetId }, guidanceText);
             }
             // ═══ STEP 4: CAMPAIGN NAME GUIDANCE ═══
@@ -336,15 +390,30 @@ ${campaignOptions.finalUrlSuffix ? `- Tracking: ${campaignOptions.finalUrlSuffix
 
 🎯 **NEXT STEPS - Complete Campaign Setup:**
 
-**1. Add Targeting (Recommended):**
-Without targeting, campaign targets entire world in all languages!
-   • Add locations: use add_location_criteria
-     Example: Target USA and Canada
-     → add_location_criteria(customerId: "${customerId}", campaignId: "${campaignId}", geoTargetIds: ["2840", "2124"])
+🚨 **CRITICAL - ADD TARGETING NOW:**
+⚠️ **Campaign currently targets ENTIRE WORLD in ALL LANGUAGES!**
+This is almost NEVER what you want - 99% of campaigns need specific targeting.
 
-   • Add languages: use add_language_criteria
-     Example: English only
-     → add_language_criteria(customerId: "${customerId}", campaignId: "${campaignId}", languageIds: ["1000"])
+**Why this matters:**
+• Budget wasted on irrelevant locations (ads in countries you don't serve)
+• Poor quality traffic (wrong language, wrong geography)
+• Lower conversion rates (international users can't buy)
+
+**FIX IMMEDIATELY - Add Targeting:**
+
+**1. Add Locations (REQUIRED for most campaigns):**
+   • use add_location_criteria
+   • Example - USA only: add_location_criteria(customerId: "${customerId}", campaignId: "${campaignId}", geoTargetIds: ["2840"])
+   • Example - USA + Canada: geoTargetIds: ["2840", "2124"]
+   • Example - California only: geoTargetIds: ["21137"]
+
+**2. Add Languages (REQUIRED for non-English):**
+   • use add_language_criteria
+   • Example - English only: add_language_criteria(customerId: "${customerId}", campaignId: "${campaignId}", languageIds: ["1000"])
+   • Example - English + Spanish: languageIds: ["1000", "1003"]
+
+**AGENT: After campaign creation, IMMEDIATELY remind user:**
+"⚠️ Campaign has NO geo targeting - currently targets entire world! Add locations with add_location_criteria before enabling, or you'll waste budget on irrelevant traffic."
 
 **2. Create Ad Groups:**
    • use create_ad_group(customerId: "${customerId}", campaignId: "${campaignId}", name: "Ad Group 1")

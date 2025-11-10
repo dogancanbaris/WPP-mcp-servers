@@ -321,40 +321,67 @@ ${generatedDescriptions.map((d: string, i: number) => `${i + 1}. "${d}" (${d.len
       if (!headlines || headlines.length === 0) {
         const guidanceText = `📝 CREATE HEADLINES (Step 3/6)
 
-Responsive Search Ads require 3-15 headlines:
+Responsive Search Ads require 3-15 headlines (30 chars max each).
 
-**Requirements:**
-- Minimum: 3 headlines
-- Maximum: 15 headlines
-- Character limit: 30 chars per headline
-- Google shows up to 3 at a time (tests combinations)
+🎓 **AGENT TRAINING - WHAT MAKES QUALITY HEADLINES:**
 
-**Best Practices:**
-✅ Include keywords in multiple headlines
-✅ Vary your messaging (features, benefits, CTAs)
-✅ Use dynamic keyword insertion: {KeyWord:Default}
-✅ Test different value propositions
+**THE DIVERSITY FORMULA (Cover ALL 5 categories):**
 
-**Examples:**
-- "Fast, Free Shipping" (19 chars)
-- "Shop Premium Running Shoes" (26 chars)
-- "Save Up to 50% Today" (20 chars)
-- "Trusted by 1M+ Customers" (24 chars)
+1️⃣ **KEYWORDS** (3-5) - What users search for
+   • Product names, brand names, models
+   • Examples: "Dell XPS 15", "Business Laptop", "Intel i7 Laptop"
 
-**Provide:** Array of 3-15 headlines (as JSON array or comma-separated)
+2️⃣ **BENEFITS** (3-5) - What user gets
+   • Value propositions, features, advantages
+   • Examples: "Free Shipping", "30-Day Returns", "5-Star Rated"
 
-Example:
-\`\`\`json
-{
-  "headlines": [
-    "Premium Running Shoes",
-    "Fast Free Shipping",
-    "Save Up to 50% Off",
-    "Shop Top Brands",
-    "Trusted Since 2010"
-  ]
-}
-\`\`\``;
+3️⃣ **CTAs** (2-3) - Actions to take
+   • Shop Now, Order Today, Buy Now, Get Quote
+   • Examples: "Shop Now - Save 20%", "Order Today", "Get Free Quote"
+
+4️⃣ **URGENCY** (2-3) - Time-sensitive
+   • Limited time, scarcity, deadlines
+   • Examples: "Sale Ends Soon", "Limited Stock", "Today Only"
+
+5️⃣ **SOCIAL PROOF** (2-3) - Trust signals
+   • Reviews, ratings, popularity, awards
+   • Examples: "Trusted by 10K+", "5-Star Rated", "#1 Best Seller"
+
+**CHARACTER OPTIMIZATION:**
+• 25-30 chars = Optimal (max visibility)
+• 15-24 chars = Acceptable
+• <15 chars = Wasted space (expand if possible!)
+
+**AGENT QUALITY CHECKLIST - REVIEW USER'S HEADLINES:**
+□ Diversity: Do headlines cover all 5 categories? (Not all keywords or all CTAs)
+□ Repetition: Are <30% headlines identical/very similar?
+□ Length: Do most use 25-30 chars?
+□ Relevance: Do headlines match product being advertised?
+□ Clarity: No vague terms like "Great Product"?
+
+**COMMON ISSUES TO FLAG:**
+❌ "I see 10/15 headlines are CTAs ('Buy Now', 'Shop Now', etc.) but missing keywords and benefits. Recommend: 5 keywords, 3 benefits, 3 CTAs, 2 urgency, 2 social proof"
+❌ "All headlines <15 chars. You're not using full 30 char space. Expand 'Free Ship' to 'Free Shipping On All Orders'?"
+❌ "Headlines 1-8 all mention 'Free Shipping'. Too repetitive! Diversify: shipping (1-2), returns (1), rating (1), price (1), quality (1)"
+
+**EXAMPLE - EXCELLENT 15 HEADLINES:**
+"Nike Air Max 270" (16 chars) - keyword
+"Premium Running Shoes" (21 chars) - keyword
+"Men's Athletic Footwear" (23 chars) - keyword
+"Free 2-Day Shipping" (19 chars) - benefit
+"30-Day Free Returns" (19 chars) - benefit
+"Expert Fit Guidance" (19 chars) - benefit
+"Shop Now - Save 20%" (19 chars) - CTA
+"Order Today" (11 chars) - CTA
+"Buy Now - Free Ship" (19 chars) - CTA
+"Sale Ends This Sunday" (21 chars) - urgency
+"Limited Sizes Available" (23 chars) - urgency
+"5-Star Customer Reviews" (23 chars) - social proof
+"Trusted by Runners" (18 chars) - social proof
+"Best Price Guaranteed" (21 chars) - benefit
+"Shop Top Running Brands" (23 chars) - keyword
+
+Provide your headlines array (or use agent assistance!)`;
 
         return injectGuidance({ customerId, adGroupId }, guidanceText);
       }
@@ -407,38 +434,59 @@ Shorten these headlines and try again.`;
       if (!descriptions || descriptions.length === 0) {
         const guidanceText = `📝 CREATE DESCRIPTIONS (Step 4/6)
 
-Responsive Search Ads require 2-4 descriptions:
+Responsive Search Ads require 2-4 descriptions (90 chars max each).
 
-**Requirements:**
-- Minimum: 2 descriptions
-- Maximum: 4 descriptions
-- Character limit: 90 chars per description
-- Google shows up to 2 at a time
+🎓 **AGENT TRAINING - DESCRIPTION QUALITY CRITERIA:**
 
-**Best Practices:**
-✅ Expand on headline value propositions
-✅ Include call-to-action
-✅ Highlight unique selling points
-✅ Use different tones (urgent, informational)
+**WHAT MAKES EFFECTIVE DESCRIPTIONS:**
 
-**Examples:**
-- "Shop our collection of premium running shoes. Fast, free shipping on all orders over $50." (88 chars)
-- "Find the perfect fit for your running style. Expert support available 24/7." (76 chars)
+**THE 3-PART FORMULA** (Each description should include):
+1. **Feature or Benefit** - What you offer
+2. **Value Proposition** - Why it matters
+3. **Call-to-Action** - What to do next
+
+**DESCRIPTION VARIETY (Create 4, each with different angle):**
+
+1️⃣ **Feature-Focused** (What + Why)
+   "Shop premium Dell XPS laptops with Intel i7, 16GB RAM, and 512GB SSD. Perfect for professionals."
+
+2️⃣ **Benefit-Focused** (What you get)
+   "Free shipping on all orders. 30-day hassle-free returns. 5-star customer service rated by 10K+ buyers."
+
+3️⃣ **CTA-Focused** (Urgency + Action)
+   "Limited time sale - save up to 30% on select models. Order today and get free expedited shipping!"
+
+4️⃣ **Trust-Focused** (Social proof + Reassurance)
+   "Trusted by business professionals worldwide. Expert support available 24/7. Money-back guarantee."
+
+**CHARACTER OPTIMIZATION:**
+• 80-90 chars = Optimal (use full space!)
+• 60-79 chars = Good
+• <60 chars = Wasted opportunity (expand!)
+
+**AGENT QUALITY CHECKLIST:**
+□ Variety: Do descriptions use different angles? (not 4 identical feature lists)
+□ CTA present: Does at least 1 description include clear call-to-action?
+□ No headline repetition: Descriptions add NEW information (don't just repeat headlines)
+□ Length optimized: Most descriptions 80-90 chars?
+□ Clear benefit: Does reader understand what they get?
+
+**COMMON ISSUES TO FLAG:**
+❌ "All 4 descriptions are feature lists. Vary: 1 features, 1 benefits, 1 CTA, 1 trust"
+❌ "Description 1 is 45 chars - you have 45 more chars to add value! Expand with benefits or CTA?"
+❌ "Descriptions repeat headlines word-for-word. Descriptions should ADD new info, not duplicate"
+❌ "No call-to-action in any description. Add 'Shop now', 'Order today', 'Get quote' to at least one?"
+
+**EXAMPLE - EXCELLENT 4 DESCRIPTIONS:**
+1. "Dell XPS 15 with Intel i7, 16GB RAM, 512GB SSD. Premium build for business professionals." (89 chars)
+2. "Free shipping, 30-day returns, and expert support. Buy with confidence from 5-star seller." (89 chars)
+3. "Limited time offer - save 20% on XPS laptops. Order today for free expedited delivery!" (86 chars)
+4. "Trusted by Fortune 500 companies. 24/7 customer support. Industry-leading warranty included." (90 chars)
 
 **Current Progress:**
-✅ Headlines: ${headlines.length} provided (valid)
+✅ Headlines: ${headlines.length} provided
 
-**Provide:** Array of 2-4 descriptions
-
-Example:
-\`\`\`json
-{
-  "descriptions": [
-    "Shop premium running shoes with fast, free shipping on orders over $50. Find your perfect fit.",
-    "Expert support available 24/7. Trusted by over 1 million runners worldwide."
-  ]
-}
-\`\`\``;
+Provide 2-4 descriptions array`;
 
         return injectGuidance({ customerId, adGroupId, headlines }, guidanceText);
       }

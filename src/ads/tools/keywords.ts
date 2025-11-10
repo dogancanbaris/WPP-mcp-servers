@@ -214,43 +214,74 @@ What is the ad group ID?`;
       if (!keywords || keywords.length === 0) {
         const guidanceText = `🔑 KEYWORD SPECIFICATION (Step 3/4)
 
-Enter the keywords you want to add:
+🎓 **AGENT TRAINING - KEYWORD QUALITY & RELEVANCE:**
+
+**THE THEME COHERENCE RULE:**
+All keywords in ad group MUST relate to the SAME theme!
+
+**KEYWORD-TO-AD GROUP RELEVANCE CHECK:**
+
+✅ **Good (Coherent):**
+Ad Group: "Dell XPS 15 - Business"
+Keywords: "dell xps 15", "xps 15 laptop", "business laptop dell", "premium dell laptop"
+→ All relate to Dell XPS 15 business laptops ✅
+
+❌ **Bad (Incoherent):**
+Ad Group: "Dell XPS 15 - Business"
+Keywords: "dell xps 15", "hp laptop", "printer", "mouse"
+→ HP/printer/mouse don't match Dell XPS theme! ❌
+
+**MATCH TYPE STRATEGY - AGENT HELP USER CHOOSE:**
+
+**For each keyword, often use MULTIPLE match types:**
+• "dell xps 15" [EXACT] - $3.00 bid (highest intent, exact searchers)
+• "dell xps 15" [PHRASE] - $2.50 bid (exploratory, phrase matchers)
+• "business laptop" [BROAD] - $1.50 bid (discovery, related searches)
+
+**When to use each:**
+
+**EXACT Match** [keyword]
+✅ Use for: Brand terms, specific models, high-intent keywords
+✅ Bid: Highest (most valuable traffic)
+✅ Safety: Very safe, limited reach
+❌ Risk: Almost none (very targeted)
+
+**PHRASE Match** "keyword"
+✅ Use for: Most keywords (best balance)
+✅ Bid: Medium
+✅ Safety: Safe with some reach
+❌ Risk: Low (controlled expansion)
+
+**BROAD Match** keyword
+⚠️ Use for: Discovery, with TIGHT negative keyword list!
+⚠️ Bid: Lowest (testing only)
+⚠️ Safety: RISKY without negatives
+❌ Risk: HIGH (can trigger on anything "related")
+
+**AGENT QUALITY CHECKLIST - REVIEW USER'S KEYWORDS:**
+□ Theme coherence: Do ALL keywords relate to ad group theme?
+□ No brand conflicts: Not mixing competing brands (Nike + Adidas)?
+□ Match type strategy: Is EXACT bid > PHRASE bid > BROAD bid?
+□ BROAD match safety: If BROAD present, are negative keywords planned?
+□ Character limits: Keywords under 80 chars?
+□ Not too broad: No single-word BROAD match (extreme risk!)?
+
+**AGENT REVIEW EXAMPLES:**
+❌ User adds "nike shoes" to "Adidas Sneakers" ad group → Agent: "Brand conflict! 'Nike' doesn't match 'Adidas' ad group theme. Create separate 'Nike' ad group?"
+❌ User adds "laptop" [BROAD] → Agent: "Single-word BROAD match = VERY wide reach (tablets, desktops, all laptops). Use 'business laptop' [PHRASE] instead? Or add extensive negatives?"
+✅ User adds exact/phrase variations of same keyword → Agent: "Good strategy! You're using multiple match types for 'dell xps 15' to test reach vs control."
 
 **Format:**
 \`\`\`json
 {
   "keywords": [
-    {
-      "text": "running shoes",
-      "matchType": "PHRASE",
-      "maxCpcDollars": 2.50
-    },
-    {
-      "text": "nike running shoes",
-      "matchType": "EXACT",
-      "maxCpcDollars": 3.00
-    }
+    {"text": "dell xps 15", "matchType": "EXACT", "maxCpcDollars": 3.00},
+    {"text": "dell xps 15 laptop", "matchType": "PHRASE", "maxCpcDollars": 2.50}
   ]
 }
 \`\`\`
 
-**Match Types:**
-- **EXACT**: [keyword] - Only exact searches (most control, lowest reach)
-- **PHRASE**: "keyword" - Searches containing phrase (balanced)
-- **BROAD**: keyword - Related searches (least control, highest reach)
-
-**Best Practices:**
-- Start with EXACT and PHRASE match
-- Set conservative max CPC bids
-- Limit to 10-20 keywords per batch for easier management
-- Group related keywords together
-
-**Max CPC (optional but recommended):**
-- Set per-keyword bid limit
-- Prevents overspending on expensive clicks
-- Example: 2.50 for $2.50 max per click
-
-How many keywords do you want to add? Provide keywords array.`;
+Provide keywords array (or describe what you want to target and agent can help!)`;
 
         return injectGuidance({ customerId, adGroupId }, guidanceText);
       }
