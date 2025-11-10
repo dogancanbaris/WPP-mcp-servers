@@ -164,38 +164,6 @@ export declare const googleAdsTools: ({
                 type: string;
                 description: string;
             };
-            name: {
-                type: string;
-                description: string;
-            };
-            dailyAmountDollars: {
-                type: string;
-                description: string;
-            };
-            confirmationToken: {
-                type: string;
-                description: string;
-            };
-        };
-        required: never[];
-    };
-    handler(input: any): Promise<import("../../shared/interactive-workflow.js").McpResponse | {
-        success: boolean;
-        requiresApproval: boolean;
-        preview: string;
-        confirmationToken: string;
-        message: string;
-    }>;
-} | {
-    name: string;
-    description: string;
-    inputSchema: {
-        type: "object";
-        properties: {
-            customerId: {
-                type: string;
-                description: string;
-            };
             budgetId: {
                 type: string;
                 description: string;
@@ -977,20 +945,10 @@ export declare const writeAdsTools: ({
                 type: string;
                 description: string;
             };
-            confirmationToken: {
-                type: string;
-                description: string;
-            };
         };
         required: never[];
     };
-    handler(input: any): Promise<import("../../shared/interactive-workflow.js").McpResponse | {
-        success: boolean;
-        requiresApproval: boolean;
-        preview: string;
-        confirmationToken: string;
-        message: string;
-    }>;
+    handler(input: any): Promise<import("../../shared/interactive-workflow.js").McpResponse>;
 } | {
     name: string;
     description: string;

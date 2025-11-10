@@ -65,16 +65,12 @@ export const createBudgetTool = {
         type: 'number',
         description: 'Daily budget amount in dollars (e.g., 50 for $50/day)',
       },
-      confirmationToken: {
-        type: 'string',
-        description: 'Confirmation token from dry-run preview (optional - if not provided, will show preview)',
-      },
     },
     required: [], // Make optional for discovery
   },
   async handler(input: any) {
     try {
-      const { customerId, name, dailyAmountDollars, confirmationToken } = input;
+      const { customerId, name, dailyAmountDollars } = input;
 
       // Extract OAuth tokens from request
       const refreshToken = extractRefreshToken(input);
@@ -134,93 +130,70 @@ What should the budget be named?`;
       if (!dailyAmountDollars) {
         const guidanceText = `💵 DAILY BUDGET AMOUNT (Step 3/4)
 
-Enter the daily budget amount in dollars:
+🎓 **AGENT TRAINING - BUDGET SIZING STRATEGY:**
 
-**Examples:**
-- For small test campaigns: 10-25
-- For standard campaigns: 50-100
-- For aggressive campaigns: 200+
+**THE BUDGET CALCULATION FORMULA:**
+Daily Budget = Target CPA × Desired Conversions/Day × Learning Buffer
 
-**Planning Tips:**
-- Calculate: (Target CPA × Desired conversions/day)
-- Start conservative for new campaigns
-- Consider search volume and competition
-- Allow 2-3x target CPA for testing phase
+**Example Calculation:**
+• Target CPA: $50 per lead
+• Goal: 2 conversions/day
+• Learning buffer: 2x (for testing/optimization)
+• Budget: $50 × 2 × 2 = $200/day
 
-**Minimum:** Usually $1/day
-**Format:** Enter as a number (e.g., "50" for $50/day)
+**BUDGET BY CAMPAIGN TYPE:**
 
-What should the daily budget be (in dollars)?`;
+**SEARCH Campaigns:**
+• Test: $20-50/day (gather initial data)
+• Standard: $50-200/day (most common)
+• Competitive: $200-1000/day (high-CPC industries like legal, insurance)
+• Brand protection: $10-30/day (usually low CPC)
+
+**SHOPPING Campaigns:**
+• Minimum: $50/day (need volume for product algorithms)
+• Standard: $100-500/day
+• Aggressive: $500+/day
+⚠️ Lower budgets don't work well (insufficient data for optimization)
+
+**PERFORMANCE_MAX:**
+• Minimum: $50/day (automation needs budget flexibility)
+• Recommended: $100-300/day
+• Needs: 6-week learning period with consistent budget
+
+**DISPLAY/VIDEO:**
+• Minimum: $30/day (CPM-based, need impressions)
+• Standard: $100-300/day
+• Brand campaigns: $500+/day for reach
+
+**AGENT BUDGET CHECKLIST - HELP USER DECIDE:**
+□ What's the campaign type? (different minimums!)
+□ What's target CPA or ROAS? (calculate from there)
+□ How competitive is the industry? (legal = high, local service = medium)
+□ Is this testing or scaling? (testing = lower, scaling = higher)
+□ What's monthly budget limit? (daily = monthly ÷ 30.4)
+
+**COMMON MISTAKES TO FLAG:**
+❌ "$5/day for Shopping campaign" → Agent: "Shopping needs $50+/day minimum for algorithms to work. Increase to $50 or use Search?"
+❌ "$500/day for brand term test" → Agent: "Brand terms typically have low CPC ($1-5). $500/day might be excessive. Start with $30-50?"
+❌ "$20/day for 'insurance lawyer' keywords" → Agent: "This industry has $50-150 CPC. $20/day = less than 1 click/day! Need $200+ for meaningful data"
+
+**AGENT SIZING EXAMPLES:**
+✅ User: "I want 5 leads/day at $40 CPA" → Agent: "Budget: $40 × 5 × 2 (learning) = $400/day recommended. Start with $300-400"
+✅ User: "Brand protection for 'My Company'" → Agent: "Brand terms usually $1-3 CPC. 10 clicks/day = $30/day recommended"
+❌ User: "Make it $2/day" → Agent: "$2/day is too low for any meaningful traffic. Minimum $10 for testing, $20+ recommended"
+
+**Budget amount in dollars:**`;
 
         return injectGuidance({ customerId, name }, guidanceText);
       }
 
-      // ═══ STEP 4: DRY-RUN PREVIEW (existing approval flow) ═══
+      // ═══ STEP 4: EXECUTE BUDGET CREATION ═══
+      // Note: CREATE operations don't need approval (budget doesn't affect spend until assigned)
       const amountMicros = amountToMicros(dailyAmountDollars);
 
-      // Build dry-run preview
-      const approvalEnforcer = getApprovalEnforcer();
+      logger.info('Creating budget', { customerId, name, dailyAmountDollars });
 
-      const dryRunBuilder = new DryRunResultBuilder(
-        'create_budget',
-        'Google Ads',
-        customerId
-      );
-
-      dryRunBuilder.addChange({
-        resource: 'Campaign Budget',
-        resourceId: 'new',
-        field: 'daily_amount_micros',
-        currentValue: 'N/A (new budget)',
-        newValue: `$${dailyAmountDollars.toFixed(2)}/day`,
-        changeType: 'create',
-      });
-
-      dryRunBuilder.setFinancialImpact({
-        estimatedNewDailySpend: dailyAmountDollars,
-        monthlyDifference: dailyAmountDollars * 30.4,
-      });
-
-      // Add recommendations
-      if (dailyAmountDollars > 100) {
-        dryRunBuilder.addRecommendation(
-          'This is a relatively high daily budget for a new budget. Consider starting lower and scaling up.'
-        );
-      }
-
-      dryRunBuilder.addRecommendation(
-        'This budget will not affect spend until assigned to an active campaign'
-      );
-
-      const dryRun = dryRunBuilder.build();
-
-      // If no confirmation token, return preview
-      if (!confirmationToken) {
-        // Generate confirmation token for the full dry-run
-        const token = approvalEnforcer.createConfirmationToken(dryRun);
-
-        const preview = approvalEnforcer.formatDryRunForDisplay(dryRun, token);
-
-        return {
-          success: true,
-          requiresApproval: true,
-          preview,
-          confirmationToken: token,
-          message:
-            'Budget creation requires approval. Review the preview above and call this tool again with the confirmationToken to proceed.',
-        };
-      }
-
-      // Execute with confirmation
-      logger.info('Creating budget with confirmation', { customerId, name, dailyAmountDollars });
-
-      const result = await approvalEnforcer.validateAndExecute(
-        confirmationToken,
-        dryRun,
-        async () => {
-          return await client.createBudget(customerId, name, amountMicros);
-        }
-      );
+      const result = await client.createBudget(customerId, name, amountMicros);
 
       // AUDIT: Log successful budget creation
       await audit.logWriteOperation('user', 'create_budget', customerId, {
@@ -230,17 +203,42 @@ What should the daily budget be (in dollars)?`;
         monthlyEstimate: dailyAmountDollars * 30.4,
       });
 
-      return {
-        success: true,
-        data: {
-          customerId,
-          budgetId: result,
-          name,
-          dailyAmount: microsToAmount(amountMicros),
-          monthlyEstimate: microsToAmount(amountMicros * 30.4),
-          message: `✅ Budget "${name}" created successfully with ${microsToAmount(amountMicros)}/day`,
-        },
-      };
+      const budgetId = result.results?.[0]?.resource_name?.split('/')?.pop() || result;
+
+      const guidanceText = `✅ BUDGET CREATED SUCCESSFULLY
+
+**Budget Details:**
+- Name: ${name}
+- ID: ${budgetId}
+- Daily Amount: $${dailyAmountDollars}/day
+- Monthly Estimate: $${(dailyAmountDollars * 30.4).toFixed(2)}/month
+
+⚠️ **IMPORTANT:** This budget won't affect spend until assigned to a campaign!
+
+🎯 **NEXT STEPS:**
+
+**1. Assign to Campaign:**
+   • New campaign: use create_campaign with budgetId="${budgetId}"
+   • Existing campaign: use update_campaign with budgetId="${budgetId}"
+
+**2. Monitor Spend:**
+   • Budget sets daily limit (campaign pauses when reached)
+   • Monthly estimate: ~$${(dailyAmountDollars * 30.4).toFixed(0)} (actual varies by performance)
+
+**3. Adjust if Needed:**
+   • Too restrictive (pausing daily): use update_budget to increase
+   • Overspending: Decrease via update_budget
+
+${dailyAmountDollars > 200 ? `\n⚠️ **High Budget Alert:** $${dailyAmountDollars}/day is substantial. Monitor closely, especially in first week!` : ''}
+${dailyAmountDollars < 20 ? `\n⚠️ **Low Budget Alert:** $${dailyAmountDollars}/day may be too low for competitive keywords. Consider increasing if performance is limited.` : ''}`;
+
+      return injectGuidance({
+        customerId,
+        budgetId,
+        name,
+        dailyAmount: dailyAmountDollars,
+        monthlyEstimate: dailyAmountDollars * 30.4,
+      }, guidanceText);
     } catch (error) {
       logger.error('Failed to create budget', error as Error);
 

@@ -22,20 +22,10 @@ export declare const createBudgetTool: {
                 type: string;
                 description: string;
             };
-            confirmationToken: {
-                type: string;
-                description: string;
-            };
         };
         required: never[];
     };
-    handler(input: any): Promise<import("../../shared/interactive-workflow.js").McpResponse | {
-        success: boolean;
-        requiresApproval: boolean;
-        preview: string;
-        confirmationToken: string;
-        message: string;
-    }>;
+    handler(input: any): Promise<import("../../shared/interactive-workflow.js").McpResponse>;
 };
 /**
  * Update budget
