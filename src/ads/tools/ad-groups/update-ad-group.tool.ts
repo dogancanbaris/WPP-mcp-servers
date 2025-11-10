@@ -250,7 +250,7 @@ This campaign has no ad groups. Create an ad group first.
       }
 
       // ═══ STEP 4: MODIFICATION SPECIFICATION ═══
-      if (!name && !status && cpcBidMicros === undefined) {
+      if (!name && !status && cpcBidMicros === undefined && !type && !trackingUrlTemplate && !urlCustomParameters && !adRotationMode) {
         const customer = client.getCustomer(customerId);
         const adGroups = await customer.query(`
           SELECT
