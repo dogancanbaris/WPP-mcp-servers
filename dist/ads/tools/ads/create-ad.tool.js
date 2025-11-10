@@ -50,6 +50,19 @@ export const createAdTool = {
                 type: 'string',
                 description: 'Display path 2 (optional, 15 chars max)',
             },
+            // Mobile and tracking parameters
+            mobileFinalUrl: {
+                type: 'string',
+                description: 'Mobile final URL (optional but recommended - 60% of traffic is mobile)',
+            },
+            finalUrlSuffix: {
+                type: 'string',
+                description: 'Final URL suffix for UTM tracking (optional, e.g., "utm_source=google")',
+            },
+            trackingTemplate: {
+                type: 'string',
+                description: 'Tracking URL template for conversion tracking (optional)',
+            },
             confirmationToken: {
                 type: 'string',
                 description: 'Confirmation token for executing the operation',
@@ -59,7 +72,7 @@ export const createAdTool = {
     },
     async handler(input) {
         try {
-            const { customerId, adGroupId, headlines, descriptions, finalUrl, path1, path2, confirmationToken } = input;
+            const { customerId, adGroupId, headlines, descriptions, finalUrl, path1, path2, mobileFinalUrl, finalUrlSuffix, trackingTemplate, confirmationToken } = input;
             // Extract OAuth tokens from request
             const refreshToken = extractRefreshToken(input);
             if (!refreshToken) {
@@ -384,6 +397,9 @@ Shorten or remove path2.`;
 
 **Display URL:** ${fullDisplayPath}
 **Final URL:** ${finalUrl}
+${mobileFinalUrl ? `**Mobile Final URL:** ${mobileFinalUrl}` : '⚠️ **No Mobile URL** - 60% of traffic is mobile!'}
+${finalUrlSuffix ? `**Tracking Suffix:** ${finalUrlSuffix}` : ''}
+${trackingTemplate ? `**Tracking Template:** ${trackingTemplate}` : ''}
 
 **Headlines (${headlines.length}):**
 ${headlines.map((h, i) => `${i + 1}. ${h} (${h.length} chars)`).join('\n')}
@@ -451,6 +467,11 @@ Call this tool again with the same parameters plus:
                             path2: path2 || undefined,
                         },
                         final_urls: [finalUrl],
+                        // Add mobile URLs if provided
+                        final_mobile_urls: mobileFinalUrl ? [mobileFinalUrl] : undefined,
+                        // Add tracking if provided
+                        final_url_suffix: finalUrlSuffix || undefined,
+                        tracking_url_template: trackingTemplate || undefined,
                     },
                 },
             };

@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { ComponentConfig, BlendConfig } from '@/types/dashboard-builder';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { ComponentConfig, BlendConfig, FilterConfig, DateRangeConfig } from '@/types/dashboard-builder';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, AlertCircle } from 'lucide-react';
@@ -20,6 +20,8 @@ import type { Field } from '@/lib/api/dashboards';
 import { useDataSources } from '@/hooks/useDataSources';
 import { getComponentBehavior } from '../component-behavior';
 import BlendDataDialog from '@/components/dashboard-builder/dialogs/BlendDataDialog';
+import { getBlendSummary, getPrimaryBlendDatasetInfo } from '@/lib/data/blend-utils';
+import { toast } from '@/lib/toast';
 
 interface ChartSetupProps {
   config: ComponentConfig;
@@ -74,35 +76,35 @@ const normalizeDatePreset = (preset?: string): string | undefined => {
 export const ChartSetup: React.FC<ChartSetupProps> = ({ config, onUpdate }) => {
   const behavior = getComponentBehavior(config.type);
 
-  if (behavior.setupVariant === 'text') {
-    return <TextContentSetup config={config} onUpdate={onUpdate} />;
-  }
-
-  if (behavior.setupVariant === 'media') {
-    return <MediaSetupPanel config={config} onUpdate={onUpdate} />;
-  }
-
-  if (behavior.setupVariant === 'shape') {
-    return <ShapeSetupPanel config={config} onUpdate={onUpdate} />;
-  }
-
-  if (behavior.setupVariant === 'control') {
-    return <ControlSetupPanel />;
-  }
-
-  if (behavior.setupVariant === 'none') {
-    return <NoSetupPanel />;
-  }
-
   const { dataSources, loading: sourcesLoading, error } = useDataSources();
   const [availableFields, setAvailableFields] = useState<Field[]>([]);
 
   const chartType = config.type || 'table';
-  const selectedSourceId = config.dataset_id || config.datasource || dataSources[0]?.id || '';
-  const blendEnabled = !!(config.blendConfig && config.blendConfig.sources?.length && config.blendConfig.sources.length > 1);
+  const dataSourceByLegacyName = useMemo(() => {
+    if (!config.datasource) return undefined;
+    return dataSources.find(
+      (source) => source.table === config.datasource || source.name === config.datasource
+    );
+  }, [config.datasource, dataSources]);
+
+  const selectedSourceId = useMemo(() => {
+    if (config.dataset_id) return config.dataset_id;
+    if (dataSourceByLegacyName) return dataSourceByLegacyName.id;
+    return dataSources[0]?.id || '';
+  }, [config.dataset_id, dataSourceByLegacyName, dataSources]);
+
+  const supportsBlending = behavior.supportsBlending;
+  const blendEnabled =
+    supportsBlending &&
+    !!(config.blendConfig && config.blendConfig.sources?.length && config.blendConfig.sources.length > 1);
   const selectedDimensions = ((config as unknown as Record<string, unknown>).dimensions as string[]) || [];
   const drillDownEnabled = ((config as unknown as Record<string, unknown>).drillDownEnabled as boolean) || false;
   const [isBlendDialogOpen, setBlendDialogOpen] = useState(false);
+  const blendSummary = useMemo(
+    () => getBlendSummary(config.blendConfig, dataSources),
+    [config.blendConfig, dataSources]
+  );
+  const lastBaseDatasetRef = useRef<string | undefined>(config.dataset_id);
 
   const metrics: Metric[] = useMemo(() => {
     return (config.metrics || []).map((metricId) => {
@@ -157,12 +159,39 @@ export const ChartSetup: React.FC<ChartSetupProps> = ({ config, onUpdate }) => {
     }
   }, [dataSources, selectedSourceId, config.dataset_id, onUpdate]);
 
+  useEffect(() => {
+    if (!blendEnabled && config.dataset_id) {
+      lastBaseDatasetRef.current = config.dataset_id;
+    }
+  }, [blendEnabled, config.dataset_id]);
+
+  if (behavior.setupVariant === 'text') {
+    return <TextContentSetup config={config} onUpdate={onUpdate} />;
+  }
+
+  if (behavior.setupVariant === 'media') {
+    return <MediaSetupPanel config={config} onUpdate={onUpdate} />;
+  }
+
+  if (behavior.setupVariant === 'shape') {
+    return <ShapeSetupPanel config={config} onUpdate={onUpdate} />;
+  }
+
+  if (behavior.setupVariant === 'control') {
+    return <ControlSetupPanel />;
+  }
+
+  if (behavior.setupVariant === 'none') {
+    return <NoSetupPanel />;
+  }
+
   const handleChartTypeChange = (type: string) => {
     onUpdate({ type });
   };
 
   const handleDataSourceChange = (sourceId: string) => {
     const source = dataSources.find((ds) => ds.id === sourceId);
+    lastBaseDatasetRef.current = sourceId;
     onUpdate({
       dataset_id: sourceId,
       datasource: source?.table || source?.name || sourceId,
@@ -170,19 +199,35 @@ export const ChartSetup: React.FC<ChartSetupProps> = ({ config, onUpdate }) => {
   };
 
   const handleBlendToggle = (enabled: boolean) => {
+    if (!supportsBlending) return;
     if (enabled) {
+      if (dataSources.length < 2) {
+        toast.error('Connect at least two data sources before blending');
+        return;
+      }
       setBlendDialogOpen(true);
     } else {
-      onUpdate({ blendConfig: undefined });
+      handleBlendClear();
     }
   };
 
+  const handleBlendClear = () => {
+    const fallbackSourceId =
+      lastBaseDatasetRef.current || selectedSourceId || dataSources[0]?.id;
+    const fallbackSource = dataSources.find((ds) => ds.id === fallbackSourceId);
+    onUpdate({
+      blendConfig: undefined,
+      dataset_id: fallbackSourceId,
+      datasource: fallbackSource ? fallbackSource.table || fallbackSource.name : undefined,
+    });
+  };
+
   const handleBlendSave = (blendConfig: BlendConfig) => {
-    const primarySource = blendConfig.sources.find((source) => source.id === blendConfig.primarySourceId);
+    const primaryInfo = getPrimaryBlendDatasetInfo(blendConfig, dataSources);
     onUpdate({
       blendConfig,
-      dataset_id: primarySource?.datasetId,
-      datasource: 'Blended Source',
+      dataset_id: primaryInfo?.datasetId,
+      datasource: primaryInfo?.label || 'Blended Source',
     });
   };
 
@@ -200,22 +245,23 @@ export const ChartSetup: React.FC<ChartSetupProps> = ({ config, onUpdate }) => {
   };
 
   const handleFiltersChange = (updatedFilters: ChartFilter[]) => {
-    const mapped = updatedFilters.map((f) => ({
+    const mapped: FilterConfig[] = updatedFilters.map((f) => ({
       field: f.fieldId || f.fieldName,
       operator: f.operator,
       values: Array.isArray(f.value) ? (f.value as string[]) : [String(f.value)],
       enabled: true,
     }));
-    onUpdate({ componentFilters: mapped as any });
+    onUpdate({ componentFilters: mapped });
   };
 
   const handleDateRangeChange = (range: DateRange) => {
     if (range.type === 'custom' && range.startDate && range.endDate) {
+      const nextRange: DateRangeConfig = {
+        start: range.startDate.toISOString().slice(0, 10),
+        end: range.endDate.toISOString().slice(0, 10),
+      };
       onUpdate({
-        dateRange: {
-          start: range.startDate.toISOString().slice(0, 10),
-          end: range.endDate.toISOString().slice(0, 10),
-        } as any,
+        dateRange: nextRange,
       });
     } else {
       onUpdate({ dateRange: undefined });
@@ -257,8 +303,11 @@ export const ChartSetup: React.FC<ChartSetupProps> = ({ config, onUpdate }) => {
         blendEnabled={blendEnabled}
         onBlendToggle={handleBlendToggle}
         isBlendActive={blendEnabled}
-        blendSummary={blendEnabled ? `${config.blendConfig?.sources.length} sources` : undefined}
+        blendSummary={blendEnabled ? blendSummary.summaryLabel : undefined}
+        blendDetails={blendEnabled ? blendSummary.details : undefined}
+        supportsBlending={supportsBlending}
         onConfigureBlend={() => setBlendDialogOpen(true)}
+        onClearBlend={blendEnabled ? handleBlendClear : undefined}
       />
 
       <Separator />
@@ -291,13 +340,15 @@ export const ChartSetup: React.FC<ChartSetupProps> = ({ config, onUpdate }) => {
 
       <DateRangePicker value={dateRange} onChange={handleDateRangeChange} />
 
-      <BlendDataDialog
-        open={isBlendDialogOpen}
-        onClose={() => setBlendDialogOpen(false)}
-        dataSources={dataSources}
-        value={config.blendConfig}
-        onSave={handleBlendSave}
-      />
+      {supportsBlending && (
+        <BlendDataDialog
+          open={isBlendDialogOpen}
+          onClose={() => setBlendDialogOpen(false)}
+          dataSources={dataSources}
+          value={config.blendConfig}
+          onSave={handleBlendSave}
+        />
+      )}
     </div>
   );
 };

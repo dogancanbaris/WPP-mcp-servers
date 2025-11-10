@@ -1,12 +1,12 @@
 /**
- * Create Ad Tool
+ * Update Campaign Tool
  *
- * MCP tool for creating Responsive Search Ads in Google Ads.
+ * MCP tool for updating existing Google Ads campaign settings.
  */
 /**
- * Create Responsive Search Ad
+ * Update campaign settings
  */
-export declare const createAdTool: {
+export declare const updateCampaignTool: {
     name: string;
     description: string;
     inputSchema: {
@@ -16,45 +16,47 @@ export declare const createAdTool: {
                 type: string;
                 description: string;
             };
-            adGroupId: {
+            campaignId: {
                 type: string;
                 description: string;
             };
-            headlines: {
-                type: string;
-                items: {
-                    type: string;
-                };
-                description: string;
-            };
-            descriptions: {
-                type: string;
-                items: {
-                    type: string;
-                };
-                description: string;
-            };
-            finalUrl: {
+            name: {
                 type: string;
                 description: string;
             };
-            path1: {
+            budgetId: {
                 type: string;
                 description: string;
             };
-            path2: {
+            targetGoogleSearch: {
                 type: string;
                 description: string;
             };
-            mobileFinalUrl: {
+            targetSearchNetwork: {
                 type: string;
                 description: string;
             };
-            finalUrlSuffix: {
+            targetContentNetwork: {
+                type: string;
+                description: string;
+            };
+            targetPartnerSearchNetwork: {
+                type: string;
+                description: string;
+            };
+            startDate: {
+                type: string;
+                description: string;
+            };
+            endDate: {
                 type: string;
                 description: string;
             };
             trackingTemplate: {
+                type: string;
+                description: string;
+            };
+            finalUrlSuffix: {
                 type: string;
                 description: string;
             };
@@ -65,6 +67,6 @@ export declare const createAdTool: {
         };
         required: never[];
     };
-    handler(input: any): Promise<import("../../../shared/interactive-workflow.js").McpResponse>;
+    handler(input: any): Promise<any>;
 };
-//# sourceMappingURL=create-ad.tool.d.ts.map
+//# sourceMappingURL=update-campaign.tool.d.ts.map

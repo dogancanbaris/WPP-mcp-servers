@@ -127,7 +127,7 @@ KPI_TYPES.forEach((type) => {
     supportsDataSource: true,
     supportsComponentFilters: true,
     supportsPageFilters: true,
-    supportsBlending: false,
+    supportsBlending: true,
   };
 });
 

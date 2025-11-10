@@ -1,7 +1,7 @@
 /**
  * Tool Categorization for Smart Discovery
  *
- * Organizes all 98 Google marketing tools into logical categories
+ * Organizes all 99 Google marketing tools into logical categories
  * for efficient searching and discovery via meta-tools.
  */
 
@@ -62,7 +62,7 @@ export const toolCategories: Record<string, ToolCategory> = {
   },
 
   // ============================================================================
-  // GOOGLE ADS (59 tools)
+  // GOOGLE ADS (60 tools)
   // ============================================================================
 
   'ads.accounts': {
@@ -81,6 +81,7 @@ export const toolCategories: Record<string, ToolCategory> = {
     platform: 'Google Ads',
     tools: [
       'create_campaign',
+      'update_campaign',
       'list_campaigns',
       'update_campaign_status',
       'get_campaign_performance'

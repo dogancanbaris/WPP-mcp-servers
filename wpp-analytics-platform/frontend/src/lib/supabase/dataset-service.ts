@@ -41,7 +41,7 @@ export async function listDatasets(): Promise<ListDatasetsResponse> {
       .from('datasets')
       .select('*')
       .or(`workspace_id.eq.${workspace.id},workspace_id.is.null`)
-      .order('created_at', { ascending: false });
+      .order('name', { ascending: true });
 
     if (error) {
       console.error('List datasets error:', error);

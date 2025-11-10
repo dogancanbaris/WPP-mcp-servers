@@ -13,6 +13,7 @@ interface DataSource {
   id: string;
   name: string;
   type: string;
+  table?: string;
 }
 
 interface DataSourceSelectorProps {
@@ -24,6 +25,9 @@ interface DataSourceSelectorProps {
   isBlendActive?: boolean;
   blendSummary?: string;
   onConfigureBlend?: () => void;
+  blendDetails?: string[];
+  supportsBlending?: boolean;
+  onClearBlend?: () => void;
 }
 
 export function DataSourceSelector({
@@ -35,6 +39,9 @@ export function DataSourceSelector({
   isBlendActive,
   blendSummary,
   onConfigureBlend,
+  blendDetails,
+  supportsBlending = true,
+  onClearBlend,
 }: DataSourceSelectorProps) {
   const currentSource = dataSources.find((ds) => ds.id === selectedSourceId);
 
@@ -42,7 +49,7 @@ export function DataSourceSelector({
     <div className="space-y-3">
       <label className="text-sm font-medium text-gray-700">Data Source</label>
 
-      <Select value={selectedSourceId} onValueChange={onSourceChange}>
+      <Select value={selectedSourceId} onValueChange={onSourceChange} disabled={blendEnabled}>
         <SelectTrigger className="w-full">
           <SelectValue>
               <div className="flex items-start gap-2">
@@ -80,37 +87,64 @@ export function DataSourceSelector({
         </SelectContent>
       </Select>
 
-      <div className="flex items-center justify-between pt-2 border-t">
-        <label htmlFor="blend-toggle" className="text-sm text-gray-600 cursor-pointer">
-          Blend data from multiple sources
-        </label>
-        <div className="flex items-center gap-2">
-          {isBlendActive && blendSummary && (
-            <button
-              type="button"
-              className="text-xs text-primary hover:underline"
-              onClick={onConfigureBlend}
-            >
-              {blendSummary}
-            </button>
-          )}
-          <Switch
-            id="blend-toggle"
-            checked={blendEnabled}
-            onCheckedChange={onBlendToggle}
-          />
+      {supportsBlending && (
+        <div className="flex items-center justify-between pt-2 border-t">
+          <label htmlFor="blend-toggle" className="text-sm text-gray-600 cursor-pointer">
+            Blend data from multiple sources
+          </label>
+          <div className="flex items-center gap-2">
+            {isBlendActive && blendSummary && (
+              <button
+                type="button"
+                className="text-xs text-primary hover:underline"
+                onClick={onConfigureBlend}
+              >
+                {blendSummary}
+              </button>
+            )}
+            <Switch
+              id="blend-toggle"
+              checked={blendEnabled}
+              onCheckedChange={onBlendToggle}
+            />
+          </div>
         </div>
-      </div>
+      )}
 
-      {isBlendActive && (
-        <div className="flex justify-end">
-          <button
-            type="button"
-            className="text-xs text-primary hover:underline"
-            onClick={onConfigureBlend}
-          >
-            Configure blend settings
-          </button>
+      {supportsBlending && isBlendActive && (
+        <div className="rounded-md border border-primary/30 bg-primary/5 p-3 space-y-2 text-xs">
+          <div className="flex items-center justify-between">
+            <span className="font-semibold text-primary">Blend active</span>
+            <div className="flex items-center gap-2 text-[11px]">
+              <button
+                type="button"
+                className="text-primary hover:underline"
+                onClick={onConfigureBlend}
+              >
+                Edit
+              </button>
+              {onClearBlend && (
+                <>
+                  <span className="text-muted-foreground">•</span>
+                  <button
+                    type="button"
+                    className="text-destructive hover:underline"
+                    onClick={onClearBlend}
+                  >
+                    Remove
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+          {blendSummary && <p className="text-sm text-primary">{blendSummary}</p>}
+          {blendDetails?.length ? (
+            <ul className="space-y-1 text-muted-foreground">
+              {blendDetails.map((detail, index) => (
+                <li key={`${detail}-${index}`}>• {detail}</li>
+              ))}
+            </ul>
+          ) : null}
         </div>
       )}
     </div>

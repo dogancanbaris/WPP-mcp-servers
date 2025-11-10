@@ -1,7 +1,7 @@
 /**
  * Tool Categorization for Smart Discovery
  *
- * Organizes all 98 Google marketing tools into logical categories
+ * Organizes all 99 Google marketing tools into logical categories
  * for efficient searching and discovery via meta-tools.
  */
 export interface ToolCategory {

@@ -3,7 +3,7 @@
  */
 export { listAccessibleAccountsTool, getAccountInfoTool } from './accounts.js';
 export { listCampaignsTool, getCampaignPerformanceTool, getSearchTermsReportTool, getKeywordPerformanceTool, listBudgetsTool, runCustomReportTool, getAdGroupPerformanceTool, getAdPerformanceTool, } from './reporting/index.js';
-export { updateCampaignStatusTool, createCampaignTool } from './campaigns/index.js';
+export { updateCampaignStatusTool, createCampaignTool, updateCampaignTool } from './campaigns/index.js';
 export { createAdGroupTool, updateAdGroupTool, listAdGroupsTool, updateAdGroupBidModifierTool, getAdGroupQualityScoreTool } from './ad-groups/index.js';
 export { createAdTool, listAdsTool, updateAdTool, pauseAdTool } from './ads/index.js';
 export { createBudgetTool, updateBudgetTool } from './budgets.js';
@@ -429,22 +429,16 @@ export declare const googleAdsTools: ({
                 type: string;
                 description: string;
             };
+            campaignId: {
+                type: string;
+                description: string;
+            };
             name: {
                 type: string;
                 description: string;
             };
             budgetId: {
                 type: string;
-                description: string;
-            };
-            campaignType: {
-                type: string;
-                enum: string[];
-                description: string;
-            };
-            status: {
-                type: string;
-                enum: string[];
                 description: string;
             };
             targetGoogleSearch: {
@@ -479,21 +473,14 @@ export declare const googleAdsTools: ({
                 type: string;
                 description: string;
             };
+            confirmationToken: {
+                type: string;
+                description: string;
+            };
         };
         required: never[];
     };
-    handler(input: any): Promise<import("../../shared/interactive-workflow.js").McpResponse | {
-        success: boolean;
-        data: {
-            customerId: any;
-            campaignId: any;
-            name: any;
-            campaignType: any;
-            status: any;
-            message: string;
-        };
-        warning: string[];
-    }>;
+    handler(input: any): Promise<any>;
 } | {
     name: string;
     description: string;
@@ -1242,18 +1229,7 @@ export declare const writeAdsTools: ({
         };
         required: never[];
     };
-    handler(input: any): Promise<import("../../shared/interactive-workflow.js").McpResponse | {
-        success: boolean;
-        data: {
-            customerId: any;
-            campaignId: any;
-            name: any;
-            campaignType: any;
-            status: any;
-            message: string;
-        };
-        warning: string[];
-    }>;
+    handler(input: any): Promise<import("../../shared/interactive-workflow.js").McpResponse>;
 } | {
     name: string;
     description: string;
@@ -1380,6 +1356,18 @@ export declare const writeAdsTools: ({
                 description: string;
             };
             path2: {
+                type: string;
+                description: string;
+            };
+            mobileFinalUrl: {
+                type: string;
+                description: string;
+            };
+            finalUrlSuffix: {
+                type: string;
+                description: string;
+            };
+            trackingTemplate: {
                 type: string;
                 description: string;
             };

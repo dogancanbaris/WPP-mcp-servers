@@ -346,22 +346,63 @@ Now configure campaign settings and tracking (all optional - smart defaults will
         initialStatus: status || 'PAUSED',
       });
 
-      return {
+      // Extract campaign ID from result
+      const campaignId = result.results?.[0]?.resource_name?.split('/')?.pop() || result;
+
+      const guidanceText = `✅ CAMPAIGN CREATED SUCCESSFULLY
+
+**Campaign Details:**
+- Name: ${name}
+- ID: ${campaignId}
+- Type: ${campaignType}
+- Status: ${status || 'PAUSED'}
+- Budget: ${budgetId}
+
+**Settings Applied:**
+- Network: Google Search ${campaignOptions.targetGoogleSearch !== false ? '✅' : '❌'}, Partners ${campaignOptions.targetSearchNetwork ? '✅' : '❌'}, Display ${campaignOptions.targetContentNetwork ? '✅' : '❌'}
+${campaignOptions.startDate ? `- Start Date: ${campaignOptions.startDate}` : ''}
+${campaignOptions.endDate ? `- End Date: ${campaignOptions.endDate}` : ''}
+${campaignOptions.finalUrlSuffix ? `- Tracking: ${campaignOptions.finalUrlSuffix}` : ''}
+
+🎯 **NEXT STEPS - Complete Campaign Setup:**
+
+**1. Add Targeting (Recommended):**
+Without targeting, campaign targets entire world in all languages!
+   • Add locations: use add_location_criteria
+     Example: Target USA and Canada
+     → add_location_criteria(customerId: "${customerId}", campaignId: "${campaignId}", geoTargetIds: ["2840", "2124"])
+
+   • Add languages: use add_language_criteria
+     Example: English only
+     → add_language_criteria(customerId: "${customerId}", campaignId: "${campaignId}", languageIds: ["1000"])
+
+**2. Create Ad Groups:**
+   • use create_ad_group(customerId: "${customerId}", campaignId: "${campaignId}", name: "Ad Group 1")
+
+**3. Add Keywords:**
+   • use add_keywords with keywords for the ad group
+
+**4. Create Ads:**
+   • use create_ad with headlines and descriptions
+
+**5. Enable Campaign:**
+   • use update_campaign_status to set status to ENABLED
+
+${status === 'ENABLED' ? '⚠️ **WARNING:** Campaign is ENABLED - will spend immediately once ads/keywords added!' : 'ℹ️ Campaign is PAUSED - safe to add targeting, ad groups, keywords, and ads'}
+
+**Recommended Flow:**
+→ add_location_criteria → add_language_criteria → create_ad_group → add_keywords → create_ad → update_campaign_status(ENABLED)`;
+
+      return injectGuidance({
         success: true,
-        data: {
-          customerId,
-          campaignId: result,
-          name,
-          campaignType,
-          status: status || 'PAUSED',
-          message: `Campaign "${name}" created successfully in ${status || 'PAUSED'} status`,
-        },
-        warning: [
-          status === 'ENABLED'
-            ? '⚠️ Campaign created in ENABLED status - will start spending immediately if ads and keywords are added'
-            : 'ℹ️ Campaign created in PAUSED status - add ads and keywords, then enable when ready',
-        ],
-      };
+        customerId,
+        campaignId,
+        name,
+        campaignType,
+        status: status || 'PAUSED',
+        budgetId,
+        settings: campaignOptions
+      }, guidanceText);
     } catch (error) {
       logger.error('Failed to create campaign', error as Error);
 

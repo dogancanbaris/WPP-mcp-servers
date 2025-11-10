@@ -391,22 +391,16 @@ export declare const allTools: ({
                 type: string;
                 description: string;
             };
+            campaignId: {
+                type: string;
+                description: string;
+            };
             name: {
                 type: string;
                 description: string;
             };
             budgetId: {
                 type: string;
-                description: string;
-            };
-            campaignType: {
-                type: string;
-                enum: string[];
-                description: string;
-            };
-            status: {
-                type: string;
-                enum: string[];
                 description: string;
             };
             targetGoogleSearch: {
@@ -441,21 +435,14 @@ export declare const allTools: ({
                 type: string;
                 description: string;
             };
+            confirmationToken: {
+                type: string;
+                description: string;
+            };
         };
         required: never[];
     };
-    handler(input: any): Promise<import("../../shared/interactive-workflow.js").McpResponse | {
-        success: boolean;
-        data: {
-            customerId: any;
-            campaignId: any;
-            name: any;
-            campaignType: any;
-            status: any;
-            message: string;
-        };
-        warning: string[];
-    }>;
+    handler(input: any): Promise<any>;
 } | {
     name: string;
     description: string;

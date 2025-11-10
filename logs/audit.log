@@ -2868,5 +2868,290 @@
       "budgetId": "15124166331"
     },
     "errorMessage": "Failed to create campaign: undefined"
+  },
+  {
+    "timestamp": "2025-11-10T02:16:35.420Z",
+    "user": "user",
+    "action": "create_budget",
+    "property": "2041738707",
+    "operationType": "write",
+    "result": "success",
+    "details": {
+      "budgetId": {
+        "results": [
+          {
+            "resource_name": "customers/2041738707/campaignBudgets/15118753175",
+            "campaign_budget": null
+          }
+        ],
+        "partial_failure_error": null
+      },
+      "budgetName": "Dell Brand Budget",
+      "dailyAmount": 250,
+      "monthlyEstimate": 7600
+    }
+  },
+  {
+    "timestamp": "2025-11-10T02:17:10.242Z",
+    "user": "user",
+    "action": "create_campaign",
+    "property": "2041738707",
+    "operationType": "write",
+    "result": "success",
+    "details": {
+      "campaignId": {
+        "results": [
+          {
+            "resource_name": "customers/2041738707/campaigns/23245517498",
+            "campaign": null
+          }
+        ],
+        "partial_failure_error": null
+      },
+      "campaignName": "Dell Brand Protection",
+      "campaignType": "SEARCH",
+      "budgetId": "15118753175",
+      "initialStatus": "PAUSED"
+    }
+  },
+  {
+    "timestamp": "2025-11-10T02:18:40.071Z",
+    "user": "user",
+    "action": "create_budget",
+    "property": "2041738707",
+    "operationType": "write",
+    "result": "success",
+    "details": {
+      "budgetId": {
+        "results": [
+          {
+            "resource_name": "customers/2041738707/campaignBudgets/15118756283",
+            "campaign_budget": null
+          }
+        ],
+        "partial_failure_error": null
+      },
+      "budgetName": "Dell Performance Budget",
+      "dailyAmount": 150,
+      "monthlyEstimate": 4560
+    }
+  },
+  {
+    "timestamp": "2025-11-10T02:18:50.831Z",
+    "user": "user",
+    "action": "create_budget",
+    "property": "2041738707",
+    "operationType": "read",
+    "result": "failure",
+    "details": {
+      "budgetName": "Dell Performance Budget",
+      "attemptedAmount": 150
+    },
+    "errorMessage": "Invalid or expired confirmation token. Please generate a new preview and confirm within 60 seconds."
+  },
+  {
+    "timestamp": "2025-11-10T02:19:10.531Z",
+    "user": "user",
+    "action": "create_budget",
+    "property": "2041738707",
+    "operationType": "read",
+    "result": "failure",
+    "details": {
+      "budgetName": "Dell Performance Budget",
+      "attemptedAmount": 150
+    },
+    "errorMessage": "Failed to create budget: undefined"
+  },
+  {
+    "timestamp": "2025-11-10T02:19:21.652Z",
+    "user": "user",
+    "action": "create_budget",
+    "property": "2041738707",
+    "operationType": "read",
+    "result": "failure",
+    "details": {
+      "budgetName": "Dell Performance Budget",
+      "attemptedAmount": 150
+    },
+    "errorMessage": "Failed to create budget: undefined"
+  },
+  {
+    "timestamp": "2025-11-10T02:20:04.539Z",
+    "user": "user",
+    "action": "create_campaign",
+    "property": "2041738707",
+    "operationType": "write",
+    "result": "success",
+    "details": {
+      "campaignId": {
+        "results": [
+          {
+            "resource_name": "customers/2041738707/campaigns/23249734522",
+            "campaign": null
+          }
+        ],
+        "partial_failure_error": null
+      },
+      "campaignName": "Dell Laptop Sales",
+      "campaignType": "SEARCH",
+      "budgetId": "15118756283",
+      "initialStatus": "PAUSED"
+    }
+  },
+  {
+    "timestamp": "2025-11-10T02:20:14.186Z",
+    "user": "user",
+    "action": "create_campaign",
+    "property": "2041738707",
+    "operationType": "write",
+    "result": "success",
+    "details": {
+      "campaignId": {
+        "results": [
+          {
+            "resource_name": "customers/2041738707/campaigns/23240463318",
+            "campaign": null
+          }
+        ],
+        "partial_failure_error": null
+      },
+      "campaignName": "Dell Desktop Sales",
+      "campaignType": "SEARCH",
+      "budgetId": "15118756283",
+      "initialStatus": "PAUSED"
+    }
+  },
+  {
+    "timestamp": "2025-11-10T02:20:23.578Z",
+    "user": "user",
+    "action": "create_campaign",
+    "property": "2041738707",
+    "operationType": "read",
+    "result": "failure",
+    "details": {
+      "campaignName": "Dell Desktop Sales",
+      "campaignType": "SEARCH",
+      "budgetId": "15118756283"
+    },
+    "errorMessage": "Failed to create campaign: undefined"
+  },
+  {
+    "timestamp": "2025-11-10T02:20:55.397Z",
+    "user": "user",
+    "action": "create_campaign",
+    "property": "2041738707",
+    "operationType": "write",
+    "result": "success",
+    "details": {
+      "campaignId": {
+        "results": [
+          {
+            "resource_name": "customers/2041738707/campaigns/23240465268",
+            "campaign": null
+          }
+        ],
+        "partial_failure_error": null
+      },
+      "campaignName": "Dell Accessories",
+      "campaignType": "SEARCH",
+      "budgetId": "15118753175",
+      "initialStatus": "PAUSED"
+    }
+  },
+  {
+    "timestamp": "2025-11-10T02:21:05.451Z",
+    "user": "user",
+    "action": "create_campaign",
+    "property": "2041738707",
+    "operationType": "write",
+    "result": "success",
+    "details": {
+      "campaignId": {
+        "results": [
+          {
+            "resource_name": "customers/2041738707/campaigns/23249735701",
+            "campaign": null
+          }
+        ],
+        "partial_failure_error": null
+      },
+      "campaignName": "Dell Support Services",
+      "campaignType": "SEARCH",
+      "budgetId": "15118753175",
+      "initialStatus": "PAUSED"
+    }
+  },
+  {
+    "timestamp": "2025-11-10T02:21:15.591Z",
+    "user": "user",
+    "action": "create_campaign",
+    "property": "2041738707",
+    "operationType": "read",
+    "result": "failure",
+    "details": {
+      "campaignName": "Dell Support Services",
+      "campaignType": "SEARCH",
+      "budgetId": "15118753175"
+    },
+    "errorMessage": "Failed to create campaign: undefined"
+  },
+  {
+    "timestamp": "2025-11-10T02:39:54.042Z",
+    "user": "user",
+    "action": "create_campaign",
+    "property": "2041738707",
+    "operationType": "write",
+    "result": "success",
+    "details": {
+      "campaignId": {
+        "results": [
+          {
+            "resource_name": "customers/2041738707/campaigns/23249759215",
+            "campaign": null
+          }
+        ],
+        "partial_failure_error": null
+      },
+      "campaignName": "Dell - Search - Gaming Laptops - Q4 2025",
+      "campaignType": "SEARCH",
+      "budgetId": "15118753175",
+      "initialStatus": "PAUSED"
+    }
+  },
+  {
+    "timestamp": "2025-11-10T10:24:34.780Z",
+    "user": "user",
+    "action": "create_budget",
+    "property": "2041738707",
+    "operationType": "read",
+    "result": "failure",
+    "details": {
+      "budgetName": "Dell Brand Budget",
+      "attemptedAmount": 100
+    },
+    "errorMessage": "Failed to create budget: 11: A campaign budget with this name already exists."
+  },
+  {
+    "timestamp": "2025-11-10T10:43:24.203Z",
+    "user": "user",
+    "action": "create_campaign",
+    "property": "2041738707",
+    "operationType": "write",
+    "result": "success",
+    "details": {
+      "campaignId": {
+        "results": [
+          {
+            "resource_name": "customers/2041738707/campaigns/23242001949",
+            "campaign": null
+          }
+        ],
+        "partial_failure_error": null
+      },
+      "campaignName": "Dell - Search - Black Friday Sale - Q4 2025",
+      "campaignType": "SEARCH",
+      "budgetId": "15118753175",
+      "initialStatus": "PAUSED"
+    }
   }
 ]

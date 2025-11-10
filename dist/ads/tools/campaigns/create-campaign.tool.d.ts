@@ -69,17 +69,6 @@ export declare const createCampaignTool: {
         };
         required: never[];
     };
-    handler(input: any): Promise<import("../../../shared/interactive-workflow.js").McpResponse | {
-        success: boolean;
-        data: {
-            customerId: any;
-            campaignId: any;
-            name: any;
-            campaignType: any;
-            status: any;
-            message: string;
-        };
-        warning: string[];
-    }>;
+    handler(input: any): Promise<import("../../../shared/interactive-workflow.js").McpResponse>;
 };
 //# sourceMappingURL=create-campaign.tool.d.ts.map

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useDashboardStore } from '@/store/dashboardStore';
@@ -8,7 +8,6 @@ import { MenuButton } from './MenuButton';
 import { ToolbarSection } from './ToolbarButton';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { cn } from '@/lib/utils';
 import {
   createFileMenuItems,
   createEditMenuItems,
@@ -52,9 +51,12 @@ import { useEditActions } from '../actions/edit-actions';
 import { useFileActions } from '../actions/file-actions';
 import { useInsertActions } from '../actions/insert-actions';
 import { useArrangeActions } from '../actions/arrange-actions';
-import type { ColumnWidth, ComponentType } from '@/types/dashboard-builder';
+import type { ComponentConfig, ColumnWidth, ComponentType, BlendConfig } from '@/types/dashboard-builder';
 import { refreshAllDashboardData } from '@/lib/utils/refresh-data';
 import { toast } from '@/lib/toast';
+import { useDataSources } from '@/hooks/useDataSources';
+import { getComponentBehavior } from '../sidebar/component-behavior';
+import { getPrimaryBlendDatasetInfo } from '@/lib/data/blend-utils';
 
 interface EditorTopbarProps {
   dashboardId: string;
@@ -69,17 +71,19 @@ interface EditorTopbarProps {
  * Based on COMPREHENSIVE-COMPONENT-SPECIFICATIONS.md Part 1
  */
 export const EditorTopbar: React.FC<EditorTopbarProps> = ({ dashboardId }) => {
-  const { config, setTitle, addRow, addComponent, addPage, zoom, setZoom, save, viewMode, setViewMode } = useDashboardStore();
+  const { config, setTitle, addRow, addComponent, addPage, save, viewMode, setViewMode } = useDashboardStore();
   const canUndo = useDashboardStore((s) => s.canUndo);
   const canRedo = useDashboardStore((s) => s.canRedo);
   const currentPageId = useDashboardStore((s) => s.currentPageId);
   const selectedComponentId = useDashboardStore((s) => s.selectedComponentId);
+  const selectedComponentIdsSet = useDashboardStore((s) => s.selectedComponentIds);
   const setSidebar = useDashboardStore((s) => s.setSidebar);
   const copyStyle = useDashboardStore((s) => s.copyStyle);
   const pasteStyle = useDashboardStore((s) => s.pasteStyle);
   const toggleLock = useDashboardStore((s) => s.toggleLock);
   const pauseUpdates = useDashboardStore((s) => s.pauseUpdates);
   const setPauseUpdates = useDashboardStore((s) => s.setPauseUpdates);
+  const bulkUpdateComponents = useDashboardStore((s) => s.bulkUpdateComponents);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [titleValue, setTitleValue] = useState(config.title);
 
@@ -93,12 +97,16 @@ export const EditorTopbar: React.FC<EditorTopbarProps> = ({ dashboardId }) => {
   const [isKeyboardShortcutsOpen, setIsKeyboardShortcutsOpen] = useState(false);
   const [isDataSourcesOpen, setIsDataSourcesOpen] = useState(false);
   const [isBlendDialogOpen, setIsBlendDialogOpen] = useState(false);
+  const [blendDialogTargets, setBlendDialogTargets] = useState<string[]>([]);
+  const [blendDialogInitialConfig, setBlendDialogInitialConfig] = useState<BlendConfig | undefined>(undefined);
   const [isDashboardSettingsOpen, setIsDashboardSettingsOpen] = useState(false);
 
   // Help menu dialog states
   const [isReportIssueOpen, setIsReportIssueOpen] = useState(false);
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
   const [isChangelogOpen, setIsChangelogOpen] = useState(false);
+
+  const { dataSources, loading: dataSourcesLoading } = useDataSources();
 
 
   // Action hooks - Pass callback to open new dashboard dialog
@@ -122,6 +130,42 @@ export const EditorTopbar: React.FC<EditorTopbarProps> = ({ dashboardId }) => {
     onDeselectAll: editActions.onDeselectAll,
     onAddChart: () => setIsComponentPickerOpen(true),
   });
+
+  const selectedComponentIds = useMemo(() => Array.from(selectedComponentIdsSet), [selectedComponentIdsSet]);
+
+  const selectedComponents = useMemo<ComponentConfig[]>(() => {
+    if (!selectedComponentIds || selectedComponentIds.length === 0) {
+      return [];
+    }
+
+    const idSet = new Set(selectedComponentIds);
+    const matches: ComponentConfig[] = [];
+    const pushComponent = (component?: ComponentConfig) => {
+      if (component && idSet.has(component.id)) {
+        matches.push(component);
+      }
+    };
+
+    if (config.pages && config.pages.length > 0) {
+      const page =
+        (currentPageId && config.pages.find((p) => p.id === currentPageId)) ||
+        config.pages[0];
+      if (page) {
+        page.components?.forEach((canvasComponent) =>
+          pushComponent(canvasComponent.component)
+        );
+        page.rows.forEach((row) =>
+          row.columns.forEach((column) => pushComponent(column.component))
+        );
+      }
+    } else {
+      config.rows.forEach((row) =>
+        row.columns.forEach((column) => pushComponent(column.component))
+      );
+    }
+
+    return matches;
+  }, [config, currentPageId, selectedComponentIds]);
 
   const handleTitleBlur = () => {
     setIsEditingTitle(false);
@@ -184,18 +228,68 @@ export const EditorTopbar: React.FC<EditorTopbarProps> = ({ dashboardId }) => {
     }
   };
 
-  const handleZoomChange = (newZoom: number) => {
-    setZoom(newZoom);
-  };
-
   const handleToggleViewMode = () => {
     const newMode = viewMode === 'edit' ? 'view' : 'edit';
     setViewMode(newMode);
     console.log(`Switched to ${newMode} mode`);
   };
 
-  const handleAIAgent = () => {
-    console.log('AI Assistant coming soon');
+  const handleOpenBlendDialog = () => {
+    if (dataSourcesLoading) {
+      toast.info('Loading data sources…');
+      return;
+    }
+    if (dataSources.length < 2) {
+      toast.error('Connect at least two data sources before blending');
+      return;
+    }
+    if (!selectedComponents.length) {
+      toast.error('Select at least one component to configure a blend');
+      return;
+    }
+    const unsupported = selectedComponents.filter(
+      (component) => !getComponentBehavior(component.type).supportsBlending
+    );
+    if (unsupported.length > 0) {
+      toast.error('Selected component does not support blending');
+      return;
+    }
+    const firstBlendConfig = selectedComponents[0].blendConfig;
+    const normalizedFirstConfig = firstBlendConfig ? JSON.stringify(firstBlendConfig) : null;
+    const sameBlend =
+      normalizedFirstConfig !== null &&
+      selectedComponents.every(
+        (component) => JSON.stringify(component.blendConfig) === normalizedFirstConfig
+      );
+
+    setBlendDialogInitialConfig(sameBlend ? firstBlendConfig : undefined);
+    setBlendDialogTargets(selectedComponents.map((component) => component.id));
+    setIsBlendDialogOpen(true);
+  };
+
+  const handleBlendDialogClose = () => {
+    setIsBlendDialogOpen(false);
+    setBlendDialogTargets([]);
+    setBlendDialogInitialConfig(undefined);
+  };
+
+  const handleBlendDialogSave = (blendConfig: BlendConfig) => {
+    if (!blendDialogTargets.length) {
+      handleBlendDialogClose();
+      return;
+    }
+    const primaryInfo = getPrimaryBlendDatasetInfo(blendConfig, dataSources);
+    bulkUpdateComponents(blendDialogTargets, {
+      blendConfig,
+      dataset_id: primaryInfo?.datasetId,
+      datasource: primaryInfo?.label || 'Blended Source',
+    });
+    toast.success(
+      blendDialogTargets.length === 1
+        ? 'Blend configuration updated'
+        : `Blend applied to ${blendDialogTargets.length} components`
+    );
+    handleBlendDialogClose();
   };
 
   // Create connected menu items
@@ -254,7 +348,7 @@ export const EditorTopbar: React.FC<EditorTopbarProps> = ({ dashboardId }) => {
         case 'blend':
           return {
             ...item,
-            action: () => setIsBlendDialogOpen(true),
+            action: handleOpenBlendDialog,
           };
       }
     }
@@ -660,7 +754,10 @@ export const EditorTopbar: React.FC<EditorTopbarProps> = ({ dashboardId }) => {
 
       <BlendDataDialog
         open={isBlendDialogOpen}
-        onClose={() => setIsBlendDialogOpen(false)}
+        onClose={handleBlendDialogClose}
+        dataSources={dataSources}
+        value={blendDialogInitialConfig}
+        onSave={handleBlendDialogSave}
       />
 
       <KeyboardShortcutsDialog

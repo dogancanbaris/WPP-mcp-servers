@@ -18,7 +18,7 @@ export {
 } from './reporting/index.js';
 
 // Campaign write operations
-export { updateCampaignStatusTool, createCampaignTool } from './campaigns/index.js';
+export { updateCampaignStatusTool, createCampaignTool, updateCampaignTool } from './campaigns/index.js';
 
 // Ad group write operations
 export { createAdGroupTool, updateAdGroupTool, listAdGroupsTool, updateAdGroupBidModifierTool, getAdGroupQualityScoreTool } from './ad-groups/index.js';
@@ -77,7 +77,7 @@ import {
   getAdGroupPerformanceTool,
   getAdPerformanceTool,
 } from './reporting/index.js';
-import { updateCampaignStatusTool, createCampaignTool } from './campaigns/index.js';
+import { updateCampaignStatusTool, createCampaignTool, updateCampaignTool } from './campaigns/index.js';
 import { createAdGroupTool, updateAdGroupTool, listAdGroupsTool, updateAdGroupBidModifierTool, getAdGroupQualityScoreTool } from './ad-groups/index.js';
 import { createAdTool, listAdsTool, updateAdTool, pauseAdTool } from './ads/index.js';
 import { createBudgetTool, updateBudgetTool } from './budgets.js';
@@ -123,6 +123,7 @@ export const googleAdsTools = [
   // Write operations (with comprehensive agent guidance)
   updateCampaignStatusTool,
   createCampaignTool,
+  updateCampaignTool,
   createBudgetTool,
   updateBudgetTool,
   createAdGroupTool,
