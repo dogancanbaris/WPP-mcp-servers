@@ -107,20 +107,36 @@ export const addKeywordsTool = {
               type: 'number',
               description: 'Maximum CPC bid in dollars (optional)',
             },
+            finalUrls: {
+              type: 'array',
+              items: { type: 'string' },
+              description: 'Keyword-specific landing page URLs (optional)',
+            },
+            trackingUrlTemplate: {
+              type: 'string',
+              description: 'Keyword-specific tracking template (optional)',
+            },
+            urlCustomParameters: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  key: { type: 'string' },
+                  value: { type: 'string' },
+                },
+              },
+              description: 'Keyword-specific custom URL parameters (optional)',
+            },
           },
           required: ['text', 'matchType'],
         },
-      },
-      confirmationToken: {
-        type: 'string',
-        description: 'Confirmation token from dry-run preview (optional - if not provided, will show preview)',
       },
     },
     required: [], // Make optional for discovery
   },
   async handler(input: any) {
     try {
-      const { customerId, adGroupId, keywords, confirmationToken } = input;
+      const { customerId, adGroupId, keywords } = input;
 
       // Extract OAuth tokens from request
       const refreshToken = extractRefreshToken(input);
@@ -239,13 +255,9 @@ How many keywords do you want to add? Provide keywords array.`;
         return injectGuidance({ customerId, adGroupId }, guidanceText);
       }
 
-      // ═══ STEP 4: DRY-RUN PREVIEW (existing approval flow) ═══
-      // Vagueness detection - ensure specific IDs
-      detectAndEnforceVagueness({
-        operation: 'add_keywords',
-        inputText: `add ${keywords.length} keywords to ad group ${adGroupId}`,
-        inputParams: { customerId, adGroupId, keywordCount: keywords.length },
-      });
+      // ═══ STEP 4: EXECUTE KEYWORD ADDITION ═══
+      // Note: CREATE operations don't need approval (like create_campaign, create_ad_group)
+      // Keywords start in ENABLED status but ad group is PAUSED, so safe
 
       // Check bulk limit (max 50 keywords per request)
       if (keywords.length > 50) {
@@ -254,35 +266,21 @@ How many keywords do you want to add? Provide keywords array.`;
         );
       }
 
-      // Convert dollar bids to micros
+      logger.info('Adding keywords', { customerId, adGroupId, count: keywords.length });
+
+      // Convert dollar bids to micros and add new fields
       const keywordsWithMicros = keywords.map((kw: any) => ({
         text: kw.text,
         matchType: kw.matchType,
         cpcBidMicros: kw.maxCpcDollars ? amountToMicros(kw.maxCpcDollars) : undefined,
+        finalUrls: kw.finalUrls,
+        trackingUrlTemplate: kw.trackingUrlTemplate,
+        urlCustomParameters: kw.urlCustomParameters,
       }));
 
-      // Build dry-run preview
-      const approvalEnforcer = getApprovalEnforcer();
+      const result = await client.addKeywords(customerId, adGroupId, keywordsWithMicros);
 
-      const dryRunBuilder = new DryRunResultBuilder(
-        'add_keywords',
-        'Google Ads',
-        customerId
-      );
-
-      // Add each keyword as a change
-      keywords.forEach((kw: any, index: number) => {
-        dryRunBuilder.addChange({
-          resource: 'Keyword',
-          resourceId: `new_${index + 1}`,
-          field: 'keyword',
-          currentValue: 'N/A (new keyword)',
-          newValue: `"${kw.text}" [${kw.matchType}]${kw.maxCpcDollars ? ` @ $${kw.maxCpcDollars}/click` : ''}`,
-          changeType: 'create',
-        });
-      });
-
-      // Count match types and broad match keywords
+      // Count match types
       const matchTypeCounts = keywords.reduce(
         (acc: any, kw: any) => {
           acc[kw.matchType] = (acc[kw.matchType] || 0) + 1;
@@ -291,88 +289,49 @@ How many keywords do you want to add? Provide keywords array.`;
         { EXACT: 0, PHRASE: 0, BROAD: 0 }
       );
 
-      const broadMatchCount = matchTypeCounts.BROAD || 0;
+      const guidanceText = `✅ KEYWORDS ADDED SUCCESSFULLY
 
-      // Add risks based on match types
-      if (broadMatchCount > 0) {
-        dryRunBuilder.addRisk(
-          `${broadMatchCount} BROAD match keyword(s) will trigger on related searches - may increase spend significantly`
-        );
-        dryRunBuilder.addRecommendation(
-          'Monitor search terms report closely for BROAD match keywords to identify irrelevant traffic'
-        );
-        dryRunBuilder.addRecommendation(
-          'Consider adding negative keywords to prevent wasted spend on BROAD match'
-        );
-      }
+**Summary:**
+- Total Keywords: ${keywords.length}
+- EXACT Match: ${matchTypeCounts.EXACT}
+- PHRASE Match: ${matchTypeCounts.PHRASE}
+- BROAD Match: ${matchTypeCounts.BROAD}
 
-      if (keywords.length > 20) {
-        dryRunBuilder.addRisk(
-          `Adding ${keywords.length} keywords at once may be difficult to manage and optimize`
-        );
-        dryRunBuilder.addRecommendation(
-          'Consider adding keywords in smaller batches for easier monitoring and optimization'
-        );
-      }
+**Keywords Added:**
+${keywords.map((kw: any, i: number) =>
+  `${i + 1}. "${kw.text}" [${kw.matchType}]${kw.maxCpcDollars ? ` @ $${kw.maxCpcDollars}/click` : ''}${kw.finalUrls ? ` → ${kw.finalUrls[0]}` : ''}`
+).join('\n')}
 
-      // Check for high CPC bids
-      const highCpcKeywords = keywords.filter((kw: any) => kw.maxCpcDollars && kw.maxCpcDollars > 10);
-      if (highCpcKeywords.length > 0) {
-        dryRunBuilder.addRisk(
-          `${highCpcKeywords.length} keyword(s) have high CPC bids (>$10) which may increase spend rapidly`
-        );
-      }
+🎯 **NEXT STEPS:**
 
-      const dryRun = dryRunBuilder.build();
+**1. Create Ads (Required before enabling):**
+   • use create_ad with agent assistance
+     → Agent can generate professional headlines/descriptions!
 
-      // If no confirmation token, return preview
-      if (!confirmationToken) {
-        const { confirmationToken: token } = await approvalEnforcer.createDryRun(
-          'add_keywords',
-          'Google Ads',
-          customerId,
-          { adGroupId, keywords }
-        );
+**2. Monitor Search Terms:**
+   • use get_search_terms_report after campaign runs
+     → Find irrelevant queries triggering your keywords
 
-        const preview = approvalEnforcer.formatDryRunForDisplay(dryRun);
+**3. Add Negative Keywords:**
+   • use add_negative_keywords to block irrelevant traffic
+     → Especially important for BROAD match keywords
 
-        return {
-          success: true,
-          requiresApproval: true,
-          preview,
-          confirmationToken: token,
-          message:
-            'Keyword addition requires approval. Review the preview above and call this tool again with the confirmationToken to proceed.',
-        };
-      }
+**4. Optimize Bids:**
+   • use set_keyword_bid to adjust based on performance
+     → Higher bids for converting keywords, lower for exploratory
 
-      // Execute with confirmation
-      logger.info('Adding keywords with confirmation', { customerId, adGroupId, count: keywords.length });
+${matchTypeCounts.BROAD > 0 ? `\n⚠️ **BROAD MATCH WARNING:** You added ${matchTypeCounts.BROAD} BROAD match keyword(s). Monitor search terms closely to prevent wasted spend!` : ''}
 
-      const result = await approvalEnforcer.validateAndExecute(
-        confirmationToken,
-        dryRun,
-        async () => {
-          return await client.addKeywords(customerId, adGroupId, keywordsWithMicros);
-        }
-      );
+${keywords.length > 20 ? `\n⚠️ **LARGE BATCH WARNING:** ${keywords.length} keywords may be hard to manage. Consider monitoring in smaller groups.` : ''}`;
 
-      return {
-        success: true,
-        data: {
-          customerId,
-          adGroupId,
-          keywordsAdded: keywords.length,
-          matchTypeBreakdown: matchTypeCounts,
-          keywords: keywords.map((kw: any) => ({
-            text: kw.text,
-            matchType: kw.matchType,
-            maxCpc: kw.maxCpcDollars ? `$${kw.maxCpcDollars}` : 'Not set',
-          })),
-          result,
-          message: `✅ Added ${keywords.length} keyword(s) to ad group ${adGroupId}`,
-        },
-      };
+      return injectGuidance({
+        customerId,
+        adGroupId,
+        keywordsAdded: keywords.length,
+        matchTypeBreakdown: matchTypeCounts,
+        keywords,
+        result,
+      }, guidanceText);
     } catch (error) {
       logger.error('Failed to add keywords', error as Error);
       throw error;

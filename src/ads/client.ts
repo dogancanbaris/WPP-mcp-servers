@@ -424,22 +424,52 @@ export class GoogleAdsClient {
   async addKeywords(
     customerId: string,
     adGroupId: string,
-    keywords: Array<{ text: string; matchType: string; cpcBidMicros?: number }>
+    keywords: Array<{
+      text: string;
+      matchType: string;
+      cpcBidMicros?: number;
+      finalUrls?: string[];
+      trackingUrlTemplate?: string;
+      urlCustomParameters?: Array<{ key: string; value: string }>;
+    }>
   ): Promise<any> {
     try {
       const customer = this.getCustomer(customerId);
 
       logger.info('Adding keywords', { customerId, adGroupId, count: keywords.length });
 
-      const operations = keywords.map((kw) => ({
-        ad_group: `customers/${customerId}/adGroups/${adGroupId}`,
-        keyword: {
-          text: kw.text,
-          match_type: kw.matchType,
-        },
-        cpc_bid_micros: kw.cpcBidMicros,
-        status: 'ENABLED',
-      }));
+      const operations = keywords.map((kw) => {
+        const operation: any = {
+          ad_group: `customers/${customerId}/adGroups/${adGroupId}`,
+          keyword: {
+            text: kw.text,
+            match_type: kw.matchType,
+          },
+          status: 'ENABLED',
+        };
+
+        // Optional CPC bid
+        if (kw.cpcBidMicros) {
+          operation.cpc_bid_micros = kw.cpcBidMicros;
+        }
+
+        // NEW: Final URLs (keyword-specific landing pages)
+        if (kw.finalUrls && kw.finalUrls.length > 0) {
+          operation.final_urls = kw.finalUrls;
+        }
+
+        // NEW: Tracking template (keyword-level tracking)
+        if (kw.trackingUrlTemplate) {
+          operation.tracking_url_template = kw.trackingUrlTemplate;
+        }
+
+        // NEW: Custom parameters (keyword-level custom data)
+        if (kw.urlCustomParameters && kw.urlCustomParameters.length > 0) {
+          operation.url_custom_parameters = kw.urlCustomParameters;
+        }
+
+        return operation;
+      });
 
       const result = await customer.adGroupCriteria.create(operations as any);
 

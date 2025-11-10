@@ -3326,5 +3326,33 @@
       ],
       "adRotationMode": "OPTIMIZE"
     }
+  },
+  {
+    "timestamp": "2025-11-10T17:11:40.026Z",
+    "user": "user",
+    "action": "create_ad",
+    "property": "2041738707",
+    "operationType": "read",
+    "result": "failure",
+    "details": {
+      "adGroupId": "186247065497",
+      "headlineCount": 15,
+      "descriptionCount": 3
+    }
+  },
+  {
+    "timestamp": "2025-11-10T17:14:37.202Z",
+    "user": "user",
+    "action": "create_ad",
+    "property": "2041738707",
+    "operationType": "write",
+    "result": "success",
+    "details": {
+      "adGroupId": "186247065497",
+      "adId": "unknown",
+      "headlineCount": 15,
+      "descriptionCount": 3,
+      "finalUrl": "https://example.com/dell-xps-15"
+    }
   }
 ]

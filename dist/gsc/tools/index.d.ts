@@ -457,57 +457,6 @@ export declare const allTools: ({
                 type: string;
                 description: string;
             };
-            keywords: {
-                type: string;
-                description: string;
-                items: {
-                    type: string;
-                    properties: {
-                        text: {
-                            type: string;
-                            description: string;
-                        };
-                        matchType: {
-                            type: string;
-                            enum: string[];
-                            description: string;
-                        };
-                        maxCpcDollars: {
-                            type: string;
-                            description: string;
-                        };
-                    };
-                    required: string[];
-                };
-            };
-            confirmationToken: {
-                type: string;
-                description: string;
-            };
-        };
-        required: never[];
-    };
-    handler(input: any): Promise<import("../../shared/interactive-workflow.js").McpResponse | {
-        success: boolean;
-        requiresApproval: boolean;
-        preview: string;
-        confirmationToken: string;
-        message: string;
-    }>;
-} | {
-    name: string;
-    description: string;
-    inputSchema: {
-        type: "object";
-        properties: {
-            customerId: {
-                type: string;
-                description: string;
-            };
-            adGroupId: {
-                type: string;
-                description: string;
-            };
             criterionIds: {
                 type: string;
                 description: string;

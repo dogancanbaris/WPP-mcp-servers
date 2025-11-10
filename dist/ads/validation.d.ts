@@ -150,11 +150,11 @@ export declare const UpdateCampaignStatusSchema: z.ZodObject<{
     campaignId: z.ZodString;
     status: z.ZodEnum<["ENABLED", "PAUSED", "REMOVED"]>;
 }, "strip", z.ZodTypeAny, {
-    status: "ENABLED" | "PAUSED" | "REMOVED";
+    status: "PAUSED" | "ENABLED" | "REMOVED";
     customerId: string;
     campaignId: string;
 }, {
-    status: "ENABLED" | "PAUSED" | "REMOVED";
+    status: "PAUSED" | "ENABLED" | "REMOVED";
     customerId: string;
     campaignId: string;
 }>;

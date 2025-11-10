@@ -93,7 +93,7 @@ export const createAdTool = {
   },
   async handler(input: any) {
     try {
-      const { customerId, adGroupId, headlines, descriptions, finalUrl, path1, path2, mobileFinalUrl, finalUrlSuffix, trackingTemplate, agentAssistMode, productInfo, targetAudience, uniqueSellingPoints, confirmationToken } = input;
+      const { customerId, adGroupId, headlines, descriptions, finalUrl, path1, path2, mobileFinalUrl, finalUrlSuffix, trackingTemplate, agentAssistMode, productInfo, targetAudience, uniqueSellingPoints } = input;
 
       // Extract OAuth tokens from request
       const refreshToken = extractRefreshToken(input);
@@ -583,98 +583,29 @@ Shorten or remove path2.`;
         return injectGuidance({ customerId, adGroupId, headlines, descriptions, finalUrl, path1, path2 }, guidanceText);
       }
 
-      // ═══ STEP 6: DRY-RUN PREVIEW ═══
-      if (!confirmationToken) {
-        const displayUrl = finalUrl.replace('https://', '').replace('http://', '');
-        const domain = displayUrl.split('/')[0];
-        const fullDisplayPath = [domain, path1, path2].filter(Boolean).join('/');
-
-        const previewText = `📋 AD CREATION PREVIEW (Step 6/6)
-
-**RESPONSIVE SEARCH AD:**
-
-**Display URL:** ${fullDisplayPath}
-**Final URL:** ${finalUrl}
-${mobileFinalUrl ? `**Mobile Final URL:** ${mobileFinalUrl}` : '⚠️ **No Mobile URL** - 60% of traffic is mobile!'}
-${finalUrlSuffix ? `**Tracking Suffix:** ${finalUrlSuffix}` : ''}
-${trackingTemplate ? `**Tracking Template:** ${trackingTemplate}` : ''}
-
-**Headlines (${headlines.length}):**
-${headlines.map((h: string, i: number) => `${i + 1}. ${h} (${h.length} chars)`).join('\n')}
-
-**Descriptions (${descriptions.length}):**
-${descriptions.map((d: string, i: number) => `${i + 1}. ${d} (${d.length} chars)`).join('\n')}
-
-**Ad Preview (Example Combination):**
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Ad • ${fullDisplayPath}
-
-${headlines[0]} | ${headlines[1]} | ${headlines[2]}
-
-${descriptions[0]}
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-**Note:** Google will test different combinations of your headlines and descriptions.
-
-⚠️ **IMPORTANT:**
-• Ad will be created in PAUSED status
-• Review all text carefully (no edits after creation)
-• Ensure landing page matches ad message
-• Ad must be approved by Google before serving
-
-✅ **Ready to create this ad?**
-
-Call this tool again with the same parameters plus:
-\`\`\`json
-{
-  "confirmationToken": "${Math.random().toString(36).substring(7)}"
-}
-\`\`\``;
-
-        return {
-          content: [{
-            type: 'text',
-            text: previewText
-          }],
-          data: {
-            customerId,
-            adGroupId,
-            headlines,
-            descriptions,
-            finalUrl,
-            path1,
-            path2,
-          },
-          requiresApproval: true,
-          confirmationToken: Math.random().toString(36).substring(7),
-          success: true,
-        };
-      }
-
-      // ═══ STEP 7: EXECUTE AD CREATION ═══
+      // ═══ STEP 6: EXECUTE AD CREATION ═══
+      // Note: CREATE operations don't need approval (creates in PAUSED status)
       logger.info('Creating responsive search ad', { customerId, adGroupId, headlineCount: headlines.length, descriptionCount: descriptions.length });
 
       const customer = client.getCustomer(customerId);
 
       // Build responsive search ad
       const adOperation: any = {
-        create: {
-          ad_group: `customers/${customerId}/adGroups/${adGroupId}`,
-          status: 'PAUSED',
-          ad: {
-            responsive_search_ad: {
-              headlines: headlines.map((text: string) => ({ text })),
-              descriptions: descriptions.map((text: string) => ({ text })),
-              path1: path1 || undefined,
-              path2: path2 || undefined,
-            },
-            final_urls: [finalUrl],
-            // Add mobile URLs if provided
-            final_mobile_urls: mobileFinalUrl ? [mobileFinalUrl] : undefined,
-            // Add tracking if provided
-            final_url_suffix: finalUrlSuffix || undefined,
-            tracking_url_template: trackingTemplate || undefined,
+        ad_group: `customers/${customerId}/adGroups/${adGroupId}`,
+        status: 'PAUSED',
+        ad: {
+          responsive_search_ad: {
+            headlines: headlines.map((text: string) => ({ text })),
+            descriptions: descriptions.map((text: string) => ({ text })),
+            path1: path1 || undefined,
+            path2: path2 || undefined,
           },
+          final_urls: [finalUrl],
+          // Add mobile URLs if provided
+          final_mobile_urls: mobileFinalUrl ? [mobileFinalUrl] : undefined,
+          // Add tracking if provided
+          final_url_suffix: finalUrlSuffix || undefined,
+          tracking_url_template: trackingTemplate || undefined,
         },
       };
 

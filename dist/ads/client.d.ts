@@ -76,6 +76,12 @@ export declare class GoogleAdsClient {
         text: string;
         matchType: string;
         cpcBidMicros?: number;
+        finalUrls?: string[];
+        trackingUrlTemplate?: string;
+        urlCustomParameters?: Array<{
+            key: string;
+            value: string;
+        }>;
     }>): Promise<any>;
     /**
      * Add negative keywords

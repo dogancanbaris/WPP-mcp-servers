@@ -37,24 +37,40 @@ export declare const addKeywordsTool: {
                             type: string;
                             description: string;
                         };
+                        finalUrls: {
+                            type: string;
+                            items: {
+                                type: string;
+                            };
+                            description: string;
+                        };
+                        trackingUrlTemplate: {
+                            type: string;
+                            description: string;
+                        };
+                        urlCustomParameters: {
+                            type: string;
+                            items: {
+                                type: string;
+                                properties: {
+                                    key: {
+                                        type: string;
+                                    };
+                                    value: {
+                                        type: string;
+                                    };
+                                };
+                            };
+                            description: string;
+                        };
                     };
                     required: string[];
                 };
             };
-            confirmationToken: {
-                type: string;
-                description: string;
-            };
         };
         required: never[];
     };
-    handler(input: any): Promise<import("../../shared/interactive-workflow.js").McpResponse | {
-        success: boolean;
-        requiresApproval: boolean;
-        preview: string;
-        confirmationToken: string;
-        message: string;
-    }>;
+    handler(input: any): Promise<import("../../shared/interactive-workflow.js").McpResponse>;
 };
 /**
  * List keywords
