@@ -45,20 +45,10 @@ export declare const createUserListTool: {
                 type: string;
                 description: string;
             };
-            confirmationToken: {
-                type: string;
-                description: string;
-            };
         };
         required: never[];
     };
-    handler(input: any): Promise<import("../../shared/interactive-workflow.js").McpResponse | {
-        success: boolean;
-        requiresApproval: boolean;
-        preview: string;
-        confirmationToken: string;
-        message: string;
-    }>;
+    handler(input: any): Promise<import("../../shared/interactive-workflow.js").McpResponse>;
 };
 /**
  * Upload customer match list

@@ -45,10 +45,6 @@ export declare const createBiddingStrategyTool: {
                 type: string;
                 description: string;
             };
-            confirmationToken: {
-                type: string;
-                description: string;
-            };
         };
         required: never[];
     };

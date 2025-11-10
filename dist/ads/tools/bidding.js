@@ -164,16 +164,12 @@ export const createBiddingStrategyTool = {
                 type: 'number',
                 description: 'Target value (CPA in dollars or ROAS as decimal, e.g., 2.5 for 2.5x ROAS)',
             },
-            confirmationToken: {
-                type: 'string',
-                description: 'Confirmation token from dry-run preview',
-            },
         },
         required: [],
     },
     async handler(input) {
         try {
-            const { customerId, name, strategyType, targetValue, confirmationToken } = input;
+            const { customerId, name, strategyType, targetValue } = input;
             // Extract OAuth tokens
             const refreshToken = extractRefreshToken(input);
             if (!refreshToken) {
@@ -290,31 +286,38 @@ What should the strategy be named?`;
                 if (strategyType === 'TARGET_CPA') {
                     guidanceText = `💰 TARGET CPA VALUE (Step 4/5)
 
-Enter your target cost per acquisition in dollars:
+🎓 **AGENT TRAINING - REALISTIC TARGET CPA SETTING:**
 
-**How to Calculate Target CPA:**
-1. Customer Lifetime Value (LTV): $___
-2. Acceptable profit margin: ___%
-3. Target CPA = LTV × (1 - margin)
+**CALCULATION FORMULA:**
+Target CPA = (Customer LTV × Profit Margin Tolerance) ÷ Close Rate
 
 **Example:**
-- If LTV = $200 and margin = 60%
-- Target CPA = $200 × 0.40 = $80
+- Customer LTV: $500
+- Profit margin: 60% (you keep $300)
+- Close rate: 50% (half of leads convert to customers)
+- Target CPA: ($500 × 0.60) ÷ 0.50 = $600 per lead
+- BUT start higher: $750 for learning period
 
-**Current Performance Check:**
-Before setting target, check your current CPA:
-- Use get_campaign_performance tool
-- Review last 30-90 days
-- Set target 10-20% better than current average
+**CURRENT PERFORMANCE BASELINE:**
+⚠️ **CRITICAL:** Never set target without knowing current performance!
 
-**Recommended Approach:**
-- Start conservative (close to current CPA)
-- Monitor for 7-14 days
-- Gradually lower target if hitting goals
-- Increase if volume drops too much
+**AGENT CHECKLIST - HELP SET REALISTIC TARGET:**
+□ What's current CPA? (ask user or use get_campaign_performance)
+□ What's the goal? (lower CPA or maintain volume)
+□ Is there sufficient data? (15+ conversions/30 days minimum)
+□ What's realistic reduction? (10-20% max for first attempt)
 
-What should the target CPA be (in dollars)?
-**Example:** 50 (for $50 CPA target)`;
+**AGENT DECISION FRAMEWORK:**
+- Current CPA $200 → Start with $180-190 target (10% improvement)
+- Current CPA $50 → Start with $45-48 target
+- NO current data → Start with LTV × 0.4 (conservative)
+
+**COMMON MISTAKES TO FLAG:**
+❌ Current $200, target $50 → Agent: "75% reduction is too aggressive! You'll get minimal volume. Recommend starting at $150-180"
+❌ Target $5 for complex B2B sale → Agent: "$5 CPA for B2B is unrealistic (industry avg $50-500). What's your actual customer value?"
+❌ No conversion data, setting tight target → Agent: "You need 15+ conversions for optimization. Use Maximize Conversions first to gather data"
+
+Target CPA in dollars:`;
                 }
                 else {
                     guidanceText = `📈 TARGET ROAS VALUE (Step 4/5)
@@ -354,60 +357,7 @@ What should the target ROAS be (as decimal)?
                 }
                 return injectGuidance({ customerId, strategyType, name }, guidanceText);
             }
-            // ═══ STEP 5: DRY-RUN PREVIEW ═══
-            if (!confirmationToken) {
-                // @ts-ignore - Variable used in API call
-                const targetMicros = targetValue ? (strategyType === 'TARGET_CPA' ? targetValue * 1000000 : targetValue) : undefined; // Used in API call below
-                const changes = [
-                    `Strategy Type: ${strategyType}`,
-                    `Strategy Name: ${name}`,
-                ];
-                if (strategyType === 'TARGET_CPA' && targetValue) {
-                    changes.push(`Target CPA: ${formatCurrency(targetValue)}`);
-                    changes.push(`Monthly Target (30 conversions): ${formatCurrency(targetValue * 30)}`);
-                }
-                else if (strategyType === 'TARGET_ROAS' && targetValue) {
-                    changes.push(`Target ROAS: ${targetValue.toFixed(2)}x`);
-                    changes.push(`For $1,000 spend: ${formatCurrency(targetValue * 1000)} expected revenue`);
-                }
-                const risks = [];
-                const recommendations = [];
-                if (strategyType === 'TARGET_CPA' || strategyType === 'TARGET_ROAS') {
-                    recommendations.push('Strategy requires 15+ conversions in last 30 days for optimal performance');
-                    recommendations.push('Monitor for 7-14 days before making adjustments');
-                    recommendations.push('Assign to campaigns with similar conversion goals');
-                }
-                if (strategyType === 'TARGET_CPA' && targetValue && targetValue < 10) {
-                    risks.push('Very low CPA target may limit delivery. Ensure conversion tracking is accurate.');
-                }
-                if (strategyType === 'TARGET_ROAS' && targetValue && targetValue > 5) {
-                    risks.push('High ROAS target may limit delivery. Start lower and increase gradually.');
-                }
-                recommendations.push('This strategy will not affect campaigns until assigned');
-                recommendations.push('Use update_campaign tool to assign strategy to campaigns');
-                const preview = `📋 CREATE BIDDING STRATEGY - REVIEW & CONFIRM (Step 5/5)
-
-**PROPOSED CHANGES:**
-${changes.map(c => `   • ${c}`).join('\n')}
-
-${risks.length > 0 ? `\n⚠️ **RISKS & WARNINGS:**\n${risks.map(r => `   • ${r}`).join('\n')}` : ''}
-
-💡 **RECOMMENDATIONS:**
-${recommendations.map(r => `   • ${r}`).join('\n')}
-
-✅ **Proceed with strategy creation?**
-Call this tool again with confirmationToken to execute.`;
-                return {
-                    content: [{
-                            type: 'text',
-                            text: preview,
-                        }],
-                    requiresApproval: true,
-                    confirmationToken: `create_bidding_strategy_${Date.now()}`,
-                    preview: { changes, risks, recommendations },
-                };
-            }
-            // ═══ STEP 6: EXECUTE ═══
+            // ═══ STEP 5: EXECUTE ═══
             logger.info('Creating bidding strategy', { customerId, name, strategyType, targetValue });
             const targetMicros = targetValue ? (strategyType === 'TARGET_CPA' ? targetValue * 1000000 : targetValue) : undefined;
             const result = await client.createBiddingStrategy(customerId, name, strategyType, targetMicros);

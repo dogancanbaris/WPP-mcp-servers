@@ -210,16 +210,12 @@ export const createUserListTool = {
                 type: 'string',
                 description: 'List description (optional)',
             },
-            confirmationToken: {
-                type: 'string',
-                description: 'Confirmation token from dry-run preview (optional - if not provided, will show preview)',
-            },
         },
         required: [], // Make all optional for discovery
     },
     async handler(input) {
         try {
-            const { customerId, name, membershipDays = 30, description, confirmationToken } = input;
+            const { customerId, name, membershipDays = 30, description } = input;
             // Extract OAuth tokens from request
             const refreshToken = extractRefreshToken(input);
             if (!refreshToken) {
@@ -285,87 +281,98 @@ export const createUserListTool = {
             }
             // ═══ STEP 3: MEMBERSHIP DURATION GUIDANCE ═══
             if (!membershipDays) {
-                const durations = [
-                    { days: 7, desc: 'Very recent visitors (small, highly relevant)' },
-                    { days: 14, desc: 'Recent visitors (good for cart abandonment)' },
-                    { days: 30, desc: 'Standard duration (recommended for most)' },
-                    { days: 60, desc: 'Extended reach (larger audience)' },
-                    { days: 90, desc: 'Long-term visitors (maximum relevance window)' },
-                    { days: 180, desc: 'Very long-term (for customer retention)' },
-                    { days: 540, desc: 'Maximum allowed (1.5 years)' },
-                ];
-                return formatDiscoveryResponse({
-                    step: '3/3',
-                    title: 'SELECT MEMBERSHIP DURATION',
-                    items: durations,
-                    itemFormatter: (d, i) => `${i + 1}. ${d.days} days
-   ${d.desc}`,
-                    prompt: 'How long should users stay in this list?',
-                    nextParam: 'membershipDays',
-                    context: { customerId, name },
-                    emoji: '⏱️',
-                });
+                const guidanceText = `⏱️ MEMBERSHIP DURATION (Step 3/3)
+
+🎓 **AGENT TRAINING - REMARKETING LIST STRATEGY:**
+
+**MEMBERSHIP DURATION LOGIC:**
+How long users stay in list after visiting = List size vs Relevance tradeoff
+
+**SHORT DURATION (7-14 days):**
+✅ Use for: Cart abandonment, product viewers, hot leads
+✅ Pros: Highly relevant, recent interest
+❌ Cons: Small list size, need high traffic
+📊 Example: "Cart Abandoners - 7 Days" (visited cart, didn't purchase, last week)
+
+**MEDIUM DURATION (30-60 days):**
+✅ Use for: General remarketing, brand awareness, most use cases
+✅ Pros: Balanced size and relevance
+✅ Sweet spot: 30 days (Google's default)
+📊 Example: "All Visitors - 30 Days"
+
+**LONG DURATION (90-540 days):**
+✅ Use for: Customer exclusion lists, broad reach, seasonal campaigns
+✅ Pros: Large list size
+❌ Cons: Less relevant (older visits)
+📊 Example: "All Converters - 90 Days (Exclude from prospecting)"
+
+**AGENT DECISION FRAMEWORK:**
+Ask: "What's the goal of this list?"
+- Retarget recent cart abandoners → **7-14 days** (strike while hot!)
+- General remarketing → **30 days** (standard)
+- Exclude past customers → **90-180 days** (capture all recent converters)
+- Customer retention → **180-540 days** (re-engage lapsed customers)
+
+**COMMON MISTAKES TO FLAG:**
+❌ "540 days for cart abandoners" → Agent: "540 days is too long! Cart abandoners should be 7-14 days (strike while interest is hot)"
+❌ "7 days for all visitors" → Agent: "7 days = very small list. Unless high traffic site, use 30 days for adequate reach"
+✅ "30 days for site visitors" → Agent: "Perfect! 30 days balances recency and list size"
+
+Duration in days (7, 14, 30, 60, 90, 180, or 540):`;
+                return injectGuidance({ customerId, name }, guidanceText);
             }
-            // Vagueness detection
-            detectAndEnforceVagueness({
-                operation: 'create_user_list',
-                inputText: `create user list ${name}`,
-                inputParams: { customerId, name },
-            });
-            // Build dry-run preview
-            const approvalEnforcer = getApprovalEnforcer();
-            const dryRunBuilder = new DryRunResultBuilder('create_user_list', 'Google Ads', customerId);
-            dryRunBuilder.addChange({
-                resource: 'User List',
-                resourceId: 'new',
-                field: 'user_list',
-                currentValue: 'N/A (new list)',
-                newValue: `"${name}" (${membershipDays} day membership)`,
-                changeType: 'create',
-            });
-            dryRunBuilder.addRecommendation('Remarketing tag must be installed on website to populate this list');
-            dryRunBuilder.addRecommendation('List needs 1,000+ users for Display Network, 100+ for Search');
-            if (membershipDays < 7) {
-                dryRunBuilder.addRecommendation(`Short membership duration (${membershipDays} days) - list will be small but very recent`);
-            }
-            const dryRun = dryRunBuilder.build();
-            // If no confirmation token, return preview
-            if (!confirmationToken) {
-                const { confirmationToken: token } = await approvalEnforcer.createDryRun('create_user_list', 'Google Ads', customerId, { name });
-                const preview = approvalEnforcer.formatDryRunForDisplay(dryRun);
-                return {
-                    success: true,
-                    requiresApproval: true,
-                    preview,
-                    confirmationToken: token,
-                    message: 'User list creation requires approval. Review the preview above and call this tool again with the confirmationToken to proceed.',
-                };
-            }
-            // Execute with confirmation
-            logger.info('Creating user list with confirmation', { customerId, name });
-            const result = await approvalEnforcer.validateAndExecute(confirmationToken, dryRun, async () => {
-                const userList = {
-                    name,
-                    membership_life_span: membershipDays,
-                    description: description || '',
-                    membership_status: 'OPEN',
-                };
-                const operation = {
-                    create: userList,
-                };
-                const response = await customer.userLists.create([operation]);
-                return response;
-            });
-            return {
-                success: true,
-                data: {
-                    customerId,
-                    userListId: result,
-                    name,
-                    membershipDays,
-                    message: `✅ User list "${name}" created successfully`,
-                },
+            // ═══ EXECUTE USER LIST CREATION ===
+            logger.info('Creating user list', { customerId, name, membershipDays });
+            const userList = {
+                name,
+                membership_life_span: membershipDays,
+                description: description || '',
+                membership_status: 'OPEN',
             };
+            const operation = {
+                create: userList,
+            };
+            const response = await customer.userLists.create([operation]);
+            const userListId = response.results?.[0]?.resource_name?.split('/')?.pop() || response;
+            const guidanceText = `✅ USER LIST CREATED
+
+**List Details:**
+- Name: ${name}
+- ID: ${userListId}
+- Membership Duration: ${membershipDays} days
+${description ? `- Description: ${description}` : ''}
+
+🚨 **CRITICAL - LIST IS EMPTY UNTIL TAG INSTALLED:**
+
+**1. Install Remarketing Tag (REQUIRED):**
+   • Go to Google Ads → Tools → Audience Manager
+   • Get remarketing tag snippet
+   • Add to ALL pages of your website (in <head> section)
+   • Without tag = list stays at 0 users!
+
+**2. Set Up Rules (Optional but recommended):**
+   Lists can be rule-based or include all visitors
+   • URL rules: Users who visited specific pages
+   • Action rules: Users who took specific actions
+   • Currently: This list will collect ALL visitors (no rules set)
+
+**3. Wait for Population:**
+   • Minimum for Search: 100 users
+   • Minimum for Display: 1,000 users
+   • Time needed: Depends on traffic (could be days to weeks)
+
+**4. Use in Campaigns:**
+   • Create remarketing campaign targeting this list
+   • Or exclude this list from prospecting campaigns
+
+${membershipDays < 14 ? `\n⚠️ **Short Duration Alert:** ${membershipDays} days = small list size. Good for hot leads, but ensure sufficient traffic!` : ''}
+${membershipDays > 180 ? `\n⚠️ **Long Duration Alert:** ${membershipDays} days = large but less relevant list. Good for exclusions/broad reach.` : ''}`;
+            return injectGuidance({
+                customerId,
+                userListId,
+                name,
+                membershipDays,
+            }, guidanceText);
         }
         catch (error) {
             logger.error('Failed to create user list', error);
