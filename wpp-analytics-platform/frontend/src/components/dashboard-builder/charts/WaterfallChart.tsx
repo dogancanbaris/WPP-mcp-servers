@@ -32,6 +32,7 @@ export const WaterfallChart: React.FC<WaterfallChartProps> = (props) => {
   const {
     id: componentId,
     dataset_id,
+    blendConfig,
     metrics = [],
     dimension,
     title = 'Waterfall Chart',
@@ -63,11 +64,12 @@ export const WaterfallChart: React.FC<WaterfallChartProps> = (props) => {
   const { data, isLoading, error } = usePageData({
     pageId: currentPageId || 'default',
     componentId: componentId || 'waterfall',
-    datasetId: dataset_id || '',
+    datasetId: dataset_id,
+    blendConfig,
     metrics,
     dimensions: dimension ? [dimension] : undefined,
     filters: cascadedFilters,
-    enabled: !!dataset_id && metrics.length > 0 && !!dimension && !!currentPageId,
+    enabled: (Boolean(dataset_id) || Boolean(blendConfig)) && metrics.length > 0 && !!dimension && !!currentPageId,
     chartType: 'waterfall',
     sortBy: finalSortBy,
     sortDirection: finalSortDirection,

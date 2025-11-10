@@ -35,6 +35,7 @@ export const SunburstChart: React.FC<SunburstChartProps> = (props) => {
   const {
     id: componentId,
     dataset_id,
+    blendConfig,
     metrics = [],
     dimensions = [],
     title = 'Sunburst Chart',
@@ -70,11 +71,12 @@ export const SunburstChart: React.FC<SunburstChartProps> = (props) => {
   const { data, isLoading, error } = usePageData({
     pageId: currentPageId || 'default',
     componentId: componentId || 'sunburst',
-    datasetId: dataset_id || '',
+    datasetId: dataset_id,
+    blendConfig: props.blendConfig,
     metrics,
     dimensions: hierarchyDimensions,
     filters: cascadedFilters,
-    enabled: !!dataset_id && metrics.length > 0 && hierarchyDimensions.length > 0 && !!currentPageId,
+    enabled: (Boolean(dataset_id) || Boolean(props.blendConfig)) && metrics.length > 0 && hierarchyDimensions.length > 0 && !!currentPageId,
     chartType: 'sunburst',
     sortBy: finalSortBy,
     sortDirection: finalSortDirection,

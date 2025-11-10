@@ -19,6 +19,7 @@ import { useCascadedFilters } from '@/hooks/useCascadedFilters';
 import { useCurrentPageId } from '@/store/dashboardStore';
 import { getChartDefaults } from '@/lib/defaults/chart-defaults';
 import { useChartResize } from '@/hooks/useChartResize';
+import { fetchChartData } from '@/lib/data/fetchChartData';
 
 export interface PieChartProps extends Partial<ComponentConfig> {
   pieRadius?: string | [string, string];
@@ -70,6 +71,7 @@ export const PieChart: React.FC<PieChartProps> = (props) => {
 
     // Data props
     dataset_id,
+    blendConfig,
     dimension = null,
     metrics = [],
     dateRange,
@@ -124,26 +126,22 @@ export const PieChart: React.FC<PieChartProps> = (props) => {
   });
 
   // Fetch from dataset API (with caching)
+  const blendKey = blendConfig ? JSON.stringify(blendConfig) : 'no-blend';
+
   const { data, isLoading, error } = useQuery({
-    queryKey: ['piechart', dataset_id, dimension, metrics, cascadedFilters, finalLimit],
+    queryKey: ['piechart', dataset_id || 'blend-only', dimension, metrics, cascadedFilters, finalLimit, blendKey],
     queryFn: async () => {
-      const params = new URLSearchParams({
-        ...(dimension && { dimensions: dimension }),
-        metrics: metrics.join(','),
-        ...(cascadedFilters.length > 0 && { filters: JSON.stringify(cascadedFilters) }),
-        limit: finalLimit?.toString() || '10', // Use defaults or fallback to 10
-        chartType: 'pie_chart' // Tell backend to sort by metric DESC
+      return fetchChartData({
+        datasetId: dataset_id || undefined,
+        blendConfig,
+        dimensions: dimension ? [dimension] : [],
+        metrics,
+        filters: cascadedFilters,
+        limit: finalLimit !== null ? finalLimit : undefined,
+        chartType: 'pie_chart',
       });
-
-      const response = await fetch(`/api/datasets/${dataset_id}/query?${params}`);
-
-      if (!response.ok) {
-        throw new Error(`API error: ${response.statusText}`);
-      }
-
-      return response.json();
     },
-    enabled: !!dataset_id && metrics.length > 0 && !!dimension
+    enabled: (Boolean(dataset_id) || Boolean(blendConfig)) && metrics.length > 0 && !!dimension
   });
 
   const containerStyle: React.CSSProperties = {

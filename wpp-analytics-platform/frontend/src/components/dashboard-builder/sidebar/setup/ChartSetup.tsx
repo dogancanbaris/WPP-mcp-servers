@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { ComponentConfig } from '@/types/dashboard-builder';
+import React, { useEffect, useMemo, useState } from 'react';
+import { ComponentConfig, BlendConfig } from '@/types/dashboard-builder';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, AlertCircle } from 'lucide-react';
@@ -10,8 +10,16 @@ import {
   MetricSelector,
   FilterSection,
   DateRangePicker,
+  TextContentSetup,
+  MediaSetupPanel,
+  ShapeSetupPanel,
+  ControlSetupPanel,
+  NoSetupPanel,
 } from '.';
-import { getAvailableFields, Field, DataSource, FieldsResponse } from '@/lib/api/dashboards';
+import type { Field } from '@/lib/api/dashboards';
+import { useDataSources } from '@/hooks/useDataSources';
+import { getComponentBehavior } from '../component-behavior';
+import BlendDataDialog from '@/components/dashboard-builder/dialogs/BlendDataDialog';
 
 interface ChartSetupProps {
   config: ComponentConfig;
@@ -63,55 +71,61 @@ const normalizeDatePreset = (preset?: string): string | undefined => {
   return DATE_PRESET_ALIASES[lower] ?? preset;
 };
 
-/**
- * ChartSetup Component - Enhanced Looker Studio Style
- *
- * Complete rebuild with all Looker Studio sections:
- * - Chart Type Selector (with icons)
- * - Data Source Selector (with blend toggle)
- * - Dimension Selector (primary + additional + drill down)
- * - Metric Selector (drag-to-reorder, aggregation, sort, compare)
- * - Filter Section (advanced filter builder)
- * - Date Range Picker (presets + custom calendar)
- *
- * Fetches available fields from /api/dashboards/fields on mount.
- *
- * @param config - Current component configuration
- * @param onUpdate - Callback to update component properties
- */
 export const ChartSetup: React.FC<ChartSetupProps> = ({ config, onUpdate }) => {
-  // State for available fields from API
-  const [dataSources, setDataSources] = useState<DataSource[]>([]);
-  const [availableFields, setAvailableFields] = useState<Field[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const behavior = getComponentBehavior(config.type);
 
-  // Current selections from config
+  if (behavior.setupVariant === 'text') {
+    return <TextContentSetup config={config} onUpdate={onUpdate} />;
+  }
+
+  if (behavior.setupVariant === 'media') {
+    return <MediaSetupPanel config={config} onUpdate={onUpdate} />;
+  }
+
+  if (behavior.setupVariant === 'shape') {
+    return <ShapeSetupPanel config={config} onUpdate={onUpdate} />;
+  }
+
+  if (behavior.setupVariant === 'control') {
+    return <ControlSetupPanel />;
+  }
+
+  if (behavior.setupVariant === 'none') {
+    return <NoSetupPanel />;
+  }
+
+  const { dataSources, loading: sourcesLoading, error } = useDataSources();
+  const [availableFields, setAvailableFields] = useState<Field[]>([]);
+
   const chartType = config.type || 'table';
-  const selectedSourceId = config.datasource || '';
-  const blendEnabled = ((config as unknown as Record<string, unknown>).blendEnabled as boolean) || false;
+  const selectedSourceId = config.dataset_id || config.datasource || dataSources[0]?.id || '';
+  const blendEnabled = !!(config.blendConfig && config.blendConfig.sources?.length && config.blendConfig.sources.length > 1);
   const selectedDimensions = ((config as unknown as Record<string, unknown>).dimensions as string[]) || [];
   const drillDownEnabled = ((config as unknown as Record<string, unknown>).drillDownEnabled as boolean) || false;
+  const [isBlendDialogOpen, setBlendDialogOpen] = useState(false);
 
-  // Convert simple metrics array to enhanced Metric objects
-  const metrics: Metric[] = (config.metrics || []).map((metricId) => {
-    const field = availableFields.find((f) => f.id === metricId);
-    return {
-      id: metricId,
-      name: field?.name || metricId,
-      aggregation: 'sum',
-      sortOrder: null,
-      compareEnabled: false,
-    };
-  });
+  const metrics: Metric[] = useMemo(() => {
+    return (config.metrics || []).map((metricId) => {
+      const field = availableFields.find((f) => f.id === metricId);
+      return {
+        id: metricId,
+        name: field?.name || metricId,
+        aggregation: 'sum',
+        sortOrder: null,
+        compareEnabled: false,
+      };
+    });
+  }, [config.metrics, availableFields]);
 
-  const filters: ChartFilter[] = (config.filters || []).map((f, idx) => ({
-    id: `filter-${idx}`,
-    fieldId: f.field,
-    fieldName: f.field,
-    operator: f.operator,
-    value: f.values.join(',')
-  }));
+  const filters: ChartFilter[] = useMemo(() => {
+    return (config.filters || []).map((f, idx) => ({
+      id: `filter-${idx}`,
+      fieldId: f.field,
+      fieldName: f.field,
+      operator: f.operator,
+      value: f.values.join(','),
+    }));
+  }, [config.filters]);
 
   const dateRange: DateRange = config.dateRange
     ? typeof config.dateRange === 'string'
@@ -120,110 +134,72 @@ export const ChartSetup: React.FC<ChartSetupProps> = ({ config, onUpdate }) => {
         ? {
             type: 'custom',
             startDate: new Date(config.dateRange.start),
-            endDate: new Date(config.dateRange.end)
+            endDate: new Date(config.dateRange.end),
           }
         : { type: 'preset', preset: 'last30Days' }
     : { type: 'preset', preset: 'last30Days' };
 
-  /**
-   * Fetch available fields from API on mount
-   * Uses the API client created by frontend-developer agent
-   */
   useEffect(() => {
-    const fetchFields = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-
-        // Use typed API client instead of raw fetch
-        const data: FieldsResponse = await getAvailableFields();
-
-        setDataSources(data.sources);
-
-        // If a data source is selected, use its fields
-        if (selectedSourceId) {
-          const selectedSource = data.sources.find((s) => s.id === selectedSourceId);
-          if (selectedSource) {
-            setAvailableFields(selectedSource.fields);
-          }
-        } else if (data.sources.length > 0) {
-          // Default to first data source
-          setAvailableFields(data.sources[0].fields);
-          onUpdate({ datasource: data.sources[0].id });
-        }
-      } catch (err) {
-        console.error('Error fetching fields:', err);
-        setError(err instanceof Error ? err.message : 'Failed to load fields');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchFields();
-  }, []);
-
-  /**
-   * Update available fields when data source changes
-   */
-  useEffect(() => {
-    if (selectedSourceId && dataSources.length > 0) {
-      const selectedSource = dataSources.find((s) => s.id === selectedSourceId);
-      if (selectedSource) {
-        setAvailableFields(selectedSource.fields);
-      }
+    if (!dataSources || dataSources.length === 0) {
+      setAvailableFields([]);
+      return;
     }
-  }, [selectedSourceId, dataSources]);
 
-  /**
-   * Handle chart type change
-   */
+    const source =
+      (selectedSourceId && dataSources.find((s) => s.id === selectedSourceId)) || dataSources[0];
+    setAvailableFields(source?.fields || []);
+
+    if (!config.dataset_id && source) {
+      onUpdate({
+        dataset_id: source.id,
+        datasource: source.table || source.name,
+      });
+    }
+  }, [dataSources, selectedSourceId, config.dataset_id, onUpdate]);
+
   const handleChartTypeChange = (type: string) => {
-    // Write to ComponentConfig.type
     onUpdate({ type });
   };
 
-  /**
-   * Handle data source change
-   */
   const handleDataSourceChange = (sourceId: string) => {
-    onUpdate({ datasource: sourceId });
+    const source = dataSources.find((ds) => ds.id === sourceId);
+    onUpdate({
+      dataset_id: sourceId,
+      datasource: source?.table || source?.name || sourceId,
+    });
   };
 
-  /**
-   * Handle blend toggle
-   */
   const handleBlendToggle = (enabled: boolean) => {
-    onUpdate({ blendEnabled: enabled });
+    if (enabled) {
+      setBlendDialogOpen(true);
+    } else {
+      onUpdate({ blendConfig: undefined });
+    }
   };
 
-  /**
-   * Handle dimension changes
-   */
+  const handleBlendSave = (blendConfig: BlendConfig) => {
+    const primarySource = blendConfig.sources.find((source) => source.id === blendConfig.primarySourceId);
+    onUpdate({
+      blendConfig,
+      dataset_id: primarySource?.datasetId,
+      datasource: 'Blended Source',
+    });
+  };
+
   const handleDimensionsChange = (dimensions: string[]) => {
     onUpdate({ dimensions });
   };
 
-  /**
-   * Handle drill down toggle
-   */
   const handleDrillDownToggle = (enabled: boolean) => {
     onUpdate({ drillDownEnabled: enabled });
   };
 
-  /**
-   * Handle metrics change
-   */
   const handleMetricsChange = (updatedMetrics: Metric[]) => {
-    // Convert back to simple array of IDs for config
     const metricIds = updatedMetrics.map((m) => m.id);
     onUpdate({ metrics: metricIds });
   };
 
-  /**
-   * Handle filters change
-   */
   const handleFiltersChange = (updatedFilters: ChartFilter[]) => {
-    // Map to FilterConfig[] and store as componentFilters (align with cascade)
     const mapped = updatedFilters.map((f) => ({
       field: f.fieldId || f.fieldName,
       operator: f.operator,
@@ -233,29 +209,28 @@ export const ChartSetup: React.FC<ChartSetupProps> = ({ config, onUpdate }) => {
     onUpdate({ componentFilters: mapped as any });
   };
 
-  /**
-   * Handle date range change
-   */
   const handleDateRangeChange = (range: DateRange) => {
-    // Only persist custom ranges; presets should inherit from cascade/global
     if (range.type === 'custom' && range.startDate && range.endDate) {
-      onUpdate({ dateRange: { start: range.startDate.toISOString().slice(0,10), end: range.endDate.toISOString().slice(0,10) } as any });
+      onUpdate({
+        dateRange: {
+          start: range.startDate.toISOString().slice(0, 10),
+          end: range.endDate.toISOString().slice(0, 10),
+        } as any,
+      });
     } else {
       onUpdate({ dateRange: undefined });
     }
   };
 
-  // Loading state
-  if (loading) {
+  if (sourcesLoading) {
     return (
       <div className="flex items-center justify-center py-12">
         <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
-        <span className="ml-3 text-sm text-gray-600">Loading fields...</span>
+        <span className="ml-3 text-sm text-gray-600">Loading data sources...</span>
       </div>
     );
   }
 
-  // Error state
   if (error) {
     return (
       <Alert variant="destructive">
@@ -265,25 +240,29 @@ export const ChartSetup: React.FC<ChartSetupProps> = ({ config, onUpdate }) => {
     );
   }
 
+  if (!dataSources || dataSources.length === 0) {
+    return <NoSetupPanel message="No data sources available. Connect a BigQuery dataset to configure this chart." />;
+  }
+
   return (
     <div className="space-y-6 pb-6">
-      {/* Chart Type */}
       <ChartTypeSelector value={chartType} onChange={handleChartTypeChange} />
 
       <Separator />
 
-      {/* Data Source */}
       <DataSourceSelector
         dataSources={dataSources}
         selectedSourceId={selectedSourceId}
         onSourceChange={handleDataSourceChange}
         blendEnabled={blendEnabled}
         onBlendToggle={handleBlendToggle}
+        isBlendActive={blendEnabled}
+        blendSummary={blendEnabled ? `${config.blendConfig?.sources.length} sources` : undefined}
+        onConfigureBlend={() => setBlendDialogOpen(true)}
       />
 
       <Separator />
 
-      {/* Dimension */}
       <DimensionSelector
         availableFields={availableFields}
         selectedDimensions={selectedDimensions}
@@ -294,7 +273,6 @@ export const ChartSetup: React.FC<ChartSetupProps> = ({ config, onUpdate }) => {
 
       <Separator />
 
-      {/* Metrics */}
       <MetricSelector
         availableFields={availableFields}
         metrics={metrics}
@@ -303,7 +281,6 @@ export const ChartSetup: React.FC<ChartSetupProps> = ({ config, onUpdate }) => {
 
       <Separator />
 
-      {/* Filters */}
       <FilterSection
         availableFields={availableFields}
         filters={filters}
@@ -312,17 +289,15 @@ export const ChartSetup: React.FC<ChartSetupProps> = ({ config, onUpdate }) => {
 
       <Separator />
 
-      {/* Date Range */}
       <DateRangePicker value={dateRange} onChange={handleDateRangeChange} />
 
-      {/* Info Message */}
-      <div className="text-xs text-gray-600 bg-blue-50 border border-blue-200 p-3 rounded-md">
-        <p className="font-medium mb-1">Auto-save enabled</p>
-        <p>
-          All changes are applied automatically. Chart preview will update in real-time
-          as you configure settings.
-        </p>
-      </div>
+      <BlendDataDialog
+        open={isBlendDialogOpen}
+        onClose={() => setBlendDialogOpen(false)}
+        dataSources={dataSources}
+        value={config.blendConfig}
+        onSave={handleBlendSave}
+      />
     </div>
   );
 };

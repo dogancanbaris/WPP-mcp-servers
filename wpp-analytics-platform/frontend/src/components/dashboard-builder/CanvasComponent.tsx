@@ -34,8 +34,8 @@ interface CanvasComponentProps {
   onPositionChange: (id: string, x: number, y: number) => void;
   /** Callback for group move */
   onGroupMove?: (componentIds: Set<string>, deltaX: number, deltaY: number) => void;
-  /** All selected component IDs for group operations */
-  selectedComponentIds?: Set<string>;
+  /** All selected canvas IDs for group operations */
+  selectedCanvasIds?: Set<string>;
   /** Callback when size changes */
   onSizeChange: (id: string, width: number, height: number, x: number, y: number) => void;
   /** Callback when component is removed */
@@ -105,7 +105,7 @@ const CanvasComponentInner: React.FC<CanvasComponentProps> = ({
   isMultiSelect = false,
   onPositionChange,
   onGroupMove,
-  selectedComponentIds,
+  selectedCanvasIds,
   onSizeChange,
   onRemove,
   onSelect,
@@ -253,13 +253,13 @@ const CanvasComponentInner: React.FC<CanvasComponentProps> = ({
   // Live group drag - update all selected components in real-time during drag
   const handleDrag = useCallback((_e: any, d: { x: number; y: number }) => {
     // Check if this is part of a multi-select group
-    if (isMultiSelect && selectedComponentIds && selectedComponentIds.has(id) && selectedComponentIds.size > 1 && onGroupMove) {
+    if (isMultiSelect && selectedCanvasIds && selectedCanvasIds.has(id) && selectedCanvasIds.size > 1 && onGroupMove) {
       // Calculate delta from start position
       const deltaX = d.x - dragStartPos.current.x;
       const deltaY = d.y - dragStartPos.current.y;
 
       // Move entire group in real-time (throttled by react-rnd internally)
-      onGroupMove(selectedComponentIds, deltaX, deltaY);
+      onGroupMove(selectedCanvasIds, deltaX, deltaY);
     } else if (onDragPreview) {
       onDragPreview(id, {
         x: d.x,
@@ -269,7 +269,7 @@ const CanvasComponentInner: React.FC<CanvasComponentProps> = ({
       });
     }
     // Single component drag handled automatically by Rnd position prop updates
-  }, [id, isMultiSelect, selectedComponentIds, onGroupMove, onDragPreview, position.height, position.width]);
+  }, [id, isMultiSelect, selectedCanvasIds, onGroupMove, onDragPreview, position.height, position.width]);
 
   const handleDragStop = useCallback((_e: any, d: { x: number; y: number }) => {
     console.log('🔄 [Drag] handleDragStop');
@@ -277,29 +277,29 @@ const CanvasComponentInner: React.FC<CanvasComponentProps> = ({
     console.log('  - New position from Rnd:', d);
     console.log('  - Start position:', dragStartPos.current);
     console.log('  - Is multi-select?', isMultiSelect);
-    console.log('  - Selected IDs:', Array.from(selectedComponentIds || []));
-    console.log('  - This ID in selection?', selectedComponentIds?.has(id));
-    console.log('  - Selection size:', selectedComponentIds?.size);
+    console.log('  - Selected IDs:', Array.from(selectedCanvasIds || []));
+    console.log('  - This ID in selection?', selectedCanvasIds?.has(id));
+    console.log('  - Selection size:', selectedCanvasIds?.size);
     console.log('  - Has onGroupMove?', !!onGroupMove);
 
     // Check if this component is part of a multi-select group
-    if (isMultiSelect && selectedComponentIds && selectedComponentIds.has(id) && selectedComponentIds.size > 1 && onGroupMove) {
+    if (isMultiSelect && selectedCanvasIds && selectedCanvasIds.has(id) && selectedCanvasIds.size > 1 && onGroupMove) {
       // Calculate delta from start position
       const deltaX = d.x - dragStartPos.current.x;
       const deltaY = d.y - dragStartPos.current.y;
 
       console.log('  - ✅ GROUP DRAG TRIGGERED');
       console.log('  - Delta:', { deltaX, deltaY });
-      console.log('  - Moving', selectedComponentIds.size, 'components');
+      console.log('  - Moving', selectedCanvasIds.size, 'components');
 
       // Move entire group
-      onGroupMove(selectedComponentIds, deltaX, deltaY);
+      onGroupMove(selectedCanvasIds, deltaX, deltaY);
     } else {
       console.log('  - Single component move to:', d);
       // Single component move
       onPositionChange(id, d.x, d.y);
     }
-  }, [id, isMultiSelect, selectedComponentIds, onGroupMove, onPositionChange]);
+  }, [id, isMultiSelect, selectedCanvasIds, onGroupMove, onPositionChange]);
 
   // Live resize preview - updates during resize for immediate feedback
   const handleResize = useCallback((
@@ -477,29 +477,29 @@ const CanvasComponentInner: React.FC<CanvasComponentProps> = ({
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
               {/* Group Actions - Show when multiple selected */}
-              {isMultiSelect && selectedComponentIds && selectedComponentIds.size > 1 && (
+              {isMultiSelect && selectedCanvasIds && selectedCanvasIds.size > 1 && (
                 <>
                   <DropdownMenuItem
                     onClick={() => {
-                      console.log('🗑️ [Group Action] Delete', selectedComponentIds.size, 'components');
-                      selectedComponentIds.forEach(canvasId => {
+                      console.log('🗑️ [Group Action] Delete', selectedCanvasIds.size, 'components');
+                      selectedCanvasIds.forEach(canvasId => {
                         const comp = component; // Will need to get actual components
                         onRemove(canvasId);
                       });
                     }}
                     className="text-red-600 dark:text-red-400"
                   >
-                    Delete {selectedComponentIds.size} Components
+                    Delete {selectedCanvasIds.size} Components
                   </DropdownMenuItem>
 
                   {onToggleLock && (
                     <DropdownMenuItem onClick={() => {
-                      console.log('🔒 [Group Action] Lock', selectedComponentIds.size, 'components');
-                      selectedComponentIds.forEach(canvasId => {
+                      console.log('🔒 [Group Action] Lock', selectedCanvasIds.size, 'components');
+                      selectedCanvasIds.forEach(canvasId => {
                         onToggleLock(canvasId);
                       });
                     }}>
-                      Lock {selectedComponentIds.size} Components
+                      Lock {selectedCanvasIds.size} Components
                     </DropdownMenuItem>
                   )}
 
@@ -578,9 +578,9 @@ const CanvasComponentInner: React.FC<CanvasComponentProps> = ({
       )}
 
       {/* Multi-Select Indicator */}
-      {isMultiSelect && isSelected && selectedComponentIds && selectedComponentIds.size > 1 && (
+      {isMultiSelect && isSelected && selectedCanvasIds && selectedCanvasIds.size > 1 && (
         <div className="absolute top-2 left-2 px-2 py-1 rounded bg-blue-500 text-white text-xs font-medium shadow-md">
-          {selectedComponentIds.size} selected
+          {selectedCanvasIds.size} selected
         </div>
       )}
       {contextMenuPosition && isMounted && createPortal(

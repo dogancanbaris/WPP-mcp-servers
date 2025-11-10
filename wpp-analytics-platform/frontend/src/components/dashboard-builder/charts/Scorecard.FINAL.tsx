@@ -13,58 +13,80 @@ import { useQuery } from '@tanstack/react-query';
 import { Loader2 } from 'lucide-react';
 import { ComponentConfig } from '@/types/dashboard-builder';
 import { formatMetricValue } from '@/lib/utils/metric-formatter';
+import { fetchChartData } from '@/lib/data/fetchChartData';
+import { useCurrentPageId } from '@/store/dashboardStore';
+import { useCascadedFilters } from '@/hooks/useCascadedFilters';
 
 export interface ScorecardProps extends Partial<ComponentConfig> {}
 
-export const Scorecard: React.FC<ScorecardProps> = ({
-  // Data props
-  dataset_id,
-  metrics = [],
-  dateRange,
+export const Scorecard: React.FC<ScorecardProps> = (props) => {
+  const {
+    // Component identity
+    id: componentId,
 
-  // Display props
-  title = 'KPI Scorecard',
-  showTitle = true,
-  titleFontFamily = 'roboto',
-  titleFontSize = '14',
-  titleFontWeight = '500',
-  titleColor = '#666666',
-  titleBackgroundColor = 'transparent',
-  titleAlignment = 'left',
+    // Data props
+    dataset_id,
+    blendConfig,
+    metrics = [],
+    dateRange,
 
-  // Background & Border
-  backgroundColor = '#ffffff',
-  showBorder = true,
-  borderColor = '#e0e0e0',
-  borderWidth = 1,
-  borderRadius = 8,
-  padding = 20,
+    // Display props
+    title = 'KPI Scorecard',
+    showTitle = true,
+    titleFontFamily = 'roboto',
+    titleFontSize = '14',
+    titleFontWeight = '500',
+    titleColor = '#666666',
+    titleBackgroundColor = 'transparent',
+    titleAlignment = 'left',
 
-  // Chart appearance
-  chartColors = ['#5470c6'],
+    // Background & Border
+    backgroundColor = '#ffffff',
+    showBorder = true,
+    borderColor = '#e0e0e0',
+    borderWidth = 1,
+    borderRadius = 8,
+    padding = 20,
 
-  ...rest
-}) => {
+    // Chart appearance
+    chartColors = ['#5470c6'],
+  } = props;
   const firstMetric = metrics[0];
+  const currentPageId = useCurrentPageId();
+
+  const { filters: cascadedFilters } = useCascadedFilters({
+    pageId: currentPageId || undefined,
+    componentId,
+    componentConfig: props as ComponentConfig,
+    dateDimension: 'date',
+  });
 
   // Fetch from dataset API (with caching)
+  const blendKey = blendConfig ? JSON.stringify(blendConfig) : 'no-blend';
+
   const { data, isLoading, error } = useQuery({
-    queryKey: ['scorecard', dataset_id, metrics, dateRange],
+    queryKey: [
+      'scorecard-final',
+      componentId || 'scorecard',
+      dataset_id || 'blend-only',
+      metrics,
+      dateRange,
+      cascadedFilters,
+      blendKey,
+    ],
     queryFn: async () => {
-      const params = new URLSearchParams({
-        metrics: metrics.join(','),
-        ...(dateRange && { dateRange: JSON.stringify(dateRange) })
+      return fetchChartData({
+        datasetId: dataset_id || undefined,
+        blendConfig,
+        metrics,
+        filters: cascadedFilters,
+        dateRange: dateRange
+          ? { start: (dateRange as any).start, end: (dateRange as any).end }
+          : undefined,
+        chartType: 'scorecard',
       });
-
-      const response = await fetch(`/api/datasets/${dataset_id}/query?${params}`);
-
-      if (!response.ok) {
-        throw new Error(`API error: ${response.statusText}`);
-      }
-
-      return response.json();
     },
-    enabled: !!dataset_id && metrics.length > 0
+    enabled: (Boolean(dataset_id) || Boolean(blendConfig)) && metrics.length > 0 && !!currentPageId,
   });
 
   // Styling

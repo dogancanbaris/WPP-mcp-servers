@@ -75,6 +75,7 @@ export const BarChart: React.FC<BarChartProps> = (props) => {
   const {
     id: componentId,
     dataset_id,
+    blendConfig,
     metrics = [],
     dimension,
     title = 'Bar Chart',
@@ -114,11 +115,12 @@ export const BarChart: React.FC<BarChartProps> = (props) => {
   const { data, isLoading, error } = usePageData({
     pageId: currentPageId || 'default',
     componentId: componentId || 'barchart',
-    datasetId: dataset_id || '',
+    datasetId: dataset_id,
+    blendConfig,
     metrics,
     dimensions: dimension ? [dimension] : undefined,
     filters: cascadedFilters,
-    enabled: !!dataset_id && metrics.length > 0 && !!dimension && !!currentPageId,
+    enabled: (Boolean(dataset_id) || Boolean(blendConfig)) && metrics.length > 0 && !!dimension && !!currentPageId,
     chartType: 'bar_chart',
     sortBy: finalSortBy,
     sortDirection: finalSortDirection,

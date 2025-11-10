@@ -39,6 +39,7 @@ export const TreeChart: React.FC<TreeChartProps> = (props) => {
   const {
     id: componentId,
     dataset_id,
+    blendConfig,
     metrics = [],
     dimensions = [],
     dateRange,
@@ -81,11 +82,12 @@ export const TreeChart: React.FC<TreeChartProps> = (props) => {
   const { data, isLoading, error } = usePageData({
     pageId: currentPageId || 'default',
     componentId: componentId || 'tree',
-    datasetId: dataset_id || '',
+    datasetId: dataset_id,
+    blendConfig,
     metrics,
     dimensions: effectiveDimensions,
     filters: cascadedFilters,
-    enabled: !!dataset_id && !!currentPageId && effectiveDimensions.length > 0,
+    enabled: (Boolean(dataset_id) || Boolean(blendConfig)) && !!currentPageId && effectiveDimensions.length > 0,
     chartType: 'tree',
     sortBy: finalSortBy,
     sortDirection: finalSortDirection,

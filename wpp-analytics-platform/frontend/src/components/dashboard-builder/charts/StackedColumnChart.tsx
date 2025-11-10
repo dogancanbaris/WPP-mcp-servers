@@ -45,6 +45,7 @@ export const StackedColumnChart: React.FC<StackedColumnChartProps> = (props) => 
   const {
     id: componentId,
     dataset_id,
+    blendConfig,
     metrics = [],
     dimensions = [],
     dimension,
@@ -89,11 +90,12 @@ export const StackedColumnChart: React.FC<StackedColumnChartProps> = (props) => 
   const { data, isLoading, error } = usePageData({
     pageId: currentPageId || 'default',
     componentId: componentId || 'stacked-column',
-    datasetId: dataset_id || '',
+    datasetId: dataset_id,
+    blendConfig,
     metrics,
     dimensions: actualDimension ? [actualDimension] : undefined,
     filters: cascadedFilters,
-    enabled: !!dataset_id && metrics.length > 0 && !!actualDimension && !!currentPageId,
+    enabled: (Boolean(dataset_id) || Boolean(blendConfig)) && metrics.length > 0 && !!actualDimension && !!currentPageId,
     chartType: 'stacked_column',
     sortBy: finalSortBy,
     sortDirection: finalSortDirection,

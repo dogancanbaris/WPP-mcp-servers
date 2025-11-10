@@ -51,6 +51,7 @@ export const Scorecard: React.FC<ScorecardProps> = (props) => {
   const {
     id: componentId,
     dataset_id,
+    blendConfig,
     metrics = [],
     dateRange,
     title = 'KPI Scorecard',
@@ -89,10 +90,11 @@ export const Scorecard: React.FC<ScorecardProps> = (props) => {
   const { data, isLoading, error } = usePageData({
     pageId: currentPageId || 'default',
     componentId: componentId || 'scorecard',
-    datasetId: dataset_id || '',
+    datasetId: dataset_id,
+    blendConfig,
     metrics,
     filters: cascadedFilters,
-    enabled: !!dataset_id && metrics.length > 0 && !!currentPageId,
+    enabled: (Boolean(dataset_id) || Boolean(blendConfig)) && metrics.length > 0 && !!currentPageId,
     chartType: 'scorecard', // Single aggregated value
   });
 

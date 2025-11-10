@@ -1,6 +1,6 @@
 import { useDashboardStore } from '@/store/dashboardStore';
 import { toast } from 'sonner';
-import type { DashboardComponent } from '@/types/dashboard';
+import type { ComponentConfig } from '@/types/dashboard-builder';
 
 // Clipboard state - using localStorage for persistence across reloads
 const CLIPBOARD_KEY = 'dashboard-builder-clipboard';
@@ -8,8 +8,11 @@ const CLIPBOARD_KEY = 'dashboard-builder-clipboard';
 // Max columns per row (12-column grid system)
 const MAX_COLUMNS_PER_ROW = 12;
 
+const createId = (prefix: string) =>
+  `${prefix}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
 interface ClipboardData {
-  component: DashboardComponent;
+  component: ComponentConfig;
   timestamp: number;
 }
 
@@ -22,7 +25,7 @@ const getClipboard = (): ClipboardData | null => {
   }
 };
 
-const setClipboard = (component: DashboardComponent | null) => {
+const setClipboard = (component: ComponentConfig | null) => {
   if (component) {
     const data: ClipboardData = {
       component,
@@ -46,6 +49,8 @@ export const useEditActions = () => {
     canRedo,
     config,
     selectComponent,
+    selectCanvasComponent,
+    selectMultipleCanvas,
     currentPageId,
   } = useDashboardStore();
 
@@ -73,27 +78,34 @@ export const useEditActions = () => {
     }
   };
 
+  const getCurrentPageConfig = () => {
+    if (config.pages && currentPageId) {
+      return config.pages.find((p) => p.id === currentPageId);
+    }
+    return undefined;
+  };
+
   /**
    * Find component by ID across all rows and columns
    */
   const getActiveRows = () => {
-    // Consistency guard: if pages exist, currentPageId should be set
     if (config.pages && config.pages.length > 0) {
-      if (!currentPageId) {
-        console.warn('[EditActions] Pages exist but currentPageId is not set. Falling back to first page.');
-        return config.pages[0]?.rows || [];
+      const page = getCurrentPageConfig();
+      if (page) {
+        return page.rows;
       }
-      const page = config.pages.find(p => p.id === currentPageId);
-      if (!page) {
-        console.warn(`[EditActions] Current page ID '${currentPageId}' not found. Falling back to first page.`);
-        return config.pages[0]?.rows || [];
-      }
-      return page.rows;
+      return config.pages[0]?.rows || [];
     }
     return config.rows;
   };
 
-  const findComponent = (componentId: string): DashboardComponent | undefined => {
+  const findComponent = (componentId: string): ComponentConfig | undefined => {
+    const page = getCurrentPageConfig();
+    const canvasEntry = page?.components?.find((comp) => comp.component.id === componentId);
+    if (canvasEntry) {
+      return canvasEntry.component;
+    }
+
     const rows = getActiveRows();
     for (const row of rows) {
       for (const column of row.columns) {
@@ -177,10 +189,52 @@ export const useEditActions = () => {
       return;
     }
 
-    // Create new component with unique ID
-    const newComponent: DashboardComponent = {
+    const page = getCurrentPageConfig();
+    const isCanvasMode = !!(page?.components && page.components.length > 0);
+
+    // Canvas mode: append component to components array with default position
+    if (isCanvasMode && currentPageId && page) {
+      const reference = page.components?.find((comp) => comp.component.id === selectedComponentId);
+      const newCanvasId = createId('canvas');
+      const newComponent: ComponentConfig = {
+        ...JSON.parse(JSON.stringify(clipboardData.component)),
+        id: createId('component'),
+      };
+
+      const nextComponent = {
+        id: newCanvasId,
+        x: (reference?.x ?? 40) + 24,
+        y: (reference?.y ?? 40) + 24,
+        width: reference?.width ?? 320,
+        height: reference?.height ?? 200,
+        zIndex: reference?.zIndex ?? 0,
+        component: newComponent,
+      };
+
+      useDashboardStore.getState().setConfig((prev) => {
+        if (!prev.pages) return prev;
+        return {
+          ...prev,
+          pages: prev.pages.map((p) =>
+            p.id === currentPageId
+              ? {
+                  ...p,
+                  components: [...(p.components || []), nextComponent],
+                }
+              : p
+          ),
+        };
+      });
+
+      selectCanvasComponent(newCanvasId);
+      toast.success('Pasted component');
+      return;
+    }
+
+    // Legacy row/column mode
+    const newComponent: ComponentConfig = {
       ...clipboardData.component,
-      id: `component-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      id: createId('component'),
     };
 
     // Determine where to paste
@@ -295,22 +349,33 @@ export const useEditActions = () => {
    * Note: Multi-select not fully implemented yet
    */
   const onSelectAll = () => {
-    // Get all component IDs
-    const rows = getActiveRows();
-    const allComponentIds = rows
-      .flatMap(row => row.columns)
-      .map(col => col.component?.id)
-      .filter((id): id is string => id !== undefined);
+    const page = getCurrentPageConfig();
 
-    if (allComponentIds.length === 0) {
+    if (page?.components && page.components.length > 0) {
+      const canvasIds = page.components.map((comp) => comp.id);
+      if (canvasIds.length === 0) {
+        toast.info('No components to select');
+        return;
+      }
+      selectMultipleCanvas(canvasIds);
+      toast.success(`Selected ${canvasIds.length} component(s)`);
+      return;
+    }
+
+    // Legacy row-based selection (fallback)
+    const rows = getActiveRows();
+    const firstComponentId = rows
+      .flatMap((row) => row.columns)
+      .map((col) => col.component?.id)
+      .find((id): id is string => !!id);
+
+    if (!firstComponentId) {
       toast.info('No components to select');
       return;
     }
 
-    // For now, just select the first component
-    // TODO: Implement multi-select in store
-    selectComponent(allComponentIds[0]);
-    toast.info(`Selected ${allComponentIds.length} component(s) (multi-select coming soon)`);
+    selectComponent(firstComponentId);
+    toast.success('Component selected');
   };
 
   /**

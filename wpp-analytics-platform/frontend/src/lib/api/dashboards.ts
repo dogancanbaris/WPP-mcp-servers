@@ -22,6 +22,11 @@ export interface DataSource {
   name: string;
   type: string;
   fields: Field[];
+  table?: string;
+  projectId?: string;
+  datasetId?: string;
+  description?: string;
+  shared?: boolean;
 }
 
 export interface FieldsResponse {

@@ -15,6 +15,11 @@ import {
 } from '.';
 import { ThemePresetsAccordion } from './ThemePresetsAccordion';
 import { CustomCSSAccordion } from './CustomCSSAccordion';
+import { getComponentBehavior } from '../component-behavior';
+import { TextStylePanel } from './TextStylePanel';
+import { MediaStylePanel } from './MediaStylePanel';
+import { ShapeStylePanel } from './ShapeStylePanel';
+import { ControlStylePanel } from './ControlStylePanel';
 
 interface ChartStyleProps {
   config: ComponentConfig;
@@ -42,6 +47,32 @@ interface ChartStyleProps {
  * @param onUpdate - Callback to update component properties
  */
 export const ChartStyle: React.FC<ChartStyleProps> = ({ config, onUpdate }) => {
+  const behavior = getComponentBehavior(config.type);
+
+  if (behavior.styleVariant === 'text') {
+    return <TextStylePanel config={config} onUpdate={onUpdate} />;
+  }
+
+  if (behavior.styleVariant === 'media') {
+    return <MediaStylePanel config={config} onUpdate={onUpdate} />;
+  }
+
+  if (behavior.styleVariant === 'shape') {
+    return <ShapeStylePanel config={config} onUpdate={onUpdate} />;
+  }
+
+  if (behavior.styleVariant === 'control') {
+    return <ControlStylePanel config={config} onUpdate={onUpdate} />;
+  }
+
+  if (behavior.styleVariant === 'none') {
+    return (
+      <div className="text-sm text-muted-foreground">
+        No additional styling options available for this component.
+      </div>
+    );
+  }
+
   // Initialize style configs with defaults
   const [titleConfig, setTitleConfig] = useState({
     text: config.title || '',

@@ -70,6 +70,7 @@ export const TimeSeriesChart: React.FC<TimeSeriesChartProps> = (props) => {
   const {
     id: componentId,
     dataset_id,
+    blendConfig,
     dimension,
     metrics = [],
     dateRange,
@@ -115,11 +116,12 @@ export const TimeSeriesChart: React.FC<TimeSeriesChartProps> = (props) => {
   const { data, isLoading, error } = usePageData({
     pageId: currentPageId || 'default',
     componentId: componentId || 'timeseries',
-    datasetId: dataset_id || '',
+    datasetId: dataset_id,
     metrics,
     dimensions: dimension ? [dimension] : undefined,
     filters: cascadedFilters,
-    enabled: !!dataset_id && metrics.length > 0 && !!dimension && !!currentPageId,
+    blendConfig,
+    enabled: (Boolean(dataset_id) || Boolean(blendConfig)) && metrics.length > 0 && !!dimension && !!currentPageId,
     fillGaps: true,
     chartType: 'time_series',
     sortBy: finalSortBy,

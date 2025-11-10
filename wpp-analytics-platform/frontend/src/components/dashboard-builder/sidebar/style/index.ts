@@ -8,3 +8,7 @@ export { DimensionStyleAccordion } from './DimensionStyleAccordion';
 export { MetricStyleAccordion } from './MetricStyleAccordion';
 export { BackgroundBorderAccordion } from './BackgroundBorderAccordion';
 export { HeaderFooterAccordion } from './HeaderFooterAccordion';
+export { TextStylePanel } from './TextStylePanel';
+export { MediaStylePanel } from './MediaStylePanel';
+export { ShapeStylePanel } from './ShapeStylePanel';
+export { ControlStylePanel } from './ControlStylePanel';

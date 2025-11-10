@@ -8,6 +8,8 @@
 import { useMemo, useState, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { DatasetQuery, SankeyData, SankeyNode, SankeyLink } from './SankeyChart.types';
+import { fetchChartData, DatasetFilterInput } from '@/lib/data/fetchChartData';
+import type { BlendConfig } from '@/types/dashboard-builder';
 
 /**
  * Dataset result row type
@@ -24,7 +26,10 @@ interface UseSankeyDataOptions {
   query: DatasetQuery;
 
   /** Dataset ID */
-  datasetId: string;
+  datasetId?: string;
+
+  /** Optional blended source configuration */
+  blendConfig?: BlendConfig;
 
   /** Flow level dimension names */
   flowLevels: string[];
@@ -46,6 +51,9 @@ interface UseSankeyDataOptions {
 
   /** Refresh interval (ms) */
   refreshInterval?: number;
+
+  /** Additional filters applied outside of query config (e.g., cascaded filters) */
+  filters?: DatasetFilterInput[];
 }
 
 /**
@@ -241,6 +249,7 @@ export function useSankeyData(options: UseSankeyDataOptions): UseSankeyDataRetur
   const {
     query,
     datasetId,
+    blendConfig,
     flowLevels,
     valueMeasure,
     minLinkValue = 0,
@@ -248,21 +257,56 @@ export function useSankeyData(options: UseSankeyDataOptions): UseSankeyDataRetur
     colors = DEFAULT_COLORS,
     autoRefresh = false,
     refreshInterval = 60000,
+    filters: extraFilters,
   } = options;
+
+  const normalizeQueryFilters = (queryFilters?: DatasetQuery['filters']): DatasetFilterInput[] | undefined => {
+    if (!queryFilters || queryFilters.length === 0) return undefined;
+    return queryFilters.map((filter) => ({
+      member: filter.field,
+      operator: filter.operator,
+      values: filter.values,
+    }));
+  };
+
+  const metrics = (query.metrics && query.metrics.length > 0) ? query.metrics : [valueMeasure];
+  const initialDimensions = query.dimensions && query.dimensions.length > 0 ? query.dimensions : flowLevels;
+  const combinedFilters = (() => {
+    const baseFilters = normalizeQueryFilters(query.filters);
+    if (extraFilters && extraFilters.length > 0) {
+      return [...(baseFilters || []), ...extraFilters];
+    }
+    return baseFilters;
+  })();
+
+  const blendKey = blendConfig ? JSON.stringify(blendConfig) : 'no-blend';
+  const hasDataSource = Boolean(datasetId) || Boolean(blendConfig);
+  const effectiveDimensions = initialDimensions.length > 0 ? initialDimensions : flowLevels;
 
   // Dataset API query
   const { data: resultData, isLoading, error, refetch } = useQuery({
-    queryKey: ['sankey-data', datasetId, query],
+    queryKey: [
+      'sankey-data',
+      datasetId || 'blend-only',
+      metrics,
+      effectiveDimensions,
+      combinedFilters ? JSON.stringify(combinedFilters) : 'no-filters',
+      query.limit,
+      blendKey,
+    ],
     queryFn: async () => {
-      const params = new URLSearchParams();
-      if (query.metrics) params.append('metrics', query.metrics.join(','));
-      if (query.dimensions) params.append('dimensions', query.dimensions.join(','));
-      if (query.limit) params.append('limit', query.limit.toString());
-
-      const response = await fetch(`/api/datasets/${datasetId}/query?${params}`);
-      if (!response.ok) throw new Error('Failed to fetch dataset');
-      return response.json();
+      const response = await fetchChartData({
+        datasetId,
+        blendConfig,
+        dimensions: effectiveDimensions,
+        metrics,
+        filters: combinedFilters,
+        limit: query.limit,
+        chartType: 'sankey',
+      });
+      return response?.data?.current || response?.data || [];
     },
+    enabled: hasDataSource && metrics.length > 0 && effectiveDimensions.length >= 2,
     refetchInterval: autoRefresh ? refreshInterval : false,
   });
 
@@ -270,7 +314,7 @@ export function useSankeyData(options: UseSankeyDataOptions): UseSankeyDataRetur
   const data = useMemo(
     () =>
       transformToSankeyData(
-        resultData,
+        resultData ?? null,
         flowLevels,
         valueMeasure,
         minLinkValue,

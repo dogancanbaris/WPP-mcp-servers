@@ -17,6 +17,7 @@ import { formatColumnHeader, formatChartLabel } from '@/lib/utils/label-formatte
 import { useState, useMemo, useEffect } from 'react';
 import { useCascadedFilters } from '@/hooks/useCascadedFilters';
 import { useCurrentPageId } from '@/store/dashboardStore';
+import { fetchChartData } from '@/lib/data/fetchChartData';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { getChartDefaults, resolveSortField } from '@/lib/defaults/chart-defaults';
@@ -106,30 +107,24 @@ export const TableChart: React.FC<TableChartProps> = (props) => {
   });
 
   // Fetch from dataset API with backend sorting and pagination
+  const blendKey = props.blendConfig ? JSON.stringify(props.blendConfig) : 'no-blend';
+
   const { data, isLoading, error } = useQuery({
-    queryKey: ['table', dataset_id, dimension, metrics, cascadedFilters, sortConfig, queryLimit],
+    queryKey: ['table', dataset_id, dimension, metrics, cascadedFilters, sortConfig, queryLimit, blendKey],
     queryFn: async () => {
-      const params = new URLSearchParams({
-        ...(dimension && { dimensions: dimension }),
-        metrics: metrics.join(','),
-        ...(cascadedFilters.length > 0 && { filters: JSON.stringify(cascadedFilters) }),
+      return fetchChartData({
+        datasetId: dataset_id,
+        blendConfig: props.blendConfig,
+        dimensions: dimension ? [dimension] : [],
+        metrics,
+        filters: cascadedFilters,
         sortBy: sortConfig.column,
         sortDirection: sortConfig.direction,
-        limit: queryLimit.toString(),
-        offset: '0',
-        includeTotalCount: 'true',
-        chartType: 'table'
+        limit: queryLimit,
+        chartType: 'table',
       });
-
-      const response = await fetch(`/api/datasets/${dataset_id}/query?${params}`);
-
-      if (!response.ok) {
-        throw new Error(`API error: ${response.statusText}`);
-      }
-
-      return response.json();
     },
-    enabled: !!dataset_id && metrics.length > 0
+    enabled: (Boolean(dataset_id) || Boolean(props.blendConfig)) && metrics.length > 0,
   });
 
   // Extract data with comparison support

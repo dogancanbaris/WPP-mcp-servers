@@ -33,6 +33,7 @@ import { formatChartLabel } from '@/lib/utils/label-formatter';
 import { useCascadedFilters } from '@/hooks/useCascadedFilters';
 import { useCurrentPageId } from '@/store/dashboardStore';
 import { getChartDefaults } from '@/lib/defaults/chart-defaults';
+import { fetchChartData } from '@/lib/data/fetchChartData';
 
 export interface WordCloudChartProps extends Partial<ComponentConfig> {
   sizeRange?: [number, number];
@@ -47,6 +48,7 @@ export const WordCloudChart: React.FC<WordCloudChartProps> = (props) => {
 
     // Data props
     dataset_id,
+    blendConfig,
     dimension = null,
     metrics = [],
     dateRange,
@@ -98,27 +100,21 @@ export const WordCloudChart: React.FC<WordCloudChartProps> = (props) => {
 
   // Fetch from dataset API (with caching)
   const { data, isLoading, error } = useQuery({
-    queryKey: ['wordcloud', dataset_id, dimension, metrics, cascadedFilters, finalLimit],
+    queryKey: ['wordcloud', dataset_id || 'blend-only', dimension, metrics, cascadedFilters, finalLimit, blendConfig ? JSON.stringify(blendConfig) : 'no-blend'],
     queryFn: async () => {
-      const params = new URLSearchParams({
-        ...(dimension && { dimensions: dimension }),
-        metrics: metrics.join(','),
-        ...(cascadedFilters.length > 0 && { filters: JSON.stringify(cascadedFilters) }),
-        limit: finalLimit?.toString() || '100',
+      return fetchChartData({
+        datasetId: dataset_id || undefined,
+        blendConfig,
+        dimensions: dimension ? [dimension] : [],
+        metrics,
+        filters: cascadedFilters,
+        limit: finalLimit !== null ? finalLimit : undefined,
         chartType: 'word_cloud',
         sortBy: metrics[0],
-        sortDirection: 'DESC'
+        sortDirection: 'DESC',
       });
-
-      const response = await fetch(`/api/datasets/${dataset_id}/query?${params}`);
-
-      if (!response.ok) {
-        throw new Error(`API error: ${response.statusText}`);
-      }
-
-      return response.json();
     },
-    enabled: !!dataset_id && metrics.length > 0 && !!dimension
+    enabled: (Boolean(dataset_id) || Boolean(blendConfig)) && metrics.length > 0 && !!dimension,
   });
 
   const containerStyle: React.CSSProperties = {

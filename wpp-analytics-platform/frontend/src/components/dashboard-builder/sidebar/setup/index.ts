@@ -6,3 +6,8 @@ export { MetricSelector } from './MetricSelector';
 export { MetricRow } from './MetricRow';
 export { FilterSection } from './FilterSection';
 export { DateRangePicker } from './DateRangePicker';
+export { TextContentSetup } from './TextContentSetup';
+export { MediaSetupPanel } from './MediaSetupPanel';
+export { ShapeSetupPanel } from './ShapeSetupPanel';
+export { ControlSetupPanel } from './ControlSetupPanel';
+export { NoSetupPanel } from './NoSetupPanel';

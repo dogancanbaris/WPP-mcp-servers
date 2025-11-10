@@ -44,6 +44,7 @@ export const StackedBarChart: React.FC<StackedBarChartProps> = (props) => {
   const {
     id: componentId,
     dataset_id,
+    blendConfig,
     metrics = [],
     dimensions,
     dimension,
@@ -87,11 +88,12 @@ export const StackedBarChart: React.FC<StackedBarChartProps> = (props) => {
   const { data, isLoading, error } = usePageData({
     pageId: currentPageId || 'default',
     componentId: componentId || 'stacked-bar',
-    datasetId: dataset_id || '',
+    datasetId: dataset_id,
+    blendConfig,
     metrics,
     dimensions: actualDimension ? [actualDimension] : undefined,
     filters: cascadedFilters,
-    enabled: !!dataset_id && metrics.length > 0 && !!actualDimension && !!currentPageId,
+    enabled: (Boolean(dataset_id) || Boolean(blendConfig)) && metrics.length > 0 && !!actualDimension && !!currentPageId,
     chartType: 'stacked_bar',
     sortBy: finalSortBy,
     sortDirection: finalSortDirection,

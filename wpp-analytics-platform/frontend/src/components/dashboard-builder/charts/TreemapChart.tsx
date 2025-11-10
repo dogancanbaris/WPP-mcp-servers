@@ -34,6 +34,7 @@ export const TreemapChart: React.FC<TreemapChartProps> = (props) => {
   const {
     id: componentId,
     dataset_id,
+    blendConfig,
     metrics = [],
     dimensions = [],
     title = 'Treemap',
@@ -66,11 +67,12 @@ export const TreemapChart: React.FC<TreemapChartProps> = (props) => {
   const { data, isLoading, error } = usePageData({
     pageId: currentPageId || 'default',
     componentId: componentId || 'treemap',
-    datasetId: dataset_id || '',
+    datasetId: dataset_id,
+    blendConfig,
     metrics,
     dimensions,
     filters: cascadedFilters,
-    enabled: !!dataset_id && metrics.length > 0 && dimensions.length > 0 && !!currentPageId,
+    enabled: (Boolean(dataset_id) || Boolean(blendConfig)) && metrics.length > 0 && dimensions.length > 0 && !!currentPageId,
     chartType: 'treemap',
     sortBy: finalSortBy,
     sortDirection: finalSortDirection,

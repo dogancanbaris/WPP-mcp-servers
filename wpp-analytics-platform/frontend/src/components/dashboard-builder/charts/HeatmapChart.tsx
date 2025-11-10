@@ -30,6 +30,7 @@ export const HeatmapChart: React.FC<HeatmapChartProps> = (props) => {
   const {
     id: componentId,
     dataset_id,
+    blendConfig,
     dimension,
     metrics = [],
     dateRange,
@@ -84,11 +85,12 @@ export const HeatmapChart: React.FC<HeatmapChartProps> = (props) => {
   const { data, isLoading, error } = usePageData({
     pageId: currentPageId || 'default',
     componentId: componentId || 'heatmapchart',
-    datasetId: dataset_id || '',
+    datasetId: dataset_id,
+    blendConfig: props.blendConfig,
     metrics,
     dimensions: [xAxisDimension, yAxisDimension].filter(Boolean),
     filters: cascadedFilters,
-    enabled: !!dataset_id && metrics.length > 0 && !!xAxisDimension && !!yAxisDimension && !!currentPageId,
+    enabled: (Boolean(dataset_id) || Boolean(props.blendConfig)) && metrics.length > 0 && !!xAxisDimension && !!yAxisDimension && !!currentPageId,
     chartType: 'heatmap',
     sortBy: finalSortBy,
     sortDirection: finalSortDirection,

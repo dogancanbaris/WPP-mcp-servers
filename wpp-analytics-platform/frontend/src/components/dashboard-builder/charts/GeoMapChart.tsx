@@ -96,6 +96,7 @@ export const GeoMapChart: React.FC<GeoMapChartProps> = (props) => {
   const {
     id: componentId,
     dataset_id,
+    blendConfig,
     metrics = [],
     dimensions = [],
     title = 'Geographic Map',
@@ -146,11 +147,12 @@ export const GeoMapChart: React.FC<GeoMapChartProps> = (props) => {
   const { data: apiData, isLoading, error: apiError } = usePageData({
     pageId: currentPageId || 'default',
     componentId: componentId || 'geomap',
-    datasetId: dataset_id || '',
+    datasetId: dataset_id,
+    blendConfig,
     metrics,
     dimensions,
     filters: cascadedFilters,
-    enabled: !!dataset_id && dimensions.length > 0 && !!currentPageId,
+    enabled: (Boolean(dataset_id) || Boolean(blendConfig)) && dimensions.length > 0 && !!currentPageId,
     chartType: 'geomap',
     sortBy: finalSortBy,
     sortDirection: finalSortDirection,

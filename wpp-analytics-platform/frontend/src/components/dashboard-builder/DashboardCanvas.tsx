@@ -36,8 +36,7 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
   const {
     config,
     zoom,
-    selectedComponentId,
-    selectedComponentIds,
+    selectedCanvasIds,
     canvasWidth,
     canvasHeight,
     setCanvasWidth,
@@ -45,8 +44,8 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
     moveComponentAbsolute,
     resizeComponent,
     removeComponent,
-    selectComponent,
-    selectMultiple,
+    selectCanvasComponent,
+    selectMultipleCanvas,
     deselectAll,
     toggleLock,
     convertToCanvas,
@@ -103,14 +102,14 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
       if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
         e.preventDefault();
         const allCanvasIds = canvasComponents.map(c => c.id);
-        selectMultiple(allCanvasIds);
+        selectMultipleCanvas(allCanvasIds);
       }
 
       // Delete - Remove all selected components
       if (e.key === 'Delete' || e.key === 'Backspace') {
-        if (selectedComponentIds.size > 0) {
+        if (selectedCanvasIds.size > 0) {
           e.preventDefault();
-          selectedComponentIds.forEach(id => {
+          selectedCanvasIds.forEach(id => {
             const canvasComp = canvasComponents.find(c => c.id === id);
             if (canvasComp && !canvasComp.component.locked) {
               removeComponent(canvasComp.component.id);
@@ -122,7 +121,7 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [canvasComponents, selectedComponentIds, deselectAll, selectMultiple, removeComponent]);
+  }, [canvasComponents, selectedCanvasIds, deselectAll, selectMultipleCanvas, removeComponent]);
 
   const handlePositionChange = (id: string, x: number, y: number) => {
     moveComponentAbsolute(id, x, y);
@@ -153,8 +152,8 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
 
   const handleDragStart = (id: string) => {
     // If multi-select, show guides for ALL selected components
-    if (selectedComponentIds.size > 1 && selectedComponentIds.has(id)) {
-      const activeComps = canvasComponents.filter(c => selectedComponentIds.has(c.id));
+    if (selectedCanvasIds.size > 1 && selectedCanvasIds.has(id)) {
+      const activeComps = canvasComponents.filter(c => selectedCanvasIds.has(c.id));
       setActiveCanvasComponents(activeComps);
     } else {
       // Single component drag
@@ -191,8 +190,7 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
     if (canvasComp) {
       // Shift+click: Add/remove from selection
       const addToSelection = event?.shiftKey || false;
-      // FIX: Use canvas ID, not component ID (store expects canvas IDs)
-      selectComponent(canvasComp.id, addToSelection);
+      selectCanvasComponent(canvasComp.id, addToSelection);
       onSelectComponent(canvasComp.component.id); // Still notify with component ID for sidebar
     }
   };
@@ -222,7 +220,7 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
                                 target.classList.contains('canvas-grid') ||
                                 target.closest('[data-canvas]') === target;
 
-    if (isCanvasBackground && selectedComponentIds.size > 0) {
+    if (isCanvasBackground && selectedCanvasIds.size > 0) {
       deselectAll();
     }
   };
@@ -276,18 +274,18 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
               setActiveCanvasComponents([]);
             }}
             onSelect={(e) => {
-              const selectedCanvasIds: string[] = [];
+              const nextSelection: string[] = [];
 
               e.selected.forEach((el) => {
                 const canvasId = el.getAttribute('data-canvas-id');
 
                 if (canvasId) {
-                  selectedCanvasIds.push(canvasId);
+                  nextSelection.push(canvasId);
                 }
               });
 
-              if (selectedCanvasIds.length > 0) {
-                selectMultiple(selectedCanvasIds);
+              if (nextSelection.length > 0) {
+                selectMultipleCanvas(nextSelection);
               } else if (e.selected.length === 0 && !e.inputEvent.shiftKey) {
                 deselectAll();
               }
@@ -313,7 +311,7 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
 
         {/* Render Canvas Components */}
         {canvasComponents.map((canvasComp) => {
-          const isSelected = selectedComponentIds.has(canvasComp.id);
+          const isSelected = selectedCanvasIds.has(canvasComp.id);
 
           return (
             <CanvasComponent
@@ -329,8 +327,8 @@ export const DashboardCanvas: React.FC<DashboardCanvasProps> = ({
               zIndex={canvasComp.zIndex || 0}
               isEditing={isEditing}
               isSelected={isSelected}
-              isMultiSelect={selectedComponentIds.size > 1}
-              selectedComponentIds={selectedComponentIds}
+              isMultiSelect={selectedCanvasIds.size > 1}
+              selectedCanvasIds={selectedCanvasIds}
               onPositionChange={handlePositionChange}
               onGroupMove={moveGroup}
               onSizeChange={handleSizeChange}

@@ -168,6 +168,7 @@ export interface ComponentConfig {
   // Data props
   dataset_id?: string;
   datasource?: string;
+  blendConfig?: BlendConfig;
   dimension?: string | null;
   breakdownDimension?: string | null;
   metrics?: string[];
@@ -321,3 +322,17 @@ export interface DashboardLayout {
 
 // Alias for backward compatibility
 export type DashboardConfig = DashboardLayout;
+export interface BlendSourceConfig {
+  id: string;
+  datasetId: string;
+  alias: string;
+  joinKeys: string[];
+  joinType: 'left' | 'inner';
+  metrics: string[];
+}
+
+export interface BlendConfig {
+  id: string;
+  primarySourceId: string;
+  sources: BlendSourceConfig[];
+}

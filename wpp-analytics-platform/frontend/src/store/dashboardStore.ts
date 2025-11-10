@@ -7,7 +7,8 @@ import type {
   ColumnConfig,
   ComponentType,
   ColumnWidth,
-  FilterConfig
+  FilterConfig,
+  CanvasComponent as CanvasComponentConfig
 } from '@/types/dashboard-builder';
 import type {
   PageConfig,
@@ -31,6 +32,7 @@ interface DashboardStore {
   config: DashboardConfig;
   selectedComponentId?: string; // Kept for backward compatibility (first in selectedComponentIds)
   selectedComponentIds: Set<string>; // NEW - Multi-select support
+  selectedCanvasIds: Set<string>;
   history: DashboardConfig[];
   historyIndex: number;
   zoom: number;
@@ -56,7 +58,7 @@ interface DashboardStore {
 
   // UI state - Settings sidebar focus
   sidebarScope: 'page' | 'component';
-  sidebarActiveTab: 'setup' | 'style' | 'filters';
+  sidebarActiveTab: 'setup' | 'style';
 
   // UI state - Data refresh control
   pauseUpdates: boolean;
@@ -75,7 +77,7 @@ interface DashboardStore {
   resetSaveStatus: () => void;
 
   // UI actions
-  setSidebar: (scope?: 'page' | 'component', tab?: 'setup' | 'style' | 'filters') => void;
+  setSidebar: (scope?: 'page' | 'component', tab?: 'setup' | 'style') => void;
   setPauseUpdates: (pause: boolean) => void;
 
   // Actions - Pages
@@ -104,8 +106,11 @@ interface DashboardStore {
   duplicateComponent: (componentId: string) => void;
   moveComponent: (componentId: string, targetColumnId: string) => void;
   selectComponent: (componentId?: string, addToSelection?: boolean) => void;
-  selectMultiple: (componentIds: string[]) => void;
+  selectCanvasComponent: (canvasId?: string, addToSelection?: boolean) => void;
+  selectMultipleCanvas: (canvasIds: string[]) => void;
   deselectAll: () => void;
+  bulkUpdateComponents: (componentIds: string[], updates: Partial<ComponentConfig>) => void;
+  bulkSetLock: (componentIds: string[], locked: boolean) => void;
 
   // Style & lock actions
   styleClipboard?: Partial<ComponentConfig> | null;
@@ -135,6 +140,56 @@ interface DashboardStore {
   // Actions - Reset
   reset: () => void;
 }
+
+const getCurrentPageConfig = (state: DashboardStore): PageConfig | undefined => {
+  if (!state.config.pages || !state.currentPageId) return undefined;
+  return state.config.pages.find((page) => page.id === state.currentPageId);
+};
+
+const findCanvasEntryByCanvasId = (
+  state: DashboardStore,
+  canvasId: string | undefined
+): CanvasComponentConfig | undefined => {
+  if (!canvasId) return undefined;
+  const page = getCurrentPageConfig(state);
+  return page?.components?.find((component) => component.id === canvasId);
+};
+
+const findCanvasEntriesByComponentId = (
+  state: DashboardStore,
+  componentId: string | undefined
+): CanvasComponentConfig[] => {
+  if (!componentId) return [];
+  const page = getCurrentPageConfig(state);
+  if (!page?.components) return [];
+  return page.components.filter((component) => component.component.id === componentId);
+};
+
+const buildComponentSelectionFromCanvas = (
+  state: DashboardStore,
+  canvasIds: Iterable<string>
+): Set<string> => {
+  const componentIds = new Set<string>();
+  for (const canvasId of canvasIds) {
+    const entry = findCanvasEntryByCanvasId(state, canvasId);
+    if (entry) {
+      componentIds.add(entry.component.id);
+    }
+  }
+  return componentIds;
+};
+
+const buildCanvasSelectionFromComponents = (
+  state: DashboardStore,
+  componentIds: Iterable<string>
+): Set<string> => {
+  const canvasIds = new Set<string>();
+  for (const componentId of componentIds) {
+    const entries = findCanvasEntriesByComponentId(state, componentId);
+    entries.forEach((entry) => canvasIds.add(entry.id));
+  }
+  return canvasIds;
+};
 
 // Generate unique IDs
 const generateId = (prefix: string): string => {
@@ -250,6 +305,7 @@ export const useDashboardStore = create<DashboardStore>()(
       config: deepClone(initialDashboard),
       selectedComponentId: undefined,
       selectedComponentIds: new Set<string>(), // NEW - Multi-select
+      selectedCanvasIds: new Set<string>(),
       history: [deepClone(initialDashboard)],
       historyIndex: 0,
       zoom: 100,
@@ -537,7 +593,7 @@ export const useDashboardStore = create<DashboardStore>()(
       },
 
       // UI actions
-      setSidebar: (scope?: 'page' | 'component', tab?: 'setup' | 'style' | 'filters') => {
+      setSidebar: (scope?: 'page' | 'component', tab?: 'setup' | 'style') => {
         set((state) => ({
           sidebarScope: scope ?? state.sidebarScope,
           sidebarActiveTab: tab ?? state.sidebarActiveTab,
@@ -942,11 +998,32 @@ export const useDashboardStore = create<DashboardStore>()(
       addComponent: (columnId: string, type: ComponentType) => {
         const state = get();
         const currentPageId = state.currentPageId;
+        const currentPage = state.config.pages && currentPageId
+          ? state.config.pages.find((p) => p.id === currentPageId)
+          : undefined;
+
+        const inheritedDatasetId =
+          currentPage?.components?.find((comp) => comp.component.dataset_id)?.component.dataset_id ||
+          currentPage?.rows
+            ?.flatMap((row) => row.columns)
+            .find((col) => col.component?.dataset_id)?.component?.dataset_id ||
+          state.config.dataset_id ||
+          undefined;
+
+        const inheritedDatasource =
+          currentPage?.components?.find((comp) => comp.component.datasource)?.component.datasource ||
+          currentPage?.rows
+            ?.flatMap((row) => row.columns)
+            .find((col) => col.component?.datasource)?.component?.datasource ||
+          state.config.datasource ||
+          undefined;
 
         const newComponent: ComponentConfig = {
           id: generateId('component'),
           type,
           title: `New ${type}`,
+          dataset_id: inheritedDatasetId,
+          datasource: inheritedDatasource,
           config: {}
         };
 
@@ -1000,72 +1077,75 @@ export const useDashboardStore = create<DashboardStore>()(
       removeComponent: (componentId: string) => {
         const state = get();
         const currentPageId = state.currentPageId;
+        const currentPage = state.config.pages && currentPageId
+          ? state.config.pages.find((p) => p.id === currentPageId)
+          : undefined;
 
-        // Prevent removing locked component
-        const rowsToSearch = (state.config.pages && currentPageId)
-          ? state.config.pages.find(p => p.id === currentPageId)?.rows || []
-          : state.config.rows;
-        let isLocked = false;
-        for (const row of rowsToSearch) {
-          for (const col of row.columns) {
-            if (col.component?.id === componentId && col.component?.locked) {
-              isLocked = true;
-              break;
-            }
-          }
-          if (isLocked) break;
+        // Prevent removing locked component (canvas mode)
+        const canvasLocked = currentPage?.components?.some(
+          (comp) => comp.component.id === componentId && comp.component.locked
+        );
+        if (canvasLocked) {
+          return;
         }
-        if (isLocked) {
-          return; // No-op for locked components
+
+        // Prevent removing locked component (row/column mode)
+        const rowsToSearch = currentPage?.rows || state.config.rows;
+        const rowLocked = rowsToSearch.some((row) =>
+          row.columns.some((col) => col.component?.id === componentId && col.component.locked)
+        );
+        if (rowLocked) {
+          return;
         }
+
+        const removeFromRows = (rows: RowConfig[]) =>
+          rows.map((row) => ({
+            ...row,
+            columns: row.columns.map((col) =>
+              col.component?.id === componentId ? { ...col, component: undefined } : col
+            ),
+          }));
+
+        const removedCanvasEntries = findCanvasEntriesByComponentId(state, componentId);
+        const removedCanvasIds = removedCanvasEntries.map((entry) => entry.id);
+        const nextComponentSelection = new Set(state.selectedComponentIds);
+        nextComponentSelection.delete(componentId);
+        const nextCanvasSelection = new Set(state.selectedCanvasIds);
+        removedCanvasIds.forEach((id) => nextCanvasSelection.delete(id));
+        const nextSelectedComponentId = nextComponentSelection.size
+          ? nextComponentSelection.values().next().value
+          : undefined;
 
         get().addToHistory();
 
-        // If we have pages, remove component from current page
         if (state.config.pages && currentPageId) {
           set({
             config: {
               ...state.config,
-              pages: state.config.pages.map(page => {
-                if (page.id === currentPageId) {
-                  return {
-                    ...page,
-                    rows: page.rows.map(row => ({
-                      ...row,
-                      columns: row.columns.map(col => {
-                        if (col.component?.id === componentId) {
-                          return { ...col, component: undefined };
-                        }
-                        return col;
-                      })
-                    }))
-                  };
-                }
-                return page;
+              pages: state.config.pages.map((page) => {
+                if (page.id !== currentPageId) return page;
+                return {
+                  ...page,
+                  rows: removeFromRows(page.rows),
+                  components: page.components
+                    ? page.components.filter((comp) => comp.component.id !== componentId)
+                    : page.components,
+                };
               }),
             },
-            selectedComponentId: state.selectedComponentId === componentId
-              ? undefined
-              : state.selectedComponentId
+            selectedComponentIds: nextComponentSelection,
+            selectedCanvasIds: nextCanvasSelection,
+            selectedComponentId: nextSelectedComponentId,
           });
         } else {
-          // Legacy: remove from config.rows
           set({
             config: {
               ...state.config,
-              rows: state.config.rows.map(row => ({
-                ...row,
-                columns: row.columns.map(col => {
-                  if (col.component?.id === componentId) {
-                    return { ...col, component: undefined };
-                  }
-                  return col;
-                })
-              }))
+              rows: removeFromRows(state.config.rows),
             },
-            selectedComponentId: state.selectedComponentId === componentId
-              ? undefined
-              : state.selectedComponentId
+            selectedComponentIds: nextComponentSelection,
+            selectedCanvasIds: nextCanvasSelection,
+            selectedComponentId: nextSelectedComponentId,
           });
         }
       },
@@ -1112,6 +1192,14 @@ export const useDashboardStore = create<DashboardStore>()(
                         return col;
                       })
                     }))
+                    ,
+                    components: page.components
+                      ? page.components.map((canvasComp) =>
+                          canvasComp.component.id === componentId
+                            ? { ...canvasComp, component: { ...canvasComp.component, ...updates } }
+                            : canvasComp
+                        )
+                      : page.components,
                   };
                 }
                 return page;
@@ -1140,9 +1228,116 @@ export const useDashboardStore = create<DashboardStore>()(
         }
       },
 
+      bulkUpdateComponents: (componentIds: string[], updates: Partial<ComponentConfig>) => {
+        if (!componentIds || componentIds.length === 0) return;
+        const state = get();
+        const idSet = new Set(componentIds);
+        let didUpdate = false;
+
+        const applyUpdates = (component?: ComponentConfig) => {
+          if (component && idSet.has(component.id)) {
+            didUpdate = true;
+            return { ...component, ...updates };
+          }
+          return component;
+        };
+
+        if (!didUpdate) {
+          // Only proceed if at least one component exists with matching id
+          const currentPage = state.currentPageId
+            ? state.config.pages?.find((p) => p.id === state.currentPageId)
+            : undefined;
+          didUpdate =
+            !!currentPage?.components?.some((comp) => idSet.has(comp.component.id)) ||
+            state.config.rows.some((row) =>
+              row.columns.some((col) => col.component && idSet.has(col.component.id))
+            );
+          if (!didUpdate) return;
+        }
+
+        const updateRows = (rows: RowConfig[]) =>
+          rows.map((row) => ({
+            ...row,
+            columns: row.columns.map((col) =>
+              col.component ? { ...col, component: applyUpdates(col.component) } : col
+            ),
+          }));
+
+        get().addToHistory();
+
+        set({
+          config: {
+            ...state.config,
+            pages: state.config.pages
+              ? state.config.pages.map((page) => ({
+                  ...page,
+                  rows: updateRows(page.rows),
+                  components: page.components
+                    ? page.components.map((comp) =>
+                        idSet.has(comp.component.id)
+                          ? { ...comp, component: applyUpdates(comp.component) }
+                          : comp
+                      )
+                    : page.components,
+                }))
+              : state.config.pages,
+            rows: updateRows(state.config.rows),
+          },
+        });
+
+        get().autoSave();
+      },
+
+      bulkSetLock: (componentIds: string[], locked: boolean) => {
+        if (!componentIds || componentIds.length === 0) return;
+        get().bulkUpdateComponents(componentIds, { locked });
+      },
+
       duplicateComponent: (componentId: string) => {
         const state = get();
         const currentPageId = state.currentPageId;
+
+        const currentPage = state.config.pages && currentPageId
+          ? state.config.pages.find((p) => p.id === currentPageId)
+          : undefined;
+
+        const canvasEntry = currentPage?.components?.find((comp) => comp.component.id === componentId);
+        if (canvasEntry) {
+          const duplicatedComponent: ComponentConfig = {
+            ...deepClone(canvasEntry.component),
+            id: generateId('component'),
+            title: canvasEntry.component.title ? `${canvasEntry.component.title} (Copy)` : undefined,
+          };
+
+          const newCanvasEntry: CanvasComponentConfig = {
+            ...deepClone(canvasEntry),
+            id: generateId('canvas'),
+            x: (canvasEntry.x ?? 0) + 24,
+            y: (canvasEntry.y ?? 0) + 24,
+            component: duplicatedComponent,
+          };
+
+          get().addToHistory();
+
+          set({
+            config: {
+              ...state.config,
+              pages: state.config.pages!.map((page) =>
+                page.id === currentPageId
+                  ? {
+                      ...page,
+                      components: [...(page.components || []), newCanvasEntry],
+                    }
+                  : page
+              ),
+            },
+            selectedComponentId: duplicatedComponent.id,
+            selectedComponentIds: new Set([duplicatedComponent.id]),
+            selectedCanvasIds: new Set([newCanvasEntry.id]),
+          });
+
+          return;
+        }
 
         let componentToDuplicate: ComponentConfig | undefined;
         let targetColumnIndex = -1;
@@ -1215,7 +1410,9 @@ export const useDashboardStore = create<DashboardStore>()(
                 return page;
               }),
             },
-            selectedComponentId: duplicatedComponent.id
+            selectedComponentId: duplicatedComponent.id,
+            selectedComponentIds: new Set([duplicatedComponent.id]),
+            selectedCanvasIds: new Set<string>()
           });
         } else {
           // Legacy: duplicate in config.rows
@@ -1224,7 +1421,9 @@ export const useDashboardStore = create<DashboardStore>()(
               ...state.config,
               rows: duplicateInRows(state.config.rows)
             },
-            selectedComponentId: duplicatedComponent.id
+            selectedComponentId: duplicatedComponent.id,
+            selectedComponentIds: new Set([duplicatedComponent.id]),
+            selectedCanvasIds: new Set<string>()
           });
         }
       },
@@ -1314,60 +1513,126 @@ export const useDashboardStore = create<DashboardStore>()(
         const state = get();
 
         if (!componentId) {
-          // Deselect all
           set({
             selectedComponentId: undefined,
-            selectedComponentIds: new Set<string>()
+            selectedComponentIds: new Set<string>(),
+            selectedCanvasIds: new Set<string>()
           });
           return;
         }
 
+        const canvasEntries = findCanvasEntriesByComponentId(state, componentId);
+        const canvasIds = canvasEntries.map((entry) => entry.id);
+
         if (addToSelection) {
-          // Toggle component in selection (Shift+click behavior)
-          const newSelection = new Set(state.selectedComponentIds);
-          if (newSelection.has(componentId)) {
-            newSelection.delete(componentId);
+          const componentSelection = new Set(state.selectedComponentIds);
+          if (componentSelection.has(componentId)) {
+            componentSelection.delete(componentId);
           } else {
-            newSelection.add(componentId);
+            componentSelection.add(componentId);
           }
 
-          set({
-            selectedComponentIds: newSelection,
-            selectedComponentId: newSelection.size > 0 ? Array.from(newSelection)[0] : undefined
+          const canvasSelection = new Set(state.selectedCanvasIds);
+          canvasIds.forEach((id) => {
+            if (canvasSelection.has(id)) {
+              canvasSelection.delete(id);
+            } else {
+              canvasSelection.add(id);
+            }
           });
-        } else {
-          // Replace selection with single component
+
           set({
-            selectedComponentId: componentId,
-            selectedComponentIds: new Set([componentId])
+            selectedComponentIds: componentSelection,
+            selectedCanvasIds: canvasSelection,
+            selectedComponentId: componentSelection.size > 0 ? componentSelection.values().next().value : undefined
           });
+          return;
         }
+
+        // Replace selection with single component
+        set({
+          selectedComponentId: componentId,
+          selectedComponentIds: new Set([componentId]),
+          selectedCanvasIds: new Set(canvasIds)
+        });
       },
 
-      selectMultiple: (componentIds: string[]) => {
-        console.log('📦 [Store] selectMultiple called');
-        console.log('  - Input IDs:', componentIds);
-        console.log('  - Count:', componentIds.length);
+      selectCanvasComponent: (canvasId?: string, addToSelection: boolean = false) => {
+        const state = get();
 
-        const newSelection = new Set(componentIds);
-        console.log('  - New Set size:', newSelection.size);
-        console.log('  - First in set:', Array.from(newSelection)[0]);
+        if (!canvasId) {
+          set({
+            selectedComponentId: undefined,
+            selectedComponentIds: new Set<string>(),
+            selectedCanvasIds: new Set<string>()
+          });
+          return;
+        }
+
+        const entry = findCanvasEntryByCanvasId(state, canvasId);
+        if (!entry) {
+          return;
+        }
+        const componentId = entry.component.id;
+
+        if (addToSelection) {
+          const canvasSelection = new Set(state.selectedCanvasIds);
+          if (canvasSelection.has(canvasId)) {
+            canvasSelection.delete(canvasId);
+          } else {
+            canvasSelection.add(canvasId);
+          }
+
+          const componentSelection = buildComponentSelectionFromCanvas(state, canvasSelection);
+
+          set({
+            selectedCanvasIds: canvasSelection,
+            selectedComponentIds: componentSelection,
+            selectedComponentId: componentSelection.size > 0 ? componentSelection.values().next().value : undefined
+          });
+          return;
+        }
 
         set({
-          selectedComponentIds: newSelection,
-          selectedComponentId: newSelection.size > 0 ? Array.from(newSelection)[0] : undefined
+          selectedCanvasIds: new Set([canvasId]),
+          selectedComponentIds: new Set([componentId]),
+          selectedComponentId: componentId
+        });
+      },
+
+      selectMultipleCanvas: (canvasIds: string[]) => {
+        const state = get();
+        if (!canvasIds || canvasIds.length === 0) {
+          set({
+            selectedComponentId: undefined,
+            selectedComponentIds: new Set<string>(),
+            selectedCanvasIds: new Set<string>()
+          });
+          return;
+        }
+
+        const validCanvasIds: string[] = [];
+        canvasIds.forEach((id) => {
+          const entry = findCanvasEntryByCanvasId(state, id);
+          if (entry) {
+            validCanvasIds.push(entry.id);
+          }
         });
 
-        const state = get();
-        console.log('  - After set - selectedComponentIds size:', state.selectedComponentIds.size);
-        console.log('  - After set - selectedComponentId:', state.selectedComponentId);
-        console.log('  - After set - Full Set:', Array.from(state.selectedComponentIds));
+        const componentSelection = buildComponentSelectionFromCanvas(state, validCanvasIds);
+
+        set({
+          selectedCanvasIds: new Set(validCanvasIds),
+          selectedComponentIds: componentSelection,
+          selectedComponentId: componentSelection.size > 0 ? componentSelection.values().next().value : undefined
+        });
       },
 
       deselectAll: () => {
         set({
           selectedComponentId: undefined,
-          selectedComponentIds: new Set<string>()
+          selectedComponentIds: new Set<string>(),
+          selectedCanvasIds: new Set<string>()
         });
       },
 
@@ -1915,6 +2180,7 @@ export const useDashboardStore = create<DashboardStore>()(
           config: emptyDashboard,
           selectedComponentId: undefined,
           selectedComponentIds: new Set<string>(), // NEW
+          selectedCanvasIds: new Set<string>(),
           history: [emptyDashboard],
           historyIndex: 0,
           zoom: 100,
@@ -1952,7 +2218,9 @@ export const useSelectedComponent = () => {
   // Prefer canvas mode (page.components)
   if (config.pages && currentPageId) {
     const page = config.pages.find((p) => p.id === currentPageId);
-    const comp = page?.components?.find((c) => c.component.id === selectedId)?.component;
+    const comp = page?.components?.find(
+      (c) => c.component.id === selectedId || c.id === selectedId
+    )?.component;
     if (comp) return comp;
   }
 

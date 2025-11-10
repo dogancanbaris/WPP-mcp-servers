@@ -3,114 +3,172 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { ChartSetup } from './setup/ChartSetup';
 import { ChartStyle } from './style/ChartStyle';
-import { FiltersTab } from './filters/FiltersTab';
+import { ComponentFilterAccordion } from '@/components/dashboard-builder/ComponentFilterAccordion';
 import { ComponentConfig } from '@/types/dashboard-builder';
 import { PagePanel } from './page/PagePanel';
 import { useCurrentPageId, usePages, useDashboardStore } from '@/store/dashboardStore';
+import { MultiSelectPanel } from './MultiSelectPanel';
 
 interface SettingsSidebarProps {
   selectedComponent?: ComponentConfig;
   onUpdateComponent: (id: string, updates: Partial<ComponentConfig>) => void;
 }
 
-// SettingsSidebar — Unified scope (Global | Page | Component)
 export const SettingsSidebar: React.FC<SettingsSidebarProps> = ({
   selectedComponent,
-  onUpdateComponent
+  onUpdateComponent,
 }) => {
   const currentPageId = useCurrentPageId();
   const pages = usePages();
-  const currentPage = useMemo(() => pages?.find(p => p.id === currentPageId), [pages, currentPageId]);
+  const currentPage = useMemo(
+    () => pages?.find((p) => p.id === currentPageId),
+    [pages, currentPageId]
+  );
   const sidebarScope = useDashboardStore((s) => s.sidebarScope);
   const sidebarActiveTab = useDashboardStore((s) => s.sidebarActiveTab);
+  const selectedCanvasSet = useDashboardStore((s) => s.selectedCanvasIds);
 
-  const [scope, setScope] = useState<'page'|'component'>(selectedComponent ? 'component' : 'page');
-  const [activeTab, setActiveTab] = useState<'setup'|'style'|'filters'>('setup');
+  const selectedCanvasComponents = useMemo(() => {
+    if (!currentPage?.components || !selectedCanvasSet?.size) return [];
+    const ids = Array.from(selectedCanvasSet);
+    return currentPage.components.filter(
+      (canvasComp) => ids.includes(canvasComp.id) || ids.includes(canvasComp.component.id)
+    );
+  }, [currentPage?.components, selectedCanvasSet]);
 
-  // Auto-switch based on selection changes
+  const effectiveSelectedComponent =
+    selectedComponent || selectedCanvasComponents[0]?.component || undefined;
+  const isMultiSelect = selectedCanvasComponents.length > 1;
+
+  const [scope, setScope] = useState<'page' | 'component'>(
+    effectiveSelectedComponent ? 'component' : 'page'
+  );
+  const [activeTab, setActiveTab] = useState<'setup' | 'style'>('setup');
+
   useEffect(() => {
-    if (selectedComponent) setScope('component');
-    else setScope('page');
-  }, [selectedComponent]);
+    setScope(effectiveSelectedComponent ? 'component' : 'page');
+  }, [effectiveSelectedComponent]);
 
-  // Auto-switch to Page scope when page changes and no component is selected
   useEffect(() => {
-    if (!selectedComponent && scope !== 'page') {
+    if (!effectiveSelectedComponent && scope !== 'page') {
       setScope('page');
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPageId]);
+  }, [currentPageId, scope, effectiveSelectedComponent]);
 
-  // Respond to programmatic sidebar focus requests (e.g., from topbar Filters button)
   useEffect(() => {
-    // Update scope if requested by store
-    if (sidebarScope) {
-      // Only switch to component if there's a selected component
-      if (sidebarScope === 'component' && selectedComponent) setScope('component');
-      if (sidebarScope === 'page') setScope('page');
+    if (sidebarScope === 'page') {
+      setScope('page');
+    } else if (sidebarScope === 'component' && effectiveSelectedComponent) {
+      setScope('component');
     }
-  }, [sidebarScope, selectedComponent]);
+  }, [sidebarScope, effectiveSelectedComponent]);
 
   useEffect(() => {
-    // Only applies to component scope
     if (scope === 'component' && sidebarActiveTab) {
       setActiveTab(sidebarActiveTab);
     }
   }, [sidebarActiveTab, scope]);
 
-  // Format component type for display (e.g., "bar-chart" -> "Bar Chart")
-  const formattedType = selectedComponent?.type
-    ? selectedComponent.type.split('-').map(w => w.charAt(0).toUpperCase()+w.slice(1)).join(' ')
+  const formattedType = effectiveSelectedComponent?.type
+    ? effectiveSelectedComponent.type
+        .split('-')
+        .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+        .join(' ')
     : '';
 
   return (
-    <div className="w-80 border-l bg-surface dashboard-sidebar overflow-y-auto h-full fade-in">
-      {/* Scope Selector */}
-      <div className="p-3 border-b bg-background">
+    <aside className="w-80 border-l bg-surface dashboard-sidebar h-full fade-in flex flex-col">
+      <div className="p-3 border-b bg-background space-y-2">
+        <p className="text-[11px] uppercase tracking-wide text-muted-foreground font-semibold">
+          Settings
+        </p>
         <div className="grid grid-cols-2 gap-1 text-xs">
-          <Button variant={scope==='page'?'default':'outline'} size="sm" onClick={()=>setScope('page')}>
-            Page{currentPage ? `: ${currentPage.name}`:''}
+          <Button
+            variant={scope === 'page' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setScope('page')}
+          >
+            Page{currentPage ? `: ${currentPage.name}` : ''}
           </Button>
-          <Button variant={scope==='component'?'default':'outline'} size="sm" onClick={()=> selectedComponent && setScope('component')} disabled={!selectedComponent}>
-            Component{selectedComponent ? `: ${selectedComponent.title || formattedType}`:''}
+          <Button
+            variant={scope === 'component' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => effectiveSelectedComponent && setScope('component')}
+            disabled={!effectiveSelectedComponent && !isMultiSelect}
+          >
+            Component
+            {isMultiSelect
+              ? `: ${selectedCanvasComponents.length} selected`
+              : effectiveSelectedComponent
+              ? `: ${effectiveSelectedComponent.title || formattedType}`
+              : ''}
           </Button>
         </div>
       </div>
 
-      {/* Scope Panels */}
-      {scope === 'page' && <PagePanel />}
-      {scope === 'component' && selectedComponent && (
-        <div className="p-4">
-          <Tabs value={activeTab} onValueChange={(v)=> setActiveTab(v as any)} className="w-full">
-            <TabsList className="grid w-full grid-cols-3 bg-muted/50 transition-colors">
-              <TabsTrigger value="setup" className="transition-all text-xs">Setup</TabsTrigger>
-              <TabsTrigger value="style" className="transition-all text-xs">Style</TabsTrigger>
-              <TabsTrigger value="filters" className="transition-all text-xs">Filters</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="setup" className="mt-4 space-y-4">
-              <ChartSetup
-                config={selectedComponent}
-                onUpdate={(updates) => onUpdateComponent(selectedComponent.id, updates)}
-              />
-            </TabsContent>
-
-            <TabsContent value="style" className="mt-4 space-y-4">
-              <ChartStyle
-                config={selectedComponent}
-                onUpdate={(updates) => onUpdateComponent(selectedComponent.id, updates)}
-              />
-            </TabsContent>
-
-            <TabsContent value="filters" className="mt-4 space-y-4">
-              <FiltersTab
-                config={selectedComponent}
-                onUpdate={(updates) => onUpdateComponent(selectedComponent.id, updates)}
-              />
-            </TabsContent>
-          </Tabs>
+      {scope === 'page' && (
+        <div className="flex-1 overflow-y-auto">
+          <PagePanel />
         </div>
       )}
-    </div>
+
+      {scope === 'component' && (
+        <div className="flex-1 overflow-y-auto">
+          {isMultiSelect ? (
+            <MultiSelectPanel selectedItems={selectedCanvasComponents} />
+          ) : effectiveSelectedComponent ? (
+            <>
+              <div className="px-4 py-3 border-b bg-background space-y-1">
+                <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Component</p>
+                <p className="text-sm font-semibold text-foreground">
+                  {effectiveSelectedComponent.title || formattedType || 'Untitled Component'}
+                </p>
+                {(effectiveSelectedComponent.dataset_id || effectiveSelectedComponent.datasource) && (
+                  <p className="text-xs text-muted-foreground">
+                    Source • {effectiveSelectedComponent.datasource || effectiveSelectedComponent.dataset_id}
+                  </p>
+                )}
+              </div>
+              <Tabs
+                value={activeTab}
+                onValueChange={(v) => setActiveTab(v as 'setup' | 'style')}
+                className="w-full px-4 py-4"
+              >
+                <TabsList className="grid w-full grid-cols-2 bg-muted/40 rounded-md">
+                  <TabsTrigger value="setup" className="text-xs">
+                    Setup
+                  </TabsTrigger>
+                  <TabsTrigger value="style" className="text-xs">
+                    Style
+                  </TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="setup" className="mt-4 space-y-6">
+                  <ChartSetup
+                    config={effectiveSelectedComponent}
+                    onUpdate={(updates) => onUpdateComponent(effectiveSelectedComponent.id, updates)}
+                  />
+                  <ComponentFilterAccordion
+                    componentConfig={effectiveSelectedComponent}
+                    onUpdate={(updates) => onUpdateComponent(effectiveSelectedComponent.id, updates)}
+                  />
+                </TabsContent>
+
+                <TabsContent value="style" className="mt-4 space-y-6">
+                  <ChartStyle
+                    config={effectiveSelectedComponent}
+                    onUpdate={(updates) => onUpdateComponent(effectiveSelectedComponent.id, updates)}
+                  />
+                </TabsContent>
+              </Tabs>
+            </>
+          ) : (
+            <div className="p-4 text-xs text-muted-foreground">
+              Select a component to edit its settings.
+            </div>
+          )}
+        </div>
+      )}
+    </aside>
   );
 };
