@@ -158,61 +158,6 @@ export declare const allTools: ({
                 type: string;
                 description: string;
             };
-            name: {
-                type: string;
-                description: string;
-            };
-            category: {
-                type: string;
-                enum: string[];
-                description: string;
-            };
-            countingType: {
-                type: string;
-                enum: string[];
-                description: string;
-            };
-            attributionWindowDays: {
-                type: string;
-                description: string;
-            };
-            valueSettings: {
-                type: string;
-                properties: {
-                    defaultValue: {
-                        type: string;
-                        description: string;
-                    };
-                    alwaysUseDefaultValue: {
-                        type: string;
-                        description: string;
-                    };
-                };
-            };
-            confirmationToken: {
-                type: string;
-                description: string;
-            };
-        };
-        required: never[];
-    };
-    handler(input: any): Promise<import("../../shared/interactive-workflow.js").McpResponse | {
-        success: boolean;
-        requiresApproval: boolean;
-        preview: string;
-        confirmationToken: string;
-        message: string;
-    }>;
-} | {
-    name: string;
-    description: string;
-    inputSchema: {
-        type: "object";
-        properties: {
-            customerId: {
-                type: string;
-                description: string;
-            };
             conversionActionId: {
                 type: string;
                 description: string;

@@ -248,16 +248,12 @@ export const createConversionActionTool = {
                     },
                 },
             },
-            confirmationToken: {
-                type: 'string',
-                description: 'Confirmation token from dry-run preview (optional - if not provided, will show preview)',
-            },
         },
         required: [], // Make all optional for discovery
     },
     async handler(input) {
         try {
-            const { customerId, name, category, countingType, attributionWindowDays = 30, valueSettings, confirmationToken, } = input;
+            const { customerId, name, category, countingType, attributionWindowDays = 30, valueSettings, } = input;
             // Extract OAuth tokens from request
             const refreshToken = extractRefreshToken(input);
             if (!refreshToken) {
@@ -323,26 +319,71 @@ export const createConversionActionTool = {
             }
             // ═══ STEP 3: CATEGORY SELECTION GUIDANCE ═══
             if (!category) {
-                const categories = [
-                    { value: 'PURCHASE', desc: 'E-commerce transactions, orders' },
-                    { value: 'LEAD', desc: 'Form submissions, contact requests' },
-                    { value: 'SIGNUP', desc: 'Account creation, registrations' },
-                    { value: 'PAGE_VIEW', desc: 'Specific page visits, content views' },
-                    { value: 'PHONE_CALL', desc: 'Call tracking conversions' },
-                    { value: 'DOWNLOAD', desc: 'File/app downloads' },
-                    { value: 'STORE_VISIT', desc: 'Physical store visits' },
-                ];
-                return formatDiscoveryResponse({
-                    step: '3/3',
-                    title: 'SELECT CONVERSION CATEGORY',
-                    items: categories,
-                    itemFormatter: (cat, i) => `${i + 1}. ${cat.value}
-   ${cat.desc}`,
-                    prompt: 'Which category best describes this conversion?',
-                    nextParam: 'category',
-                    context: { customerId, name },
-                    emoji: '📊',
-                });
+                const guidanceText = `📊 CONVERSION CATEGORY SELECTION (Step 3/7)
+
+**Current:** Creating "${name}" conversion action
+
+🎓 **AGENT TRAINING - CONVERSION CATEGORY LOGIC:**
+
+**CATEGORY DECISION TREE:**
+
+1. **PURCHASE** (E-commerce revenue)
+   ✅ Use when: Tracking online sales, transactions
+   ✅ Value: Use transaction-specific (varies by order)
+   ✅ Counting: ONE (one purchase per click)
+   ✅ Example: "E-commerce Purchase", "Product Sale"
+   ⚠️ Requires: Transaction value passing from website
+
+2. **LEAD** (Form submissions, quote requests)
+   ✅ Use when: Capturing potential customers (B2B, services)
+   ✅ Value: Fixed amount (estimate lead value, e.g., $50)
+   ✅ Counting: ONE (one lead per click)
+   ✅ Example: "Contact Form Submit", "Quote Request", "Demo Request"
+
+3. **SIGNUP** (Account creation)
+   ✅ Use when: New user registration, newsletter signup
+   ✅ Value: Fixed (lifetime value estimate) or none
+   ✅ Counting: ONE
+   ✅ Example: "Newsletter Signup", "Create Account", "Free Trial Start"
+
+4. **PAGE_VIEW** (Engagement)
+   ✅ Use when: Tracking key page visits
+   ✅ Value: Usually none (or small fixed)
+   ✅ Counting: MANY (can view multiple times)
+   ✅ Example: "Pricing Page View", "Product Detail View"
+
+5. **PHONE_CALL** (Call tracking)
+   ✅ Use when: Phone number clicks or call forwarding
+   ✅ Value: Fixed (estimated call value)
+   ✅ Counting: ONE
+   ✅ Example: "Phone Call - Sales", "Click-to-Call"
+   ⚠️ Requires: Call tracking integration
+
+6. **DOWNLOAD** (File/app downloads)
+   ✅ Use when: PDF downloads, app installs
+   ✅ Value: Fixed or none
+   ✅ Counting: ONE per download
+   ✅ Example: "Whitepaper Download", "App Install"
+
+7. **STORE_VISIT** (Offline)
+   ✅ Use when: Driving foot traffic to physical locations
+   ✅ Value: Fixed (avg transaction value)
+   ✅ Counting: ONE per visit
+   ✅ Example: "Store Visit", "In-Store Purchase"
+   ⚠️ Requires: Location extensions, sufficient location data
+
+**AGENT RECOMMENDATION FRAMEWORK:**
+Ask: "What action do you want to track when someone clicks your ad?"
+- Makes purchase → **PURCHASE**
+- Fills form/requests quote → **LEAD**
+- Signs up for account → **SIGNUP**
+- Views specific page → **PAGE_VIEW**
+- Calls phone number → **PHONE_CALL**
+- Downloads file → **DOWNLOAD**
+- Visits store → **STORE_VISIT**
+
+Which category matches your conversion?`;
+                return injectGuidance({ customerId, name }, guidanceText);
             }
             // If countingType not provided, guide user
             if (!countingType) {
@@ -375,91 +416,75 @@ export const createConversionActionTool = {
 - countingType (either "ONE" or "MANY")`;
                 return injectGuidance({ customerId, name, category }, guidanceText);
             }
-            // Vagueness detection
-            detectAndEnforceVagueness({
-                operation: 'create_conversion_action',
-                inputText: `create conversion action ${name} category ${category}`,
-                inputParams: { customerId, name, category },
-            });
-            // Build dry-run preview
-            const approvalEnforcer = getApprovalEnforcer();
-            const dryRunBuilder = new DryRunResultBuilder('create_conversion_action', 'Google Ads', customerId);
-            dryRunBuilder.addChange({
-                resource: 'Conversion Action',
-                resourceId: 'new',
-                field: 'conversion_action',
-                currentValue: 'N/A (new conversion)',
-                newValue: `"${name}" (${category}, ${countingType}, ${attributionWindowDays} day window)`,
-                changeType: 'create',
-            });
-            // Add value info if provided
-            if (valueSettings?.defaultValue) {
-                dryRunBuilder.addChange({
-                    resource: 'Conversion Action',
-                    resourceId: 'new',
-                    field: 'default_value',
-                    currentValue: 'N/A',
-                    newValue: `$${valueSettings.defaultValue.toFixed(2)} per conversion`,
-                    changeType: 'create',
-                });
-            }
-            dryRunBuilder.addRecommendation('After creating, implement tracking tag on website or app');
-            dryRunBuilder.addRecommendation('Verify conversions are being tracked within 24-48 hours');
-            if (countingType === 'MANY') {
-                dryRunBuilder.addRecommendation('MANY counting type selected - every occurrence will count (good for page views, not purchases)');
-            }
-            const dryRun = dryRunBuilder.build();
-            // If no confirmation token, return preview
-            if (!confirmationToken) {
-                const { confirmationToken: token } = await approvalEnforcer.createDryRun('create_conversion_action', 'Google Ads', customerId, { name, category });
-                const preview = approvalEnforcer.formatDryRunForDisplay(dryRun);
-                return {
-                    success: true,
-                    requiresApproval: true,
-                    preview,
-                    confirmationToken: token,
-                    message: 'Conversion action creation requires approval. Review the preview above and call this tool again with the confirmationToken to proceed.',
-                };
-            }
-            // Execute with confirmation
-            logger.info('Creating conversion action with confirmation', { customerId, name, category });
-            const result = await approvalEnforcer.validateAndExecute(confirmationToken, dryRun, async () => {
-                // Build conversion action
-                const conversionAction = {
-                    name,
-                    category,
-                    type: 'WEBPAGE',
-                    counting_type: countingType,
-                    click_through_lookback_window_days: attributionWindowDays,
-                };
-                // Add value settings if provided
-                if (valueSettings) {
-                    conversionAction.value_settings = {
-                        default_value: valueSettings.defaultValue
-                            ? valueSettings.defaultValue * 1000000
-                            : undefined,
-                        always_use_default_value: valueSettings.alwaysUseDefaultValue || false,
-                    };
-                }
-                const customer = client.getCustomer(customerId);
-                const operation = {
-                    create: conversionAction,
-                };
-                const response = await customer.conversionActions.create([operation]);
-                return response;
-            });
-            return {
-                success: true,
-                data: {
-                    customerId,
-                    conversionActionId: result,
-                    name,
-                    category,
-                    countingType,
-                    attributionWindowDays,
-                    message: `✅ Conversion action "${name}" created successfully`,
-                },
+            // ═══ EXECUTE CONVERSION ACTION CREATION ═══
+            logger.info('Creating conversion action', { customerId, name, category });
+            // Build conversion action
+            const conversionAction = {
+                name,
+                category,
+                type: 'WEBPAGE',
+                counting_type: countingType,
+                click_through_lookback_window_days: attributionWindowDays,
             };
+            // Add value settings if provided
+            if (valueSettings) {
+                conversionAction.value_settings = {
+                    default_value: valueSettings.defaultValue
+                        ? valueSettings.defaultValue * 1000000
+                        : undefined,
+                    always_use_default_value: valueSettings.alwaysUseDefaultValue || false,
+                };
+            }
+            const customer = client.getCustomer(customerId);
+            const operation = {
+                create: conversionAction,
+            };
+            const response = await customer.conversionActions.create([operation]);
+            const conversionActionId = response.results?.[0]?.resource_name?.split('/')?.pop() || response;
+            const guidanceText = `✅ CONVERSION ACTION CREATED
+
+**Conversion Details:**
+- Name: ${name}
+- ID: ${conversionActionId}
+- Category: ${category}
+- Counting: ${countingType}
+- Attribution Window: ${attributionWindowDays} days
+${valueSettings?.defaultValue ? `- Default Value: $${valueSettings.defaultValue}` : ''}
+
+🚨 **CRITICAL NEXT STEPS - IMPLEMENTATION REQUIRED:**
+
+**1. Install Tracking Tag (REQUIRED):**
+   This conversion won't track anything until you add the tracking code to your website!
+
+   • Go to Google Ads → Tools → Conversions
+   • Find "${name}" conversion
+   • Get tracking tag/snippet
+   • Add to your website's ${category === 'PURCHASE' ? 'thank-you/confirmation page' : category === 'LEAD' ? 'form submission page' : 'target page'}
+
+**2. Verify Tracking (Within 48 hours):**
+   • Make test conversion on your site
+   • Check if it appears in Google Ads
+   • If no conversions after 48 hours → Tag not installed correctly
+
+**3. Enable in Campaigns:**
+   Conversion actions are automatically available for:
+   • Campaign optimization (Target CPA, Target ROAS bidding)
+   • Smart Bidding strategies
+   • Conversion reporting
+
+**4. Set as Primary (if main goal):**
+   use update_conversion_action to set as primary goal
+
+${countingType === 'MANY' ? `\n⚠️ **MANY Counting:** Every occurrence counts. Good for ${category === 'PAGE_VIEW' ? 'page views' : 'engagement'}, NOT for purchases!` : ''}
+${category === 'PURCHASE' && !valueSettings ? `\n⚠️ **Missing Value:** PURCHASE conversions should have value. Consider adding transaction-specific value tracking!` : ''}`;
+            return injectGuidance({
+                customerId,
+                conversionActionId,
+                name,
+                category,
+                countingType,
+                attributionWindowDays,
+            }, guidanceText);
         }
         catch (error) {
             logger.error('Failed to create conversion action', error);
