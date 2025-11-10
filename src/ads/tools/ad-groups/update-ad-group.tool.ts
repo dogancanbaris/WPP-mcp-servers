@@ -113,6 +113,32 @@ export const updateAdGroupTool = {
         type: 'number',
         description: 'New CPC bid in micros (optional)',
       },
+      // NEW: Match create_ad_group parameters
+      type: {
+        type: 'string',
+        enum: ['SEARCH_STANDARD', 'SEARCH_DYNAMIC_ADS', 'DISPLAY_STANDARD', 'SHOPPING_PRODUCT_ADS', 'VIDEO_TRUE_VIEW_IN_STREAM', 'HOTEL_ADS'],
+        description: 'Ad group type (optional)',
+      },
+      trackingUrlTemplate: {
+        type: 'string',
+        description: 'Tracking URL template (optional)',
+      },
+      urlCustomParameters: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            key: { type: 'string' },
+            value: { type: 'string' },
+          },
+        },
+        description: 'Custom URL parameters for tracking (optional)',
+      },
+      adRotationMode: {
+        type: 'string',
+        enum: ['OPTIMIZE', 'ROTATE_INDEFINITELY', 'OPTIMIZE_FOR_CONVERSIONS'],
+        description: 'Ad rotation mode (optional)',
+      },
       confirmationToken: {
         type: 'string',
         description: 'Confirmation token from dry-run preview (optional - if not provided, will show preview)',
@@ -122,7 +148,7 @@ export const updateAdGroupTool = {
   },
   async handler(input: any) {
     try {
-      const { customerId, campaignId, adGroupId, name, status, cpcBidMicros, confirmationToken } = input;
+      const { customerId, campaignId, adGroupId, name, status, cpcBidMicros, type, trackingUrlTemplate, urlCustomParameters, adRotationMode, confirmationToken } = input;
 
       // Extract OAuth tokens from request
       const refreshToken = extractRefreshToken(input);
@@ -373,6 +399,51 @@ What would you like to change?`;
         }
       }
 
+      // NEW: Add changes for missing parameters from create_ad_group
+      if (type) {
+        dryRunBuilder.addChange({
+          resource: 'Ad Group',
+          resourceId: adGroupId,
+          field: 'type',
+          currentValue: 'Current',
+          newValue: type,
+          changeType: 'update',
+        });
+      }
+
+      if (trackingUrlTemplate) {
+        dryRunBuilder.addChange({
+          resource: 'Ad Group',
+          resourceId: adGroupId,
+          field: 'tracking_url_template',
+          currentValue: 'Current',
+          newValue: trackingUrlTemplate,
+          changeType: 'update',
+        });
+      }
+
+      if (urlCustomParameters && urlCustomParameters.length > 0) {
+        dryRunBuilder.addChange({
+          resource: 'Ad Group',
+          resourceId: adGroupId,
+          field: 'url_custom_parameters',
+          currentValue: 'Current',
+          newValue: urlCustomParameters.map((p: any) => `${p.key}=${p.value}`).join(', '),
+          changeType: 'update',
+        });
+      }
+
+      if (adRotationMode) {
+        dryRunBuilder.addChange({
+          resource: 'Ad Group',
+          resourceId: adGroupId,
+          field: 'ad_rotation_mode',
+          currentValue: 'Current',
+          newValue: adRotationMode,
+          changeType: 'update',
+        });
+      }
+
       // Add general recommendations
       if (status !== 'REMOVED') {
         dryRunBuilder.addRecommendation(
@@ -388,7 +459,7 @@ What would you like to change?`;
           'update_ad_group',
           'Google Ads',
           customerId,
-          { adGroupId, name, status, cpcBidMicros }
+          { adGroupId, name, status, cpcBidMicros, type, trackingUrlTemplate, urlCustomParameters, adRotationMode }
         );
 
         const preview = approvalEnforcer.formatDryRunForDisplay(dryRun);
@@ -430,6 +501,26 @@ What would you like to change?`;
 
           if (cpcBidMicros !== undefined) {
             updateOperation.cpc_bid_micros = cpcBidMicros;
+          }
+
+          // NEW: Add missing parameters from create_ad_group
+          if (type) {
+            updateOperation.type = type;
+          }
+
+          if (trackingUrlTemplate) {
+            updateOperation.tracking_url_template = trackingUrlTemplate;
+          }
+
+          if (urlCustomParameters && urlCustomParameters.length > 0) {
+            updateOperation.url_custom_parameters = urlCustomParameters.map((param: any) => ({
+              key: param.key,
+              value: param.value,
+            }));
+          }
+
+          if (adRotationMode) {
+            updateOperation.ad_rotation_mode = adRotationMode;
           }
 
           const updateResult = await customer.adGroups.update([updateOperation]);

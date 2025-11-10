@@ -20,31 +20,59 @@ export const updateCampaignTool = {
     name: 'update_campaign',
     description: `Update settings for an existing Google Ads campaign.
 
-💡 AGENT GUIDANCE - CAMPAIGN UPDATES:
+🎓 **AGENT TRAINING - IMPACT ANALYSIS FOR CAMPAIGN UPDATES:**
 
-⚠️ WHAT CAN BE UPDATED:
-- Campaign name
-- Campaign budget (reassign to different budget)
-- Network settings (which networks to target)
-- Start/end dates
-- Tracking URLs (tracking template, final URL suffix)
+**THE GOLDEN RULE:** EVERY campaign update affects live performance!
 
-⚠️ WHAT CANNOT BE UPDATED (API Limitations):
-- Campaign type (SEARCH, DISPLAY, etc.) - cannot be changed
-- Bidding strategy type - use separate update_bidding_strategy tool
+**IMPACT BY CHANGE TYPE:**
 
-💡 BEST PRACTICES:
-- Use update_campaign_status to pause/enable campaigns
-- Review current settings before making changes
-- Test changes in paused campaigns first
-- Document why changes were made
+**1. Budget Change (Reassign to different budget):**
+⚠️ **IMMEDIATE IMPACT:**
+• Higher budget → More spend, more traffic, potentially more conversions
+• Lower budget → Campaign may pause when limit hit, reduced reach
+• **Risk Level:** HIGH if campaign is ENABLED, LOW if PAUSED
 
-🎯 TYPICAL USE CASES:
-- Rename campaign for better organization
-- Change budget allocation
-- Adjust network targeting
-- Extend/shorten campaign dates
-- Update tracking parameters`,
+**AGENT CHECKLIST:**
+□ Is campaign currently ENABLED? (high impact!) or PAUSED? (low impact)
+□ What's current daily spend vs new budget? (calculate difference)
+□ Will new budget support current traffic? (avoid daily pause)
+□ Why changing budget? (scaling up success or cutting losses?)
+
+**2. Network Settings Change:**
+⚠️ **IMMEDIATE IMPACT:**
+• Adding networks → More reach, potentially lower quality traffic
+• Removing networks → Less reach, may lose conversions
+• **Risk Level:** MEDIUM
+
+**AGENT CHECKLIST:**
+□ Adding Display Network to Search campaign? (warn: different audience, lower intent)
+□ Removing Search Partners? (may lose 10-20% traffic)
+□ What's goal? (more reach or better quality?)
+
+**3. Date Changes (Start/End):**
+• End date addition → Campaign will auto-pause on that date
+• End date removal → Campaign runs indefinitely (check budget!)
+• **Risk Level:** LOW (planned)
+
+**4. Name Change:**
+• No performance impact (reporting only)
+• **Risk Level:** NONE
+
+**5. Tracking Changes:**
+• Tracking template/suffix → Analytics tracking, no ad delivery impact
+• **Risk Level:** LOW
+
+**AGENT DECISION FRAMEWORK:**
+Before recommending approval, ask:
+1. "Campaign is ENABLED and getting 100 clicks/day. Cutting budget 50% will reduce traffic. Proceed?"
+2. "Adding Display Network increases reach but lowers intent. Monitor quality closely?"
+3. "This change takes effect immediately. Best time to update?"
+
+**APPROVAL GUIDELINES:**
+✅ Always show dry-run preview with impact
+✅ Explain what will change and why it matters
+✅ Recommend best time for changes (start of day, low-traffic period)
+✅ Suggest monitoring after change`,
     inputSchema: {
         type: 'object',
         properties: {
